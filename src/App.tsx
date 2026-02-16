@@ -8,11 +8,36 @@ import Home from "./pages/Home";
 import Oracle from "./pages/Oracle";
 import Rituals from "./pages/Rituals";
 import RitualReader from "./pages/RitualReader";
+import Oferta from "./pages/Oferta";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
+import { initPixel } from "@/lib/pixel";
 
 const queryClient = new QueryClient();
+
+const AppContent = () => {
+  useEffect(() => {
+    initPixel();
+  }, []);
+
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/oraculo" element={<Oracle />} />
+        <Route path="/rituais" element={<Rituals />} />
+        <Route path="/rituais/:id" element={<RitualReader />} />
+        <Route path="/oferta" element={<Oferta />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <BottomNav />
+    </>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -20,16 +45,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/oraculo" element={<Oracle />} />
-          <Route path="/rituais" element={<Rituals />} />
-          <Route path="/rituais/:id" element={<RitualReader />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <BottomNav />
+        <AppContent />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
