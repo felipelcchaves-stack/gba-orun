@@ -1,8 +1,12 @@
 import { useRituals } from "@/hooks/useRituals";
+import { usePremium } from "@/hooks/usePremium";
 import { Link } from "react-router-dom";
-import { BookOpen, ChevronRight } from "lucide-react";
+import { BookOpen, ChevronRight, Lock } from "lucide-react";
+import { useState } from "react";
+import PremiumLockModal from "@/components/PremiumLockModal";
 
 const CATEGORIES = [
+  { key: "", label: "Todos", emoji: "📚" },
   { key: "oriki", label: "Orikis", emoji: "🪘" },
   { key: "ibori", label: "Ibori", emoji: "🕯️" },
   { key: "ebo", label: "Ebós", emoji: "🌿" },
@@ -10,7 +14,17 @@ const CATEGORIES = [
 ];
 
 const RitualsPage = () => {
-  const { data: rituals, isLoading } = useRituals();
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const { data: rituals, isLoading } = useRituals(selectedCategory || undefined);
+  const { isPremium, isLoggedIn } = usePremium();
+  const [showModal, setShowModal] = useState(false);
+
+  const handleRitualClick = (ritual: any, e: React.MouseEvent) => {
+    if (ritual.is_premium && !isPremium) {
+      e.preventDefault();
+      setShowModal(true);
+    }
+  };
 
   return (
     <div className="min-h-screen pb-24 px-5">
@@ -21,12 +35,17 @@ const RitualsPage = () => {
         {/* Category chips */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {CATEGORIES.map(cat => (
-            <span
+            <button
               key={cat.key}
-              className="shrink-0 bg-card border border-border rounded-full px-4 py-2 text-sm font-semibold"
+              onClick={() => setSelectedCategory(cat.key)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                selectedCategory === cat.key
+                  ? "gradient-sacred text-primary-foreground"
+                  : "bg-card border border-border"
+              }`}
             >
               {cat.emoji} {cat.label}
-            </span>
+            </button>
           ))}
         </div>
 
@@ -42,15 +61,27 @@ const RitualsPage = () => {
               <Link
                 key={ritual.id}
                 to={`/rituais/${ritual.id}`}
+                onClick={(e) => handleRitualClick(ritual, e)}
                 className="block bg-card rounded-2xl p-5 border border-border hover:border-primary/30 transition-all hover:shadow-sacred/10 active:scale-[0.99]"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="bg-accent rounded-xl p-2.5">
-                      <BookOpen className="h-5 w-5 text-accent-foreground" />
+                    <div className={`rounded-xl p-2.5 ${ritual.is_premium && !isPremium ? "bg-accent/30" : "bg-accent"}`}>
+                      {ritual.is_premium && !isPremium ? (
+                        <Lock className="h-5 w-5 text-accent-foreground" />
+                      ) : (
+                        <BookOpen className="h-5 w-5 text-accent-foreground" />
+                      )}
                     </div>
                     <div>
-                      <h3 className="font-display font-bold text-base">{ritual.title}</h3>
+                      <h3 className="font-display font-bold text-base flex items-center gap-2">
+                        {ritual.title}
+                        {ritual.is_premium && (
+                          <span className="text-xs bg-accent/20 text-accent-foreground px-2 py-0.5 rounded-full font-semibold">
+                            Premium
+                          </span>
+                        )}
+                      </h3>
                       <span className="text-xs text-muted-foreground capitalize">{ritual.category}</span>
                     </div>
                   </div>
@@ -67,6 +98,7 @@ const RitualsPage = () => {
           </div>
         )}
       </div>
+      <PremiumLockModal open={showModal} onClose={() => setShowModal(false)} />
     </div>
   );
 };

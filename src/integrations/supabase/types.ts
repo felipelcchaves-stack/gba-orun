@@ -14,23 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      oracle_meanings: {
+        Row: {
+          action: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
           display_name: string | null
+          guru_id: string | null
           id: string
+          is_premium: boolean
           user_id: string
         }
         Insert: {
           created_at?: string
           display_name?: string | null
+          guru_id?: string | null
           id?: string
+          is_premium?: boolean
           user_id: string
         }
         Update: {
           created_at?: string
           display_name?: string | null
+          guru_id?: string | null
           id?: string
+          is_premium?: boolean
           user_id?: string
         }
         Relationships: []
@@ -42,6 +72,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          is_premium: boolean
           title: string
           trigger_oracle: string | null
           updated_at: string
@@ -52,6 +83,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_premium?: boolean
           title: string
           trigger_oracle?: string | null
           updated_at?: string
@@ -62,6 +94,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_premium?: boolean
           title?: string
           trigger_oracle?: string | null
           updated_at?: string

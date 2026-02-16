@@ -8,6 +8,7 @@ export interface Ritual {
   content_full: string;
   trigger_oracle: string | null;
   image_url: string | null;
+  is_premium: boolean;
   created_at: string;
   updated_at: string;
 }
