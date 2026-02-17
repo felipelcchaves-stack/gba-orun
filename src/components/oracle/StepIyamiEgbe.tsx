@@ -65,7 +65,9 @@ const StepIyamiEgbe = ({ onAnswer }: Props) => {
   return (
     <>
       <h2 className="text-2xl font-display font-bold text-center mb-1">{egbeText.title}</h2>
-      <p className="text-center text-muted-foreground text-sm mb-8">{egbeText.description}</p>
+      <p className="text-center text-muted-foreground text-sm mb-4">{egbeText.description}</p>
+
+      <GuidanceBubble pointKey="oracle_step_egbe" className="mb-6" />
 
       <div className="grid grid-cols-2 gap-4">
         <button

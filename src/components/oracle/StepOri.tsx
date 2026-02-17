@@ -28,7 +28,8 @@ const StepOri = ({ ireOrIbi, onAnswer }: Props) => {
     return (
       <>
         <h2 className="text-2xl font-display font-bold text-center mb-1">{subText.title}</h2>
-        <p className="text-center text-muted-foreground text-sm mb-8">{subText.description}</p>
+        <p className="text-center text-muted-foreground text-sm mb-4">{subText.description}</p>
+        <GuidanceBubble pointKey="oracle_step_ori_actions" className="mb-6" />
         <div className="space-y-3">
           {ORI_ACTIONS.map(a => {
             const Icon = a.icon;
