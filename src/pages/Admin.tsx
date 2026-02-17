@@ -31,6 +31,7 @@ const AdminPage = () => {
   const [editing, setEditing] = useState<Ritual | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
+  const [defaultFormCategory, setDefaultFormCategory] = useState<string | undefined>(undefined);
   const [oracleSubTab, setOracleSubTab] = useState<"configs" | "tasks" | "texts">("configs");
   const [filterCat, setFilterCat] = useState("");
 
@@ -40,8 +41,8 @@ const AdminPage = () => {
     if (error) toast.error(error.message);
   };
 
-  const openEdit = (r: Ritual) => { setEditing(r); setShowForm(true); };
-  const openNew = () => { setEditing(null); setShowForm(true); };
+  const openEdit = (r: Ritual) => { setEditing(r); setDefaultFormCategory(undefined); setShowForm(true); };
+  const openNew = () => { setEditing(null); setDefaultFormCategory(undefined); setShowForm(true); };
 
   const handleSave = async (payload: any) => {
     try {
@@ -128,12 +129,15 @@ const AdminPage = () => {
                 ))}
               </div>
               <button onClick={openNew} className="bg-secondary text-secondary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shrink-0">
-                <Plus className="h-4 w-4" /> Novo
+                <Plus className="h-4 w-4" /> Novo Ritual
+              </button>
+              <button onClick={() => { setEditing(null); setDefaultFormCategory("oracao_manha"); setShowForm(true); }} className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shrink-0">
+                <Sunrise className="h-4 w-4" /> Nova Oração
               </button>
             </div>
 
             {showForm && (
-              <AdminRitualForm editing={editing} onSave={handleSave} onCancel={() => setShowForm(false)} />
+              <AdminRitualForm editing={editing} onSave={handleSave} onCancel={() => setShowForm(false)} defaultCategory={defaultFormCategory} />
             )}
 
             {isLoading ? (

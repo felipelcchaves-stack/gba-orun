@@ -33,9 +33,10 @@ interface AdminRitualFormProps {
   editing: Ritual | null;
   onSave: (payload: any) => void;
   onCancel: () => void;
+  defaultCategory?: string;
 }
 
-const AdminRitualForm = ({ editing, onSave, onCancel }: AdminRitualFormProps) => {
+const AdminRitualForm = ({ editing, onSave, onCancel, defaultCategory }: AdminRitualFormProps) => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("geral");
   const [contentFull, setContentFull] = useState("");
@@ -57,9 +58,9 @@ const AdminRitualForm = ({ editing, onSave, onCancel }: AdminRitualFormProps) =>
       setAudioUrl((editing as any).audio_url || "");
       setIsPremium(editing.is_premium ?? false);
     } else {
-      setTitle(""); setCategory("geral"); setContentFull(""); setTriggerOracle(""); setImageUrl(""); setAudioUrl(""); setIsPremium(false); setSelectedTaskTypes([]);
+      setTitle(""); setCategory(defaultCategory || "geral"); setContentFull(""); setTriggerOracle(""); setImageUrl(""); setAudioUrl(""); setIsPremium(false); setSelectedTaskTypes([]);
     }
-  }, [editing]);
+  }, [editing, defaultCategory]);
 
   const toggleTaskType = (key: string) => {
     setSelectedTaskTypes(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
@@ -81,7 +82,7 @@ const AdminRitualForm = ({ editing, onSave, onCancel }: AdminRitualFormProps) =>
   return (
     <div className="fixed inset-0 z-50 bg-foreground/50 flex items-start justify-center overflow-y-auto p-4">
       <div className="bg-background rounded-2xl p-6 w-full max-w-2xl my-8 border border-border">
-        <h2 className="text-2xl font-display font-bold mb-4">{editing ? "Editar Ritual" : "Novo Ritual"}</h2>
+        <h2 className="text-2xl font-display font-bold mb-4">{editing ? "Editar Ritual" : defaultCategory?.startsWith("oracao") ? "Nova Oração" : "Novo Ritual"}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold mb-1">Título</label>
