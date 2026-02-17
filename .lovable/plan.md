@@ -1,56 +1,73 @@
 
 
-# Compactar modal de ritual e remover link
+# Vincular multiplos rituais/rezas por tarefa no fluxo
 
-## Problema
+## Situacao atual
 
-1. O espacamento entre paragrafos ainda esta grande. Cada `<p>` gerado pelo Markdown tem `mb-2` (8px) e `leading-6` (24px), mas como textos rituais tem muitas linhas curtas, o espaco acumulado impede ver o conteudo todo sem rolar muito.
-
-2. O link "Ver ritual completo" tira o aluno da jornada do oraculo. Deve ser removido.
+Cada tarefa no no de Diagnostico suporta apenas **um** ritual vinculado (`ritual_id`). O mesmo acontece na secao "Vinculos" dos demais blocos do fluxo. Isso limita o conteudo que pode ser associado a cada etapa.
 
 ## Solucao
 
-### 1. Reduzir espacamento no CSS
+Permitir vincular **multiplos rituais** por tarefa (e por bloco), usando um campo `ritual_ids: string[]` no config JSON do no. A interface mostrara uma lista de rituais vinculados com botao para adicionar mais.
 
-Ajustar `.prose-ritual` para ser mais compacto:
-- Trocar `leading-relaxed` por `leading-snug` no container
-- Trocar `mb-2 leading-6` por `mb-1 leading-5` nos paragrafos
-- Reduzir margens dos headings (`mb-3` para `mb-2`, `mb-4` para `mb-2`)
-- Reduzir espaco das listas (`mb-4` para `mb-2`)
+## O que muda para o usuario
 
-### 2. Remover link "Ver ritual completo"
+**No painel admin (Flow Builder):**
+- Cada tarefa do Diagnostico mostrara uma lista de rituais vinculados, com botao "+ Adicionar ritual"
+- Cada bloco (Mensagem, Sim/Nao, etc.) tambem podera ter multiplos rituais na secao "Vinculos"
+- Rituais ja vinculados aparecem como chips com botao X para remover
 
-Remover o bloco `<Link to={/rituais/...}>` dos dois componentes: `FlowStepRenderer.tsx` e `RitualHelpButton.tsx`. Tambem remover os imports de `Link` e `ExternalLink` que ficam sem uso.
+**Na tela do aluno (Oraculo):**
+- Cada tarefa mostrara multiplos botoes "Ver Ritual: [nome]" se houver mais de um vinculado
+- Cada bloco do fluxo tambem mostrara todos os rituais vinculados
 
-### 3. Reduzir padding interno
+## Detalhes tecnicos
 
-Trocar `p-4 sm:p-6` por `p-3 sm:p-4` na area de conteudo dos modais para ganhar mais espaco.
+### 1. Componente MultiRitualCombobox (novo)
 
-## Arquivos modificados
+Componente que gerencia uma lista de `ritual_ids`. Mostra os rituais selecionados como chips e um combobox para adicionar mais.
+
+```text
++-------------------------------------+
+| [Reza do Ori x] [Iba Orixá x]      |
+| [+ Adicionar ritual...]             |
++-------------------------------------+
+```
+
+### 2. NodeConfigPanel.tsx
+
+**Secao "Vinculos" (blocos normais):**
+- Substituir `RitualCombobox` (singular) por `MultiRitualCombobox`
+- Campo muda de `config.ritual_id` para `config.ritual_ids`
+- Manter compatibilidade: se existir `ritual_id` antigo, migrar para `ritual_ids: [ritual_id]`
+
+**Secao "Tarefas do Diagnostico":**
+- Substituir `RitualCombobox` por `MultiRitualCombobox` em cada tarefa
+- Campo muda de `task.ritual_id` para `task.ritual_ids`
+
+### 3. FlowStepRenderer.tsx
+
+**StepHeader:**
+- Verificar `config.ritual_ids` (array) alem de `config.ritual_id` (legado)
+- Renderizar um `LinkedRitualButton` para cada ritual da lista
+
+**DiagnosisStep:**
+- Mostrar multiplos `LinkedRitualButton` por tarefa
+- Ao salvar no `journey_tasks`, usar o primeiro `ritual_id` da lista (a tabela so suporta um)
+- Manter override de ritual individual por tarefa
+
+### 4. Compatibilidade
+
+- Se `ritual_id` existir e `ritual_ids` nao, tratar como `ritual_ids: [ritual_id]`
+- Isso garante que fluxos ja configurados continuem funcionando sem necessidade de reconfigurar
+
+### Arquivos modificados
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/index.css` | Ajustar `.prose-ritual` container para `leading-snug`. Paragrafos para `mb-1 text-sm leading-5`. Headings e listas com margens menores. |
-| `src/components/oracle/FlowStepRenderer.tsx` | Remover link "Ver ritual completo" (linhas 115-122). Remover imports de `Link` e `ExternalLink`. Reduzir padding para `p-3 sm:p-4`. |
-| `src/components/RitualHelpButton.tsx` | Remover link "Ver ritual completo" (linhas 63-70). Remover imports de `Link` e `ExternalLink`. Reduzir padding para `p-3 sm:p-4`. |
+| `src/components/MultiRitualCombobox.tsx` | Novo componente para selecao multipla de rituais |
+| `src/components/admin/flow-builder/NodeConfigPanel.tsx` | Trocar `RitualCombobox` por `MultiRitualCombobox` nos vinculos e tarefas |
+| `src/components/oracle/FlowStepRenderer.tsx` | Renderizar multiplos `LinkedRitualButton` no `StepHeader` e `DiagnosisStep` |
 
-## Detalhe tecnico
-
-**CSS atualizado (index.css):**
-
-```css
-.prose-ritual {
-  @apply leading-snug;
-}
-.prose-ritual h1 { @apply text-2xl font-display font-bold mb-2; color: hsl(var(--foreground)); }
-.prose-ritual h2 { @apply text-xl font-display font-bold mb-2; color: hsl(var(--foreground)); }
-.prose-ritual h3 { @apply text-lg font-display font-bold mb-1; }
-.prose-ritual p { @apply mb-1 text-sm leading-5; color: hsl(var(--muted-foreground)); white-space: pre-line; }
-.prose-ritual ul { @apply list-disc pl-6 mb-2 space-y-0.5; }
-.prose-ritual ol { @apply list-decimal pl-6 mb-2 space-y-0.5; }
-```
-
-**Remocao do link (ambos componentes):**
-
-Deletar o bloco inteiro do `<Link>` e os imports nao utilizados (`Link` de react-router-dom, `ExternalLink` de lucide-react).
+Nenhuma alteracao de banco de dados e necessaria, pois os dados sao armazenados como JSON no campo `config` dos nos do fluxo.
 
