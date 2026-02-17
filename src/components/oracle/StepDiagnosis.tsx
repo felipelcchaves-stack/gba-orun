@@ -17,6 +17,7 @@ import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
 export interface WizardState {
   intention: "cuidado_semanal" | "orientacao";
   result: string;
+  defaultIreIbi?: string;
   ireOrIbi: "ire" | "ibi";
   ireIbiTypeId?: string;
   ireIbiTypeName?: string;
