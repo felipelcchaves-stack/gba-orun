@@ -1,23 +1,22 @@
-import { useAppSettings } from "@/hooks/useAppSettings";
-
 declare global {
   interface Window {
     fbq: (...args: any[]) => void;
     _fbq: any;
+    dataLayer: any[];
+    gtag: (...args: any[]) => void;
   }
 }
 
-let initialized = false;
+let pixelInitialized = false;
+let gtagInitialized = false;
 
 export const initPixel = async () => {
-  if (initialized) return;
-  initialized = true;
-
-  // Pixel will be initialized when settings load - call initPixelWithId separately
+  // no-op kept for backwards compat — real init happens via initPixelWithId
 };
 
 export const initPixelWithId = (pixelId: string) => {
-  if (!pixelId) return;
+  if (!pixelId || pixelInitialized) return;
+  pixelInitialized = true;
 
   /* eslint-disable */
   (function (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) {
@@ -42,9 +41,25 @@ export const initPixelWithId = (pixelId: string) => {
   window.fbq("track", "PageView");
 };
 
+export const initGoogleAds = (googleAdsId: string) => {
+  if (!googleAdsId || gtagInitialized) return;
+  gtagInitialized = true;
+
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${googleAdsId}`;
+  document.head.appendChild(script);
+
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () {
+    window.dataLayer.push(arguments);
+  };
+  window.gtag("js", new Date() as any);
+  window.gtag("config", googleAdsId);
+};
+
 export const trackEvent = (event: string, data?: Record<string, any>) => {
-  if (typeof window.fbq !== "function") return;
-  window.fbq("track", event, data);
+  if (typeof window.fbq === "function") window.fbq("track", event, data);
 };
 
 export const trackLead = () => trackEvent("Lead");

@@ -12,6 +12,8 @@ const SETTINGS_FIELDS = [
   { key: "offer_video_url", label: "URL do Vídeo (embed)", type: "url" },
   { key: "meta_pixel_id", label: "Meta Pixel ID", type: "text" },
   { key: "google_ads_id", label: "Google Ads ID", type: "text" },
+  { key: "offer_urgency_text", label: "Texto de Urgência (topo)", type: "text" },
+  { key: "offer_guarantee_days", label: "Dias de Garantia", type: "text" },
 ];
 
 const AdminOfferSettings = () => {

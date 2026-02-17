@@ -6,8 +6,8 @@ const BottomNav = () => {
   const location = useLocation();
   const { isAdmin } = useAdmin();
 
-  // Hide BottomNav on admin routes
-  if (location.pathname.startsWith("/admin")) return null;
+  // Hide BottomNav on admin and landing page routes
+  if (location.pathname.startsWith("/admin") || location.pathname === "/oferta") return null;
 
   const links = [
     { to: "/", icon: Home, label: "Início" },
