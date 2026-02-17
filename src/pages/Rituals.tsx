@@ -4,28 +4,13 @@ import { Link, useSearchParams } from "react-router-dom";
 import { BookOpen, Lock, Bookmark } from "lucide-react";
 import { useState, useEffect } from "react";
 import PremiumLockModal from "@/components/PremiumLockModal";
+import { FILTER_CATEGORIES, CATEGORY_BANNERS, getCategoryImage } from "@/lib/categories";
 
+import ritualPlaceholder1 from "@/assets/ritual-placeholder-1.jpg";
+import ritualPlaceholder2 from "@/assets/ritual-placeholder-2.jpg";
 import eboCategory from "@/assets/ebo-category.jpg";
 import iboriCategory from "@/assets/ibori-category.jpg";
 import orikiCategory from "@/assets/oriki-category.jpg";
-import egbeOrunCategory from "@/assets/egbe-orun-category.jpg";
-import ritualPlaceholder1 from "@/assets/ritual-placeholder-1.jpg";
-import ritualPlaceholder2 from "@/assets/ritual-placeholder-2.jpg";
-
-const CATEGORIES = [
-  { key: "", label: "Todos" },
-  { key: "oriki", label: "Orikis" },
-  { key: "ibori", label: "Ibori" },
-  { key: "ebo", label: "Ebós" },
-  { key: "geral", label: "Egbe Orun" },
-];
-
-const CATEGORY_BANNERS = [
-  { key: "ebo", label: "Ebós & Oferendas", desc: "Limpezas e oferendas rituais", image: eboCategory },
-  { key: "ibori", label: "Ibori & Ori", desc: "Cuidados com o Ori", image: iboriCategory },
-  { key: "oriki", label: "Orikis Sagrados", desc: "Rezas e louvações", image: orikiCategory },
-  { key: "geral", label: "Egbe Orun", desc: "Ancestralidade e comunidade", image: egbeOrunCategory },
-];
 
 const FALLBACK_IMAGES = [ritualPlaceholder1, ritualPlaceholder2, eboCategory, iboriCategory, orikiCategory];
 
@@ -57,7 +42,7 @@ const RitualsPage = () => {
 
         {/* Category chips */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          {CATEGORIES.map(cat => (
+          {FILTER_CATEGORIES.map(cat => (
             <button
               key={cat.key}
               onClick={() => setSelectedCategory(cat.key)}
@@ -115,7 +100,7 @@ const RitualsPage = () => {
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-display font-bold text-sm truncate">{ritual.title}</h3>
-                  <p className="text-xs text-muted-foreground capitalize mt-0.5">{ritual.category}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{getCategoryImage ? ritual.category : ritual.category}</p>
                   {ritual.is_premium && !isPremium && (
                     <span className="inline-flex items-center gap-1 text-[10px] text-accent-foreground bg-accent/15 px-2 py-0.5 rounded-full mt-1 font-medium">
                       <Lock className="h-2.5 w-2.5" /> Premium

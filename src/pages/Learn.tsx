@@ -4,21 +4,13 @@ import { Link } from "react-router-dom";
 import { Lock, BookOpen, Volume2, Bookmark } from "lucide-react";
 import { useState } from "react";
 import PremiumLockModal from "@/components/PremiumLockModal";
+import { FILTER_CATEGORIES, getCategoryLabel } from "@/lib/categories";
 
+import ritualPlaceholder1 from "@/assets/ritual-placeholder-1.jpg";
+import ritualPlaceholder2 from "@/assets/ritual-placeholder-2.jpg";
 import eboCategory from "@/assets/ebo-category.jpg";
 import iboriCategory from "@/assets/ibori-category.jpg";
 import orikiCategory from "@/assets/oriki-category.jpg";
-import egbeOrunCategory from "@/assets/egbe-orun-category.jpg";
-import ritualPlaceholder1 from "@/assets/ritual-placeholder-1.jpg";
-import ritualPlaceholder2 from "@/assets/ritual-placeholder-2.jpg";
-
-const MODULES = [
-  { key: "", label: "Todos" },
-  { key: "oriki", label: "Orikis" },
-  { key: "ibori", label: "Ibori" },
-  { key: "ebo", label: "Ebós" },
-  { key: "geral", label: "Fundamentos" },
-];
 
 const FALLBACK_IMAGES = [ritualPlaceholder1, ritualPlaceholder2, eboCategory, iboriCategory, orikiCategory];
 
@@ -43,7 +35,7 @@ const LearnPage = () => {
 
         {/* Module chips */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          {MODULES.map(m => (
+          {FILTER_CATEGORIES.map(m => (
             <button
               key={m.key}
               onClick={() => setModule(m.key)}
@@ -78,7 +70,7 @@ const LearnPage = () => {
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-display font-bold text-sm truncate">{ritual.title}</h3>
-                  <span className="text-xs text-muted-foreground capitalize mt-0.5 block">{ritual.category}</span>
+                  <span className="text-xs text-muted-foreground mt-0.5 block">{getCategoryLabel(ritual.category)}</span>
                   <div className="flex items-center gap-3 mt-1">
                     {ritual.is_premium && !isPremium && (
                       <span className="inline-flex items-center gap-1 text-[10px] text-accent-foreground bg-accent/15 px-2 py-0.5 rounded-full font-medium">

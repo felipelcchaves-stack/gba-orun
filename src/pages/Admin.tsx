@@ -10,7 +10,8 @@ import JsonImporter from "@/components/JsonImporter";
 import AdminRitualForm from "@/components/admin/AdminRitualForm";
 import AdminOfferSettings from "@/components/admin/AdminOfferSettings";
 
-const CATEGORIES = ["oriki", "ibori", "ebo", "geral"];
+import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
+const CATEGORIES = ALL_CATEGORY_KEYS;
 
 const AdminPage = () => {
   const { user, loading: authLoading, signIn, signUp, signOut } = useAuth();
@@ -25,6 +26,7 @@ const AdminPage = () => {
   const [editing, setEditing] = useState<Ritual | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"rituals" | "settings" | "import">("rituals");
+  const [filterCat, setFilterCat] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,9 +147,15 @@ const AdminPage = () => {
         {/* Tab content */}
         {activeTab === "rituals" && (
           <>
-            <div className="flex justify-end mb-4">
-              <button onClick={openNew} className="bg-secondary text-secondary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Novo Ritual
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-1">
+                <button onClick={() => setFilterCat("")} className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-all ${!filterCat ? "bg-foreground text-background" : "border border-border text-muted-foreground"}`}>Todos</button>
+                {CATEGORIES.map(c => (
+                  <button key={c} onClick={() => setFilterCat(c)} className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-all ${filterCat === c ? "bg-foreground text-background" : "border border-border text-muted-foreground"}`}>{getCategoryLabel(c)}</button>
+                ))}
+              </div>
+              <button onClick={openNew} className="bg-secondary text-secondary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shrink-0">
+                <Plus className="h-4 w-4" /> Novo
               </button>
             </div>
 
@@ -165,14 +173,14 @@ const AdminPage = () => {
               </div>
             ) : rituals && rituals.length > 0 ? (
               <div className="space-y-3">
-                {rituals.map(r => (
+                {rituals.filter(r => !filterCat || r.category === filterCat).map(r => (
                   <div key={r.id} className="bg-card rounded-2xl p-4 border border-border flex items-center justify-between">
                     <div>
                       <h3 className="font-display font-bold flex items-center gap-2">
                         {r.title}
                         {r.is_premium && <span className="text-xs bg-accent/20 text-accent-foreground px-2 py-0.5 rounded-full">Premium</span>}
                       </h3>
-                      <span className="text-xs text-muted-foreground capitalize">{r.category}</span>
+                      <span className="text-xs text-muted-foreground">{getCategoryLabel(r.category)}</span>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => openEdit(r)} className="p-2 rounded-lg hover:bg-muted"><Pencil className="h-4 w-4" /></button>

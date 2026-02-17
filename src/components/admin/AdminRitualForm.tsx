@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Ritual } from "@/hooks/useRituals";
 
-const CATEGORIES = ["oriki", "ibori", "ebo", "geral"];
+import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
+const CATEGORIES = ALL_CATEGORY_KEYS;
 
 interface AdminRitualFormProps {
   editing: Ritual | null;
@@ -58,7 +59,7 @@ const AdminRitualForm = ({ editing, onSave, onCancel }: AdminRitualFormProps) =>
             <div>
               <label className="block text-sm font-semibold mb-1">Categoria</label>
               <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:ring-2 focus:ring-primary outline-none">
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {CATEGORIES.map(c => <option key={c} value={c}>{getCategoryLabel(c)}</option>)}
               </select>
             </div>
             <div className="flex items-end pb-1">
