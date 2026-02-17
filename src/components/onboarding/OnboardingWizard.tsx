@@ -123,7 +123,14 @@ const OnboardingWizard = () => {
                 )}
               </div>
 
-              <Button onClick={() => setStep(1)} className="w-full bg-primary text-primary-foreground font-semibold rounded-xl h-12">
+              {showIfaQuestion && !ifaStatus && (
+                <p className="text-xs text-destructive font-medium">⚠️ Selecione seu status em Ifá para continuar.</p>
+              )}
+              <Button
+                onClick={() => setStep(1)}
+                disabled={showIfaQuestion && !ifaStatus}
+                className="w-full bg-primary text-primary-foreground font-semibold rounded-xl h-12"
+              >
                 Continuar
               </Button>
             </CardContent>
