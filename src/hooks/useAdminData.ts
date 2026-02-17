@@ -31,6 +31,8 @@ export interface AdminStats {
   total_replies: number;
   active_subscribers: number;
   overdue_users: number;
+  total_promo_clicks: number;
+  promo_clicks_today: number;
 }
 
 export const useAdminProfiles = () => {
@@ -51,7 +53,7 @@ export const useAdminStats = () => {
       const { data, error } = await supabase.rpc("admin_get_stats");
       if (error) throw error;
       const row = (data as unknown as AdminStats[])?.[0];
-      return row ?? { total_users: 0, premium_users: 0, free_users: 0, total_consultations: 0, consultations_today: 0, total_rituals: 0, total_posts: 0, total_replies: 0, active_subscribers: 0, overdue_users: 0 };
+      return row ?? { total_users: 0, premium_users: 0, free_users: 0, total_consultations: 0, consultations_today: 0, total_rituals: 0, total_posts: 0, total_replies: 0, active_subscribers: 0, overdue_users: 0, total_promo_clicks: 0, promo_clicks_today: 0 };
     },
   });
 };

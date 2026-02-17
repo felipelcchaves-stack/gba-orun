@@ -1,4 +1,4 @@
-import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare, UserCheck, AlertTriangle, DollarSign } from "lucide-react";
+import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare, UserCheck, AlertTriangle, DollarSign, MousePointerClick } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +66,8 @@ const AdminDashboard = () => {
     { label: "Gratuitos", value: stats?.free_users ?? 0, icon: UserX, color: "text-muted-foreground" },
     { label: "Consultas Hoje", value: stats?.consultations_today ?? 0, icon: CalendarDays, color: "text-primary" },
     { label: "Rituais Cadastrados", value: stats?.total_rituals ?? 0, icon: BookOpen, color: "text-primary" },
+    { label: "Cliques Promoções", value: stats?.total_promo_clicks ?? 0, icon: MousePointerClick, color: "text-accent" },
+    { label: "Cliques Hoje", value: stats?.promo_clicks_today ?? 0, icon: MousePointerClick, color: "text-primary" },
   ];
 
   const genderData = (() => {

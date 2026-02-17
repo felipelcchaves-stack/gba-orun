@@ -18,6 +18,7 @@ import Community from "./pages/Community";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import Install from "./pages/Install";
+import Promotions from "./pages/Promotions";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { initPixelWithId, initGoogleAds } from "@/lib/pixel";
@@ -47,6 +48,7 @@ const AppContent = () => {
         <Route path="/comunidade" element={<ProtectedRoute><Community /></ProtectedRoute>} />
         <Route path="/aprender" element={<ProtectedRoute><Learn /></ProtectedRoute>} />
         <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/promocoes" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/instalar" element={<ProtectedRoute><Install /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
