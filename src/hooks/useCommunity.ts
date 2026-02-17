@@ -10,6 +10,7 @@ export interface CommunityPost {
   content: string;
   created_at: string;
   author_name: string | null;
+  author_avatar: string | null;
   reply_count: number;
 }
 
@@ -20,6 +21,7 @@ export interface CommunityReply {
   content: string;
   created_at: string;
   author_name: string | null;
+  author_avatar: string | null;
 }
 
 export const usePosts = () => {
@@ -49,14 +51,17 @@ export const usePosts = () => {
 
       const userIds = [...new Set((posts || []).map((p: any) => p.user_id))];
       let profileMap: Record<string, string> = {};
+      let avatarMap: Record<string, string | null> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("user_id, display_name")
+          .select("user_id, display_name, avatar_url")
           .in("user_id", userIds);
+        
         if (profiles) {
           for (const p of profiles) {
             profileMap[p.user_id] = p.display_name || "Anônimo";
+            avatarMap[p.user_id] = (p as any).avatar_url || null;
           }
         }
       }
@@ -79,6 +84,7 @@ export const usePosts = () => {
       return (posts || []).map((p: any) => ({
         ...p,
         author_name: profileMap[p.user_id] || "Anônimo",
+        author_avatar: avatarMap[p.user_id] || null,
         reply_count: replyCounts[p.id] || 0,
       }));
     },
@@ -114,14 +120,17 @@ export const useReplies = (postId: string | null) => {
 
       const userIds = [...new Set((data || []).map((r: any) => r.user_id))];
       let profileMap: Record<string, string> = {};
+      let avatarMap: Record<string, string | null> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("user_id, display_name")
+          .select("user_id, display_name, avatar_url")
           .in("user_id", userIds);
+        
         if (profiles) {
           for (const p of profiles) {
             profileMap[p.user_id] = p.display_name || "Anônimo";
+            avatarMap[p.user_id] = (p as any).avatar_url || null;
           }
         }
       }
@@ -129,6 +138,7 @@ export const useReplies = (postId: string | null) => {
       return (data || []).map((r: any) => ({
         ...r,
         author_name: profileMap[r.user_id] || "Anônimo",
+        author_avatar: avatarMap[r.user_id] || null,
       }));
     },
   });

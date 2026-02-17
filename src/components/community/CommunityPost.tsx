@@ -4,7 +4,7 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MessageCircle, Trash2 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import CommunityReplyList from "./CommunityReplyList";
 
 interface Props {
@@ -20,6 +20,7 @@ const CommunityPost = ({ post }: Props) => {
     <div className="bg-card rounded-2xl shadow-card p-4">
       <div className="flex gap-3">
         <Avatar className="h-9 w-9">
+          {post.author_avatar && <AvatarImage src={post.author_avatar} alt={post.author_name || ""} />}
           <AvatarFallback className="text-sm bg-primary/10 text-primary font-semibold">
             {(post.author_name || "A")[0].toUpperCase()}
           </AvatarFallback>

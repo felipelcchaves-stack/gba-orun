@@ -4,7 +4,7 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Trash2, Send } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -33,6 +33,7 @@ const CommunityReplyList = ({ postId }: Props) => {
         replies.map((r: CommunityReply) => (
           <div key={r.id} className="flex gap-2 pl-2">
             <Avatar className="h-6 w-6 mt-0.5">
+              {r.author_avatar && <AvatarImage src={r.author_avatar} alt={r.author_name || ""} />}
               <AvatarFallback className="text-[10px] bg-muted">
                 {(r.author_name || "A")[0].toUpperCase()}
               </AvatarFallback>
