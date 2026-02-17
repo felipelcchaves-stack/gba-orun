@@ -1,45 +1,67 @@
 
+# Melhorar modal de ritual: imagem e espacamento
 
-# Preservar quebras de linha nos rituais e tornar modais responsivos
+## Problema
 
-## Problema 1: Quebras de linha ignoradas
+1. O modal de ritual nao mostra a imagem vinculada ao ritual, enquanto a pagina completa (`RitualReader`) exibe um header com imagem redonda + titulo + categoria. O modal deveria ter esse mesmo visual.
 
-O conteudo dos rituais e salvo com quebras de linha (`\n`), mas o ReactMarkdown trata `\n` simples como espaco (comportamento padrao do Markdown). Resultado: todo o texto aparece corrido em um unico bloco.
+2. O espacamento entre linhas esta excessivo. Cada linha curta (como "Iba Olodumare") vira um paragrafo com `mb-4` (16px de margem inferior) e `leading-8` (32px de altura de linha), criando muito espaco vazio. Alem disso, ha uma regra `.prose-ritual p` duplicada no CSS (linhas 199 e 200), onde a primeira aplica `text-lg leading-8` e a segunda sobrescreve com `text-base leading-7`, gerando inconsistencia.
 
-**Solucao:** Adicionar a prop `breaks` do ReactMarkdown em todos os locais que renderizam conteudo de rituais. Essa prop faz com que `\n` simples se torne `<br>`, respeitando as quebras de linha originais. Tambem garantir que o CSS `prose-ritual` inclua `white-space: pre-line` no paragrafo para maior seguranca.
+## Solucao
 
-## Problema 2: Modais nao responsivos
+### 1. Adicionar imagem no header do modal
 
-Os modais de ritual (tanto no `FlowStepRenderer` quanto no `RitualHelpButton`) usam `max-w-lg` fixo sem ajustes para telas pequenas. Em celulares, o modal pode cortar conteudo ou ficar apertado.
+Nos modais de ritual (`LinkedRitualButton` no FlowStepRenderer e `RitualHelpButton`), adicionar um mini-header igual ao da pagina `RitualReader`: imagem redonda do ritual ao lado do titulo e categoria.
 
-**Solucao:** Ajustar as classes dos `DialogContent` para incluir margens laterais em mobile (`mx-4`), altura maxima segura (`max-h-[85vh]`), e padding adequado. Usar `w-[calc(100vw-2rem)]` em mobile com `sm:max-w-lg` para desktop.
+```text
++------------------------------+
+| [img] Titulo do Ritual       |
+|        Categoria   Premium   |
++------------------------------+
+| Audio player (se houver)     |
+| Conteudo markdown...         |
++------------------------------+
+```
+
+### 2. Reduzir espacamento no prose-ritual
+
+Ajustar a classe `.prose-ritual p` para usar espacamento mais compacto:
+- Remover a regra duplicada (linha 199)
+- Mudar `mb-4` para `mb-2` (8px em vez de 16px)
+- Mudar `leading-7` para `leading-6` (24px em vez de 28px)
+- Manter `white-space: pre-line` para respeitar quebras de linha
+- Tambem usar `text-sm` para conteudo dentro de modais ficar mais compacto
 
 ## Arquivos modificados
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/pages/RitualReader.tsx` | Adicionar prop `breaks` no ReactMarkdown (linha 109) |
-| `src/components/oracle/FlowStepRenderer.tsx` | No `LinkedRitualButton`: adicionar `breaks` no ReactMarkdown (linha 102), trocar `prose prose-sm` por `prose-ritual`, e tornar o `DialogContent` responsivo |
-| `src/components/RitualHelpButton.tsx` | Adicionar `breaks` no ReactMarkdown, trocar `prose prose-sm` por `prose-ritual`, e tornar o `DialogContent` responsivo |
-| `src/index.css` | Na classe `.prose-ritual p`, adicionar `white-space: pre-line` como seguranca extra |
+| `src/components/oracle/FlowStepRenderer.tsx` | No `LinkedRitualButton`, substituir o `DialogHeader` simples por um mini-header com imagem redonda + titulo + categoria, usando `ritual.image_url` |
+| `src/components/RitualHelpButton.tsx` | Mesmo ajuste: adicionar imagem do ritual no header do modal |
+| `src/index.css` | Remover a regra `.prose-ritual p` duplicada (linha 199). Ajustar a restante para `mb-2 text-sm leading-6` com `white-space: pre-line` |
 
 ## Detalhe tecnico
 
-**ReactMarkdown com breaks:**
+**Header do modal (ambos componentes):**
 ```tsx
-<ReactMarkdown breaks>{ritual.content_full}</ReactMarkdown>
+<DialogHeader>
+  <div className="flex items-center gap-3">
+    <img
+      src={ritual.image_url || ritualPlaceholder}
+      alt={ritual.title}
+      className="w-12 h-12 rounded-full object-cover shrink-0"
+    />
+    <div>
+      <DialogTitle className="font-display">{ritual.title}</DialogTitle>
+      <span className="text-xs text-muted-foreground capitalize">{ritual.category}</span>
+    </div>
+  </div>
+</DialogHeader>
 ```
-A prop `breaks` converte `\n` em `<br>`, preservando as quebras de linha do autor.
 
-**DialogContent responsivo:**
-```tsx
-<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-4 sm:p-6">
-```
-Isso garante que em mobile o modal tenha margem lateral de 1rem de cada lado, e em desktop mantenha a largura maxima de `lg`.
-
-**CSS prose-ritual (seguranca extra):**
+**CSS corrigido:**
 ```css
-.prose-ritual p { @apply mb-4 text-base leading-7; color: hsl(var(--muted-foreground)); white-space: pre-line; }
+.prose-ritual p { @apply mb-2 text-sm leading-6; color: hsl(var(--muted-foreground)); white-space: pre-line; }
 ```
-O `white-space: pre-line` preserva as quebras de linha mesmo fora do ReactMarkdown.
 
+Isso reduz o espaco entre linhas pela metade e deixa o texto mais compacto, agradavel para leitura tanto na pagina completa quanto no modal.
