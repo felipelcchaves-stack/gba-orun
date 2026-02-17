@@ -1,137 +1,140 @@
 
-# Painel Completo de Gestao de Usuarios no Admin
+# Sistema de Avaliacoes com Depoimentos na Landing Page
 
-## Problema Atual
+## Resumo
 
-Hoje a tela de Usuarios no admin so mostra a listagem com filtros e um botao de travar/liberar acesso. Para adicionar um usuario manualmente, foi preciso criar uma edge function temporaria, executar e deletar -- um processo tecnico e inseguro. Nao existe importacao em massa de usuarios nem edicao de dados do perfil pelo admin.
+Criar um sistema onde usuarios com experiencia suficiente no app sao convidados a deixar uma avaliacao (estrelas + texto obrigatorio). Avaliacoes de 5 estrelas aparecem automaticamente na landing page, substituindo os depoimentos fictícios atuais. O convite so aparece uma vez e apenas quando o usuario atinge um nivel minimo de engajamento.
 
-## O que sera implementado
+## Gatilho para Exibir a Avaliacao
 
-### 1. Adicionar Usuario Manualmente (Formulario)
+O convite aparece quando o usuario atinge **200 XP** (equivalente a nivel 3). Isso garante que ele ja usou o oraculo algumas vezes, leu rituais e tem experiencia real com o app. O modal aparece uma unica vez -- se o usuario fechar sem avaliar, nao aparece novamente (para nao irritar). Se avaliar, fica registrado.
 
-Um formulario no topo da pagina de Usuarios com campos:
-- Email (obrigatorio)
-- Senha (obrigatorio, minimo 6 caracteres)
-- Nome de exibicao (opcional)
-- Marcar como Premium (checkbox)
-- Marcar como Admin (checkbox)
+## Nova Tabela no Banco de Dados
 
-Ao salvar, uma edge function segura cria o usuario no sistema de autenticacao, o perfil e opcionalmente a role de admin -- tudo numa unica chamada.
+**Tabela `user_reviews`:**
+- `id` (uuid, chave primaria)
+- `user_id` (uuid, obrigatorio)
+- `display_name` (text, obrigatorio -- preenchido automaticamente com o nome do perfil)
+- `rating` (integer, 1 a 5, obrigatorio)
+- `review_text` (text, obrigatorio, minimo 20 caracteres)
+- `created_at` (timestamp)
+- `approved` (boolean, default true -- para moderacao futura se necessario)
 
-### 2. Importacao de Usuarios em Massa (JSON)
+**Politicas RLS:**
+- SELECT publico (para a landing page poder ler)
+- INSERT apenas para o proprio usuario (auth.uid() = user_id)
+- UPDATE/DELETE bloqueados para usuarios comuns
+- ALL para admins
 
-Similar ao importador de rituais que ja existe, mas para usuarios. O admin cola um JSON com uma lista de usuarios:
+## Componentes Novos
+
+### 1. Modal de Avaliacao (`ReviewModal.tsx`)
+- Aparece automaticamente quando XP >= 200 e o usuario ainda nao avaliou
+- Mostra o nome do usuario ja preenchido (vindo do perfil)
+- 5 estrelas clicaveis (obrigatorio selecionar)
+- Campo de texto obrigatorio (minimo 20 caracteres)
+- Botoes "Enviar" e "Agora nao" (fechar sem avaliar marca como dismissed)
+- Validacao com feedback visual
+
+### 2. Hook `useReviewPrompt.ts`
+- Verifica se o usuario tem XP >= 200
+- Verifica se ja existe uma review ou se ja foi dismissado
+- Controla a exibicao do modal (usa localStorage para o dismiss)
+
+### 3. Hook `usePublicReviews.ts`
+- Busca avaliacoes de 5 estrelas aprovadas do banco
+- Usado na landing page
+- Limite de 15 avaliacoes, ordenadas por data (mais recentes primeiro)
+
+## Alteracoes em Arquivos Existentes
+
+### `src/pages/Oferta.tsx`
+- Remove o array `testimonials` hardcoded
+- Busca avaliacoes reais do banco via `usePublicReviews`
+- Se houver menos de 4 avaliacoes reais, complementa com os depoimentos ficticios atuais como fallback
+- Quando houver 15+ avaliacoes de 5 estrelas, mostra apenas as reais
+
+### `src/pages/Home.tsx`
+- Importa e renderiza o `ReviewModal` (aparece por cima do conteudo)
+
+## Fluxo do Usuario
 
 ```text
-[
-  { "email": "aluno1@email.com", "password": "Senha123", "display_name": "Maria", "is_premium": true },
-  { "email": "aluno2@email.com", "password": "Senha456", "display_name": "Joao" }
-]
+Usuario usa o app normalmente
+        |
+  Atinge 200 XP (nivel 3)
+        |
+  Proxima vez que abre a Home
+        |
+  Modal aparece: "Como voce avalia o Gba-Orun?"
+        |
+  +------------------+------------------+
+  |                                     |
+  Avalia (estrelas + texto)        Fecha sem avaliar
+  |                                     |
+  Salva no banco                  Marca dismissed
+  |                                  (nao aparece mais)
+  Se 5 estrelas ->
+  aparece na landing page
 ```
-
-A edge function processa cada usuario, criando conta + perfil, e retorna um relatorio de sucesso/falha por email.
-
-### 3. Acoes Expandidas por Usuario
-
-Alem do botao de travar/liberar, cada usuario tera:
-- Botao de editar (abre modal com nome, genero, religiao, dia de cuidado, status da assinatura, data de expiracao)
-- Botao de excluir (com confirmacao dupla)
-- Botao de tornar/remover admin
-
-### 4. Edge Function: admin-manage-users
-
-Uma unica edge function que recebe acoes diferentes:
-- `create_single`: cria um usuario
-- `create_bulk`: cria varios usuarios de uma vez
-- `delete_user`: remove usuario do sistema de autenticacao
-- `toggle_admin`: adiciona ou remove role de admin
-
-Essa funcao valida que quem esta chamando e admin antes de executar qualquer acao.
-
-## Alteracoes por arquivo
-
-| Arquivo | Acao |
-|---|---|
-| `supabase/functions/admin-manage-users/index.ts` | Nova edge function para criar, importar em massa, excluir e gerenciar roles |
-| `supabase/config.toml` | Registrar a nova edge function com verify_jwt = false |
-| `src/components/admin/AdminUsers.tsx` | Reescrever com formulario de criacao, importador JSON, acoes expandidas e modal de edicao |
-| `src/hooks/useAdminData.ts` | Sem alteracao (ja tem o que precisa) |
 
 ## Detalhes Tecnicos
 
-### Edge Function: admin-manage-users
+### Migracao SQL
 
-Responsabilidades:
+Cria a tabela `user_reviews` com:
+- Constraint unique em `user_id` (cada usuario avalia uma vez)
+- RLS com SELECT publico, INSERT para owner, ALL para admin
+- Indice em `rating` para filtrar 5 estrelas rapidamente
 
-**create_single / create_bulk:**
-- Usa `supabase.auth.admin.createUser()` com `email_confirm: true`
-- Cria registro em `profiles` com `display_name`, `is_premium`, `subscription_status`
-- Se marcado como admin, insere em `user_roles`
-- Para bulk, processa em loop e retorna relatorio: `{ success: [...], failed: [...] }`
+### ReviewModal.tsx
 
-**delete_user:**
-- Usa `supabase.auth.admin.deleteUser()` para remover da autenticacao
-- Os registros em `profiles`, `user_roles`, etc. sao removidos automaticamente pelo `ON DELETE CASCADE`
+- Usa Dialog do Radix (ja instalado)
+- Estrelas interativas com hover effect
+- Textarea com contador de caracteres e validacao
+- Nome do usuario preenchido automaticamente e nao editavel
+- Toast de sucesso ao enviar
 
-**toggle_admin:**
-- Verifica se ja tem role admin: se sim, remove; se nao, insere
-
-**Seguranca:**
-- Extrai o token JWT do header Authorization
-- Verifica se o usuario que esta chamando tem role admin usando `has_role()`
-- Usa `SUPABASE_SERVICE_ROLE_KEY` apenas para operacoes de auth admin
-
-### AdminUsers.tsx - Novo Layout
-
-A pagina tera 3 secoes visiveis:
-
-1. **Barra de acoes**: Botao "Adicionar Usuario" e "Importar em Massa" no topo
-2. **Formulario colapsavel**: Abre ao clicar em "Adicionar Usuario" com os campos listados acima
-3. **Importador colapsavel**: Abre ao clicar em "Importar em Massa" com textarea para JSON
-4. **Tabela de usuarios**: A tabela existente com colunas extras de acoes
-
-Cada linha da tabela tera um menu de acoes (dropdown) com:
-- Editar perfil
-- Liberar/Travar premium
-- Tornar/Remover admin
-- Excluir usuario
-
-### Modal de Edicao
-
-Ao clicar em "Editar", abre um Dialog com:
-- Nome de exibicao
-- Genero (select)
-- Religiao (select)
-- Dia de cuidado (select com dias da semana)
-- Status da assinatura (select: free, active, overdue, cancelled)
-- Data de expiracao (input date)
-- Salvamento direto na tabela profiles via Supabase client
-
-## Fluxo de Uso
+### useReviewPrompt.ts
 
 ```text
-Admin abre painel > Usuarios
-         |
-    +---------+---------+
-    |         |         |
-  Adicionar  Importar  Tabela
-  manual     em massa  existente
-    |         |         |
-  Preenche   Cola JSON  Ve lista
-  formulario            com acoes
-    |         |         |
-  Edge fn    Edge fn   Editar/Excluir/
-  cria 1     cria N    Toggle Admin
-  usuario    usuarios
-    |         |         |
-  Tabela atualiza automaticamente
+Logica:
+1. user_stats.xp_total >= 200?
+2. Ja existe review desse user_id no banco?
+3. localStorage tem "review_dismissed"?
+Se (1) e nao (2) e nao (3) -> mostrar modal
 ```
+
+### usePublicReviews.ts
+
+```text
+SELECT * FROM user_reviews
+WHERE rating = 5 AND approved = true
+ORDER BY created_at DESC
+LIMIT 15
+```
+
+### Oferta.tsx - Logica de exibicao
+
+```text
+Se reviews reais >= 15 -> mostra so as reais
+Se reviews reais >= 4 -> mostra as reais
+Se reviews reais < 4 -> complementa com ficticios ate ter 4
+```
+
+## Painel Admin
+
+A tabela de reviews sera acessivel no admin existente para que o administrador possa:
+- Ver todas as avaliacoes (todas as notas)
+- Aprovar/reprovar avaliacoes (campo `approved`)
+- Excluir avaliacoes impróprias
+
+Isso sera adicionado como uma nova aba ou secao dentro do admin.
 
 ## Resultado Esperado
 
-1. O admin pode criar qualquer usuario direto pelo painel, sem precisar de intervencao tecnica
-2. Pode importar dezenas/centenas de usuarios de uma vez colando um JSON
-3. Pode editar dados de qualquer usuario (nome, genero, religiao, assinatura)
-4. Pode promover ou rebaixar admins
-5. Pode excluir usuarios que nao deveriam estar no sistema
-6. Todas as acoes sao protegidas -- so admins autenticados podem executar
+1. Usuarios engajados sao convidados a avaliar de forma nao intrusiva
+2. Avaliacoes reais de 5 estrelas aparecem automaticamente na landing page
+3. Os depoimentos ficticios sao gradualmente substituidos por reais
+4. O admin tem controle total sobre quais avaliacoes aparecem
+5. O convite aparece apenas uma vez, respeitando a experiencia do usuario
