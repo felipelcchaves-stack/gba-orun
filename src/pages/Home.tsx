@@ -6,6 +6,8 @@ import { useRituals } from "@/hooks/useRituals";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { getCategoryLabel } from "@/lib/categories";
 import SpiritualCareCard from "@/components/home/SpiritualCareCard";
+import SpiritualEnergyDashboard from "@/components/home/SpiritualEnergyDashboard";
+import SpiritualEvolutionChart from "@/components/home/SpiritualEvolutionChart";
 
 import heroBanner from "@/assets/hero-banner.jpg";
 import obiOracle from "@/assets/obi-oracle.jpg";
@@ -72,6 +74,16 @@ const HomePage = () => {
           <SpiritualCareCard />
         </div>
       </div>
+
+      {/* Spiritual Energy Dashboard */}
+      {user && (
+        <div className="px-6 mb-5">
+          <div className="max-w-lg mx-auto space-y-4">
+            <SpiritualEnergyDashboard />
+            <SpiritualEvolutionChart />
+          </div>
+        </div>
+      )}
 
       {/* Quick access */}
       <div className="px-6 mt-5 mb-6">
