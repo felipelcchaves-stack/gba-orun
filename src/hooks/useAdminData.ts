@@ -18,6 +18,21 @@ export interface AdminProfile {
   subscription_started_at: string | null;
   subscription_expires_at: string | null;
   guru_subscription_id: string | null;
+  onboarding_completed: boolean | null;
+  knows_obi: boolean | null;
+  knows_ebo: boolean | null;
+  knows_ori: boolean | null;
+  knows_iyami: boolean | null;
+  knows_egbe_orun: boolean | null;
+}
+
+export interface KnowledgeStats {
+  total_onboarded: number;
+  not_knows_obi: number;
+  not_knows_ebo: number;
+  not_knows_ori: number;
+  not_knows_iyami: number;
+  not_knows_egbe_orun: number;
 }
 
 export interface AdminStats {
@@ -54,6 +69,18 @@ export const useAdminStats = () => {
       if (error) throw error;
       const row = (data as unknown as AdminStats[])?.[0];
       return row ?? { total_users: 0, premium_users: 0, free_users: 0, total_consultations: 0, consultations_today: 0, total_rituals: 0, total_posts: 0, total_replies: 0, active_subscribers: 0, overdue_users: 0, total_promo_clicks: 0, promo_clicks_today: 0 };
+    },
+  });
+};
+
+export const useAdminKnowledgeStats = () => {
+  return useQuery({
+    queryKey: ["admin-knowledge-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_get_knowledge_stats" as any);
+      if (error) throw error;
+      const row = (data as unknown as KnowledgeStats[])?.[0];
+      return row ?? { total_onboarded: 0, not_knows_obi: 0, not_knows_ebo: 0, not_knows_ori: 0, not_knows_iyami: 0, not_knows_egbe_orun: 0 };
     },
   });
 };

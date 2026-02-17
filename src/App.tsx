@@ -8,6 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Home from "./pages/Home";
 import Oracle from "./pages/Oracle";
+import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import Rituals from "./pages/Rituals";
 import RitualReader from "./pages/RitualReader";
 import Journey from "./pages/Journey";
@@ -40,6 +41,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/oferta" element={<Oferta />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/onboarding" element={<ProtectedRoute skipOnboardingCheck><OnboardingWizard /></ProtectedRoute>} />
         <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/oraculo" element={<ProtectedRoute><Oracle /></ProtectedRoute>} />
         <Route path="/rituais" element={<ProtectedRoute><Rituals /></ProtectedRoute>} />

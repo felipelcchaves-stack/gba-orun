@@ -356,6 +356,7 @@ export type Database = {
           guru_subscription_id: string | null
           id: string
           is_premium: boolean
+          onboarding_completed: boolean
           religion: string | null
           subscription_expires_at: string | null
           subscription_plan_id: string | null
@@ -374,6 +375,7 @@ export type Database = {
           guru_subscription_id?: string | null
           id?: string
           is_premium?: boolean
+          onboarding_completed?: boolean
           religion?: string | null
           subscription_expires_at?: string | null
           subscription_plan_id?: string | null
@@ -392,6 +394,7 @@ export type Database = {
           guru_subscription_id?: string | null
           id?: string
           is_premium?: boolean
+          onboarding_completed?: boolean
           religion?: string | null
           subscription_expires_at?: string | null
           subscription_plan_id?: string | null
@@ -614,6 +617,45 @@ export type Database = {
           },
         ]
       }
+      user_knowledge: {
+        Row: {
+          created_at: string
+          id: string
+          knows_ebo: boolean
+          knows_egbe_orun: boolean
+          knows_iyami: boolean
+          knows_obi: boolean
+          knows_ori: boolean
+          onboarding_completed: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          knows_ebo?: boolean
+          knows_egbe_orun?: boolean
+          knows_iyami?: boolean
+          knows_obi?: boolean
+          knows_ori?: boolean
+          onboarding_completed?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          knows_ebo?: boolean
+          knows_egbe_orun?: boolean
+          knows_iyami?: boolean
+          knows_obi?: boolean
+          knows_ori?: boolean
+          onboarding_completed?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -670,6 +712,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_knowledge_stats: {
+        Args: never
+        Returns: {
+          not_knows_ebo: number
+          not_knows_egbe_orun: number
+          not_knows_iyami: number
+          not_knows_obi: number
+          not_knows_ori: number
+          total_onboarded: number
+        }[]
+      }
       admin_get_stats: {
         Args: never
         Returns: {
@@ -700,6 +753,12 @@ export type Database = {
           guru_subscription_id: string
           id: string
           is_premium: boolean
+          knows_ebo: boolean
+          knows_egbe_orun: boolean
+          knows_iyami: boolean
+          knows_obi: boolean
+          knows_ori: boolean
+          onboarding_completed: boolean
           religion: string
           subscription_expires_at: string
           subscription_plan_id: string
