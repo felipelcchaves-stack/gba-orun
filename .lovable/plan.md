@@ -1,89 +1,121 @@
 
+# Plano: Dados Demograficos, Moderacao da Comunidade e Lembrete de Cuidado
 
-# Plano: Landing Page de Alta Conversao com SEO Completo
-
-A pagina `/oferta` atual e funcional mas basica. Vamos transforma-la numa landing page profissional de alta conversao, com todos os elementos que vendem e SEO otimizado para busca organica e anuncios.
-
----
-
-## O que muda para o usuario
-
-- Pagina visualmente impactante, com secoes estrategicas que guiam o visitante ate a compra
-- SEO completo para aparecer no Google e render previews bonitos em redes sociais
-- BottomNav escondido na `/oferta` (pagina limpa, sem distracao)
-- Pixel do Meta e Google Ads carregados automaticamente via configuracoes do admin
-- Estrutura JSON-LD para rich snippets no Google
-- Pagina 100% responsiva (mobile-first, ja que a maioria do trafego vem de celular)
+Tres melhorias que dao ao admin mais controle e ao usuario uma experiencia mais personalizada.
 
 ---
 
-## Estrutura da Landing Page (secoes em ordem)
+## Parte 1: Novos Campos no Perfil (Genero e Idade)
 
-1. **Top bar** -- Faixa fina com urgencia ("Oferta por tempo limitado" ou similar, configuravel)
-2. **Hero** -- Headline grande + sub-headline + preco com ancora + botao CTA pulsante
-3. **VSL** -- Video embed (YouTube/Vimeo) ou placeholder
-4. **Dor/Problema** -- "Voce ja passou por isso?" com 3-4 dores do publico
-5. **Solucao** -- "Apresentamos o Gba-Orun" com descricao do produto
-6. **Beneficios** -- 6 cards com icones (o que esta incluso)
-7. **Como funciona** -- 3 passos simples (1. Acesse, 2. Consulte, 3. Pratique)
-8. **Depoimentos** -- Cards com foto placeholder, nome e texto
-9. **FAQ** -- Accordion com perguntas frequentes
-10. **Garantia** -- Selo de garantia de 7 dias
-11. **CTA Final** -- Preco, ancora e botao grande
-12. **Footer** -- Mini footer com links legais
+### O que muda para o usuario
+- No formulario de perfil, dois novos campos aparecem: **Genero** (select) e **Data de Nascimento** (input date)
+- Esses dados sao opcionais e privados
+
+### Detalhes Tecnicos
+
+**1. Migration SQL**
+- Adicionar duas colunas na tabela `profiles`:
+  - `gender TEXT NULL` (valores: masculino, feminino, nao_binario, prefiro_nao_dizer)
+  - `birth_date DATE NULL` (para calcular idade)
+- Atualizar a funcao `admin_list_profiles` para retornar os novos campos
+- Atualizar a funcao `admin_get_stats` para incluir contagens por genero e por religiao
+
+**2. ProfileForm.tsx**
+- Adicionar campo Select para Genero (Masculino, Feminino, Nao-binario, Prefiro nao dizer)
+- Adicionar campo Input type="date" para Data de Nascimento
+- Incluir os novos campos no `handleSave`
+
+**3. useProfile.ts**
+- Adicionar `gender` e `birth_date` ao tipo `Profile`
+
+**4. useAdminData.ts**
+- Adicionar `gender` e `birth_date` ao tipo `AdminProfile`
+- Expandir `AdminStats` com `gender_counts` e `religion_counts`
 
 ---
 
-## Detalhes Tecnicos
+## Parte 2: Dashboard Admin com Demograficos
 
-### 1. Reescrever `src/pages/Oferta.tsx`
+### O que muda para o admin
+- KPI cards mostram distribuicao por genero e por religiao
+- Tabela de usuarios mostra colunas de Genero e Idade
+- Graficos simples de pizza/barra com Recharts mostrando a distribuicao
 
-Landing page completa com todas as secoes acima. Dados dinamicos vindos do `useAppSettings`:
-- headline, price, originalPrice, ctaText, checkoutUrl, videoUrl
-- Novos campos: `offer_urgency_text`, `offer_guarantee_days`
+### Detalhes Tecnicos
 
-Sem BottomNav: a pagina sera detectada no `BottomNav.tsx` e escondida (assim como ja acontece com `/admin`).
+**1. AdminDashboard.tsx**
+- Adicionar secao "Demografia" com dois graficos Recharts (PieChart):
+  - Distribuicao por Genero
+  - Distribuicao por Religiao
+- Calcular os dados a partir da lista de profiles (ja carregada)
 
-### 2. Novas settings no admin (`AdminOfferSettings.tsx`)
+**2. AdminUsers.tsx**
+- Adicionar colunas "Genero" e "Idade" na tabela
+- Calcular idade a partir de `birth_date`
+- Adicionar filtro por genero e religiao alem do filtro premium/gratuito existente
 
-Adicionar campos:
-- `offer_urgency_text` (texto da barra de urgencia)
-- `offer_guarantee_days` (dias de garantia, default "7")
+---
 
-Migration para inserir essas chaves na tabela `app_settings`.
+## Parte 3: Moderacao da Comunidade no Admin
 
-### 3. SEO e meta tags dinamicas
+### O que muda para o admin
+- Nova secao "Comunidade" no sidebar do Admin
+- Lista todos os posts com autor, conteudo (preview), data e botao de excluir
+- Ao clicar num post, expande as respostas com opcao de excluir individualmente
+- Contagem total de posts e respostas como KPI no dashboard
 
-Como e uma SPA (React), as meta tags do `index.html` sao globais. Para a landing page especificamente:
-- Atualizar as meta tags globais no `index.html` para serem mais orientadas a venda (ja que a oferta e a principal porta de entrada de trafego pago)
-- Adicionar `<script type="application/ld+json">` com schema `Product` diretamente no componente Oferta (injetado via `useEffect` + `document.head`)
-- Adicionar tag `<link rel="canonical">` dinamica para `/oferta`
+### Detalhes Tecnicos
 
-### 4. Pixels automaticos (`src/lib/pixel.ts` e `App.tsx`)
+**1. AdminSidebar.tsx**
+- Adicionar item "Comunidade" com icone `MessageCircle` ao menu
+- Expandir o tipo `AdminSection` para incluir `"community"`
 
-- No `AppContent`, apos carregar settings, chamar `initPixelWithId(settings.meta_pixel_id)` automaticamente
-- Adicionar suporte ao Google Ads gtag: nova funcao `initGoogleAds(id)` que injeta o script do gtag
-- Disparar `PageView` no Meta Pixel ao entrar na oferta
-- Disparar `InitiateCheckout` ao clicar no CTA (ja existe)
+**2. Novo componente: AdminCommunity.tsx**
+- Busca todos os posts via `supabase.from("community_posts").select("*")` (admin tem permissao de SELECT via RLS)
+- Busca profiles para mapear nomes e avatares
+- Lista com: avatar, nome do autor, preview do conteudo (100 chars), data, botao de excluir
+- Ao clicar num post, carrega e exibe as respostas com botao de excluir
+- Usa os hooks `useDeletePost` e `useDeleteReply` do `useCommunity.ts`
 
-### 5. Esconder BottomNav na oferta (`BottomNav.tsx`)
+**3. Admin.tsx**
+- Adicionar a secao "community" ao render condicional
 
-Adicionar `/oferta` a lista de rotas que escondem o nav (como ja acontece com `/admin`).
+**4. AdminDashboard.tsx**
+- Adicionar KPI "Posts na Comunidade" e "Respostas" ao dashboard
+- Buscar contagens via query simples (ou adicionar ao `admin_get_stats`)
 
-### 6. `robots.txt` e `sitemap`
+**5. Migration SQL**
+- Atualizar `admin_get_stats` para incluir `total_posts` e `total_replies`
 
-- Atualizar `robots.txt` para incluir referencia ao sitemap
-- Criar `public/sitemap.xml` estatico com as rotas publicas (`/`, `/oferta`, `/auth`)
+---
 
-### 7. Componentes auxiliares (dentro de Oferta.tsx)
+## Parte 4: Lembrete de Cuidado Espiritual
 
-Tudo inline no arquivo para simplicidade:
-- `UrgencyBar` -- barra fixa no topo
-- `PainSection` -- secao de dores
-- `HowItWorks` -- 3 passos
-- `FAQSection` -- accordion com Radix
-- `GuaranteeSection` -- selo de garantia
-- `LandingFooter` -- footer minimalista
+### O que muda para o usuario
+- O card "Dia de Cuidado Espiritual" ja existe na Home e funciona bem (`SpiritualCareCard`)
+- Nova funcionalidade: **Notificacao do navegador (Web Push simplificado)**
+  - Ao definir o dia de cuidado no perfil, o app pede permissao para notificacoes
+  - No dia do cuidado, ao abrir o app, aparece um banner toast destacado lembrando
+  - Se o navegador suportar, usa a Notification API para enviar um lembrete local
+
+### Detalhes Tecnicos
+
+**1. Hook: useCareReminder.ts**
+- Verifica se hoje e o dia de cuidado do usuario
+- Se for, dispara um toast especial na primeira visita do dia
+- Verifica se o navegador suporta `Notification` API e pede permissao
+- Usa `localStorage` para controlar se ja notificou hoje (evitar spam)
+
+**2. ProfileForm.tsx**
+- Ao salvar o dia de cuidado, solicitar permissao de notificacao do navegador (`Notification.requestPermission()`)
+- Mostrar feedback visual se o usuario aceitou ou nao
+
+**3. App.tsx ou Home.tsx**
+- Integrar o hook `useCareReminder` para disparar o lembrete ao entrar no app
+
+**4. Service Worker (PWA)**
+- O service worker do PWA ja esta configurado via `vite-plugin-pwa`
+- Adicionar logica de periodic sync ou notification scheduling se suportado pelo navegador (fallback: notificacao local ao abrir o app)
 
 ---
 
@@ -91,13 +123,15 @@ Tudo inline no arquivo para simplicidade:
 
 | Arquivo | Acao |
 |---|---|
-| Migration SQL | Inserir novas chaves `offer_urgency_text` e `offer_guarantee_days` em `app_settings` |
-| `src/pages/Oferta.tsx` | Reescrever com todas as secoes de alta conversao |
-| `src/components/admin/AdminOfferSettings.tsx` | Adicionar novos campos |
-| `src/components/BottomNav.tsx` | Esconder nav na rota `/oferta` |
-| `src/lib/pixel.ts` | Adicionar `initGoogleAds()` |
-| `src/App.tsx` | Inicializar pixels automaticamente com settings |
-| `index.html` | Refinar meta tags para SEO de venda |
-| `public/robots.txt` | Adicionar referencia ao sitemap |
-| `public/sitemap.xml` | Criar sitemap estatico |
-
+| Migration SQL | Colunas `gender` e `birth_date` em profiles; atualizar `admin_list_profiles` e `admin_get_stats` |
+| `src/hooks/useProfile.ts` | Adicionar novos campos ao tipo |
+| `src/components/profile/ProfileForm.tsx` | Campos de genero e data de nascimento |
+| `src/hooks/useAdminData.ts` | Expandir tipos com novos campos |
+| `src/components/admin/AdminDashboard.tsx` | Graficos demograficos + KPIs comunidade |
+| `src/components/admin/AdminUsers.tsx` | Colunas genero e idade + filtros |
+| `src/components/admin/AdminSidebar.tsx` | Novo item "Comunidade" |
+| `src/components/admin/AdminCommunity.tsx` | Criar: lista de posts e moderacao |
+| `src/pages/Admin.tsx` | Adicionar secao community |
+| `src/hooks/useCareReminder.ts` | Criar: logica de lembrete local |
+| `src/components/profile/ProfileForm.tsx` | Pedir permissao de notificacao |
+| `src/pages/Home.tsx` ou `src/App.tsx` | Integrar lembrete |
