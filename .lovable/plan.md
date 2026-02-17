@@ -1,135 +1,123 @@
 
-# Plano: Dashboard Espiritual com Graficos de Cuidado + Fonte Poppins
+
+# Plano: Combobox para Vincular Rituais/Rezas as Tarefas da Jornada
 
 ## Resumo
 
-Adicionar ao Dashboard do usuario (Home) um painel inteligente que analisa as 4 energias espirituais (Ebo, Ori, Iyami, Egbe Orun) com base no historico de consultas e tarefas, mostrando graficos de evolucao e sugestoes de cuidado. Alem disso, trocar toda a tipografia do app de Playfair Display/Inter para **Poppins**.
+Adicionar um **combobox de busca** (searchable dropdown) em dois locais estrategicos:
+
+1. **Tela de Diagnostico (StepDiagnosis)**: Depois que o fluxo do oraculo gera as tarefas, o usuario (ou voce como admin) pode clicar em cada tarefa e vincular um ritual/reza especifico antes de iniciar a jornada.
+
+2. **Formulario de Ritual no Admin (AdminRitualForm)**: Ao cadastrar ou editar um ritual, voce pode indicar para quais **tipos de tarefa** aquele ritual serve (ex: "Este ritual e uma Oracao de Ori" ou "Este e um Ebo de Limpeza"), facilitando a vinculacao automatica.
 
 ---
 
-## Parte 1: Logica de Analise Espiritual
+## O Que Vai Mudar
 
-### Fonte de Dados
+### 1. Combobox nas Tarefas do Diagnostico
 
-Os dados ja existem nas tabelas:
-- **`user_journey`**: cada consulta ao oraculo salva `oracle_result` e `context` (JSON com `eboApurado`, `oriPrecisa`, `iyamiQuer`, `egbeOrunQuer`)
-- **`journey_tasks`**: cada tarefa tem `task_type` (ebo, ibori, oracao_ori, iyami, egbe_orun, cantiga, etc.) e `completed` (boolean)
+Na tela final do oraculo (StepDiagnosis), cada tarefa listada tera:
+- Um **botao/icone** de link ao lado
+- Ao clicar, abre um **combobox com busca** mostrando todos os rituais cadastrados, filtrados pela categoria da tarefa
+- O usuario seleciona o ritual desejado e ele fica vinculado aquela tarefa
+- Quando salvar a jornada, o `ritual_id` ja vai junto
 
-### Calculo do "Nivel de Atencao" por Energia
+Isso permite que voce (como lider espiritual) escolha exatamente qual reza ou ritual a pessoa deve fazer para cada tarefa.
 
-Para cada uma das 4 energias, o sistema vai calcular um score de 0-100 baseado em:
+### 2. Campo de Tipo de Tarefa no Admin
 
-| Energia | task_types relevantes | Logica de score |
-|---|---|---|
-| **Ebo** | `ebo` | Quantas vezes foi pedido vs quantas vezes foi completado |
-| **Ori** | `ibori`, `oracao_ori` | Idem - demanda vs conclusao |
-| **Iyami** | `iyami`, `oracao_iyami` | Idem |
-| **Egbe Orun** | `egbe_orun` | Idem |
+No formulario de criacao/edicao de rituais (`AdminRitualForm`), adicionar:
+- Um campo **"Tipos de Tarefa Associados"** com multi-select (chips)
+- Opcoes: Ebo, Ibori, Oracao de Ori, Oracao de Iyami, Cantiga, Egbe Orun, Oracao da Manha, Oracao da Noite, Oriki
+- Isso sera salvo no campo `trigger_oracle` (ou em um novo campo `task_types`) para que o sistema saiba sugerir automaticamente esse ritual quando a tarefa correspondente aparecer
 
-**Formula**: `score = (total_pedidos - total_completados) / total_pedidos * 100`
-- Score alto = muitas demandas nao atendidas = precisa de atencao urgente
-- Score baixo = usuario esta em dia = energia equilibrada
-- Se nao tem dados, score = 50 (neutro)
+### 3. Sugestao Automatica Inteligente
 
-### Sugestoes Automaticas por Nivel
-
-| Energia | Score > 70 (Critico) | Score 40-70 (Atencao) | Score < 40 (Equilibrado) |
-|---|---|---|---|
-| **Ebo** | "Consulte um Awo (Babalawo/Iyanifa)" | "Faca um Ebo de manutencao" | "Ebo em dia!" |
-| **Ori** | "Precisa de um Igba Ori (assento de Ori)" | "Faca um Ibori de fortalecimento" | "Ori fortalecido!" |
-| **Iyami** | "Considere fazer Imule (pacto com as Maes)" | "Faca oracoes para Iyami" | "Iyami em paz!" |
-| **Egbe Orun** | "Considere fazer Idi Egbe (1a mao de Egbe)" | "Oferenda ao Egbe Orun" | "Egbe Orun satisfeito!" |
-
----
-
-## Parte 2: Componentes Visuais
-
-### Novo Componente: `SpiritualEnergyDashboard`
-
-Card na Home que mostra:
-
-1. **4 barras de progresso radiais** (ou barras horizontais) coloridas, uma por energia
-2. **Indicador de urgencia** com cores: verde (equilibrado), amarelo (atencao), vermelho (critico)
-3. **Sugestao principal**: a energia que mais precisa de cuidado, com a recomendacao adequada
-4. **Botao de acao**: link para o Oraculo ou para o Ritual sugerido
-
-### Novo Componente: `SpiritualEvolutionChart`
-
-Grafico de linha (usando Recharts, ja instalado) mostrando a evolucao das 4 energias ao longo do tempo:
-- Eixo X: ultimas 4 semanas (ou ultimos 30 dias agrupados por semana)
-- Eixo Y: score de atencao (0-100)
-- 4 linhas coloridas, uma por energia
-- Tooltip com detalhes
-
-### Hook: `useSpiritualAnalysis`
-
-Hook que:
-1. Busca todas as `journey_tasks` do usuario
-2. Agrupa por `task_type` nas 4 categorias
-3. Calcula os scores
-4. Gera as sugestoes
-5. Prepara os dados para o grafico de evolucao (agrupando por semana)
-
----
-
-## Parte 3: Troca de Fonte para Poppins
-
-### Mudancas
-
-1. **`index.html`** ou **`src/index.css`**: trocar o import do Google Fonts de `Playfair Display + Inter` para `Poppins` (com pesos 300, 400, 500, 600, 700)
-2. **`tailwind.config.ts`**: alterar `fontFamily.display` e `fontFamily.body` ambas para `["Poppins", "sans-serif"]`
-3. **`src/index.css`**: atualizar as regras de `h1-h6` e `.font-display` / `.font-body` para usar Poppins
-4. Nao precisa mexer nos componentes individualmente - as classes `font-display` e `font-body` ja sao usadas em todo o app e vao herdar a nova fonte
+Quando o oraculo gerar as tarefas, o sistema vai:
+1. Buscar rituais que tenham a mesma `category` da tarefa
+2. Pre-selecionar o ritual mais relevante no combobox
+3. Permitir que o usuario troque se quiser
 
 ---
 
 ## Detalhes Tecnicos
 
+### Componente: `RitualCombobox`
+
+Novo componente reutilizavel usando os componentes `Popover` + `Command` (cmdk) ja existentes no projeto:
+
+```text
++------------------------------------------+
+| [icone busca] Buscar ritual...           |
++------------------------------------------+
+| Ebo                                      |
+|   - Ebo de Limpeza Espiritual           |
+|   - Ebo de Prosperidade                  |
+| Ibori                                    |
+|   - Ibori de Protecao do Ori            |
+| Oracoes                                  |
+|   - Oracao da Manha - Oduduwa           |
++------------------------------------------+
+```
+
+- Agrupado por categoria
+- Filtravel por texto
+- Mostra badge "Premium" quando aplicavel
+- Pode receber prop `filterCategory` para mostrar so rituais de uma categoria
+
 ### Arquivos a Criar
 
 | Arquivo | Descricao |
 |---|---|
-| `src/hooks/useSpiritualAnalysis.ts` | Hook que calcula scores e sugestoes das 4 energias |
-| `src/components/home/SpiritualEnergyDashboard.tsx` | Card com barras de progresso e sugestao principal |
-| `src/components/home/SpiritualEvolutionChart.tsx` | Grafico de linha com evolucao semanal das energias |
+| `src/components/RitualCombobox.tsx` | Combobox reutilizavel com busca para selecionar rituais |
 
 ### Arquivos a Modificar
 
 | Arquivo | Mudanca |
 |---|---|
-| `src/index.css` | Trocar import de fontes para Poppins |
-| `tailwind.config.ts` | Atualizar fontFamily para Poppins |
-| `src/pages/Home.tsx` | Adicionar os novos componentes de energia abaixo do SpiritualCareCard |
+| `src/components/oracle/StepDiagnosis.tsx` | Adicionar estado local para `ritual_id` por tarefa + RitualCombobox em cada item da lista |
+| `src/components/admin/AdminRitualForm.tsx` | Adicionar campo multi-select de "Tipos de Tarefa Associados" usando chips |
+| `src/components/journey/JourneyEntryCard.tsx` | Adicionar botao para trocar ritual vinculado em tarefas ja salvas (opcional, segunda fase) |
 
-### Cores das Energias
+### Mudancas no StepDiagnosis
 
-| Energia | Cor | Referencia |
-|---|---|---|
-| Ebo | Marrom Terra (`hsl(var(--earth))`) | Cor do earth token |
-| Ori | Amarelo Ouro (`hsl(var(--gold))`) | Cor do gold token |
-| Iyami | Roxo (`#800080`) | Cor de alerta Iyami do briefing |
-| Egbe Orun | Verde Folha (`hsl(var(--leaf))`) | Cor do leaf token |
-
-### Estrutura do Grafico (Recharts)
-
-Usando `LineChart` com `ResponsiveContainer` do Recharts (ja instalado). Dados no formato:
+O componente vai manter um estado local:
 
 ```text
-[
-  { semana: "Sem 1", ebo: 80, ori: 40, iyami: 20, egbe: 60 },
-  { semana: "Sem 2", ebo: 60, ori: 50, iyami: 30, egbe: 50 },
-  ...
-]
+taskOverrides: Map<number, string | null>  // indice da tarefa -> ritual_id escolhido
 ```
 
-### Integracao na Home
+Cada tarefa na lista tera o combobox ao lado. Ao salvar, o `ritual_id` do override sera usado no lugar da busca automatica atual.
 
-O novo dashboard de energias aparecera logo abaixo do `SpiritualCareCard` existente, somente para usuarios logados. Tera dois blocos:
-1. O card com as 4 barras e a sugestao principal
-2. O grafico de evolucao (colapsavel, inicia fechado para nao sobrecarregar a tela)
+### Mudancas no AdminRitualForm
+
+Adicionar um campo com checkboxes ou chips para marcar quais `task_type` esse ritual atende. Isso sera salvo como texto separado por virgula no campo `trigger_oracle` (reaproveitando o campo existente) com prefixo `task:`, por exemplo: `task:ebo,task:ibori`.
+
+Alternativamente, podemos usar a `category` ja existente que ja faz esse match naturalmente -- nesse caso, basta garantir que o admin escolha a categoria correta e o sistema ja vincula automaticamente.
+
+### Fluxo Completo
+
+```text
+1. Admin cadastra ritual "Oracao do Ori para Fortalecimento"
+   -> Categoria: "oracao_ori"
+
+2. Usuario faz consulta ao oraculo
+   -> Resultado: Ori precisa de cuidado
+   -> Tarefa gerada: "Oracao de Ori" (category: oracao_ori)
+
+3. Na tela de diagnostico:
+   -> Tarefa "Oracao de Ori" aparece com combobox
+   -> Combobox pre-seleciona "Oracao do Ori para Fortalecimento" (match por category)
+   -> Usuario pode trocar para outro ritual se quiser
+
+4. Ao clicar "Iniciar Rotina":
+   -> Tarefa salva com ritual_id vinculado
+   -> Na Jornada, usuario clica na tarefa -> abre o ritual para leitura
+```
 
 ---
 
 ## Resultado Esperado
 
-O usuario logado vera na Home, alem do card de cuidado semanal, um painel mostrando o estado das 4 energias espirituais com barras coloridas, indicadores visuais de urgencia, sugestoes personalizadas (como "Consulte um Awo" ou "Faca Idi Egbe"), e um grafico de evolucao ao longo das semanas. Toda a tipografia do app sera Poppins, mantendo a hierarquia de tamanhos e pesos existente.
+Na tela de diagnostico do oraculo, cada tarefa tera um combobox que permite vincular um ritual/reza especifico. O sistema sugere automaticamente com base na categoria, mas o usuario pode trocar. No admin, ao cadastrar rituais, a categoria ja define para quais tarefas ele sera sugerido. Isso permite que o lider espiritual pre-configure os rituais e o usuario tenha autonomia para escolher suas proprias rezas.
+
