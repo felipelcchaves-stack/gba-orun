@@ -5,8 +5,9 @@ import { trackInitiateCheckout } from "@/lib/pixel";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { usePublicReviews } from "@/hooks/usePublicReviews";
 
-const testimonials = [
+const FALLBACK_TESTIMONIALS = [
   { name: "Maria S.", text: "Nunca mais tive dúvida no Obi. Esse app mudou minha vida espiritual!", stars: 5 },
   { name: "João P.", text: "As receitas de Ebo são completas e fiéis à tradição. Recomendo demais!", stars: 5 },
   { name: "Ana L.", text: "Uso todos os dias no meu terreiro. Os Orikis são perfeitos.", stars: 5 },
@@ -37,7 +38,18 @@ const PERIOD_LABELS: Record<string, string> = {
 const OfertaPage = () => {
   const { data: settings } = useAppSettings();
   const { data: plans } = useActivePlans();
+  const { data: realReviews } = usePublicReviews();
   const navigate = useNavigate();
+
+  // Build testimonials: real 5-star reviews first, fallback if < 4
+  const realTestimonials = (realReviews || []).map(r => ({
+    name: r.display_name,
+    text: r.review_text,
+    stars: r.rating,
+  }));
+  const testimonials = realTestimonials.length >= 4
+    ? realTestimonials
+    : [...realTestimonials, ...FALLBACK_TESTIMONIALS.slice(0, Math.max(0, 4 - realTestimonials.length))];
 
   const mainPlan = plans?.[0];
   const checkoutUrl = mainPlan?.guru_checkout_url || settings?.checkout_url || "#";
