@@ -5,6 +5,7 @@ import { useUserStats } from "@/hooks/useUserStats";
 import { useRituals } from "@/hooks/useRituals";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { getCategoryLabel } from "@/lib/categories";
+import SpiritualCareCard from "@/components/home/SpiritualCareCard";
 
 import heroBanner from "@/assets/hero-banner.jpg";
 import obiOracle from "@/assets/obi-oracle.jpg";
@@ -62,6 +63,13 @@ const HomePage = () => {
               <span className="text-xs font-semibold">{stats.streak_days}</span>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Spiritual Care Card */}
+      <div className="px-6 mb-5">
+        <div className="max-w-lg mx-auto">
+          <SpiritualCareCard />
         </div>
       </div>
 

@@ -210,27 +210,33 @@ export type Database = {
       }
       profiles: {
         Row: {
+          care_day: number | null
           created_at: string
           display_name: string | null
           guru_id: string | null
           id: string
           is_premium: boolean
+          religion: string | null
           user_id: string
         }
         Insert: {
+          care_day?: number | null
           created_at?: string
           display_name?: string | null
           guru_id?: string | null
           id?: string
           is_premium?: boolean
+          religion?: string | null
           user_id: string
         }
         Update: {
+          care_day?: number | null
           created_at?: string
           display_name?: string | null
           guru_id?: string | null
           id?: string
           is_premium?: boolean
+          religion?: string | null
           user_id?: string
         }
         Relationships: []
