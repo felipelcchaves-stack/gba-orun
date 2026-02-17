@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllGuidanceBubbles } from "@/hooks/useGuidance";
+import { useAuth } from "@/hooks/useAuth";
 import { useAppSettings, useUpdateAppSetting } from "@/hooks/useAppSettings";
 import { useProfile } from "@/hooks/useProfile";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,6 +35,7 @@ interface RowState {
 }
 
 const AdminGuidance = () => {
+  const { user } = useAuth();
   const { data: bubbles, isLoading } = useAllGuidanceBubbles();
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateAppSetting();
@@ -86,7 +88,7 @@ const AdminGuidance = () => {
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
-      const filePath = `guidance-avatar/${Date.now()}.${ext}`;
+      const filePath = `${user?.id}/guidance-avatar-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
