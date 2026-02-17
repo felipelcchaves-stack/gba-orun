@@ -35,6 +35,57 @@ export type Database = {
         }
         Relationships: []
       }
+      journey_tasks: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          id: string
+          journey_id: string
+          ritual_id: string | null
+          task_title: string
+          task_type: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          journey_id: string
+          ritual_id?: string | null
+          task_title: string
+          task_type: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          journey_id?: string
+          ritual_id?: string | null
+          task_title?: string
+          task_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_tasks_journey_id_fkey"
+            columns: ["journey_id"]
+            isOneToOne: false
+            referencedRelation: "user_journey"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journey_tasks_ritual_id_fkey"
+            columns: ["ritual_id"]
+            isOneToOne: false
+            referencedRelation: "rituals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       oracle_meanings: {
         Row: {
           action: string
@@ -150,8 +201,10 @@ export type Database = {
         Row: {
           completed: boolean
           completed_at: string | null
+          context: string | null
           created_at: string
           id: string
+          notes: string | null
           oracle_result: string
           suggested_ritual_id: string | null
           user_id: string
@@ -159,8 +212,10 @@ export type Database = {
         Insert: {
           completed?: boolean
           completed_at?: string | null
+          context?: string | null
           created_at?: string
           id?: string
+          notes?: string | null
           oracle_result: string
           suggested_ritual_id?: string | null
           user_id: string
@@ -168,8 +223,10 @@ export type Database = {
         Update: {
           completed?: boolean
           completed_at?: string | null
+          context?: string | null
           created_at?: string
           id?: string
+          notes?: string | null
           oracle_result?: string
           suggested_ritual_id?: string | null
           user_id?: string
