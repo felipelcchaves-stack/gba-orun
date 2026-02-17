@@ -20,7 +20,7 @@ const AdminOracleConfigs = () => {
 
   const startEdit = (c: OracleConfig) => {
     setEditingId(c.id);
-    setForm({ name: c.name, meaning: c.meaning, description_ire: c.description_ire, description_ibi: c.description_ibi, color_type: c.color_type });
+    setForm({ name: c.name, meaning: c.meaning, description_ire: c.description_ire, description_ibi: c.description_ibi, color_type: c.color_type, default_ire_ibi: c.default_ire_ibi || "ibi" });
   };
 
   const handleSave = async (id: string) => {
@@ -60,15 +60,28 @@ const AdminOracleConfigs = () => {
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descrição em Ibi</label>
                 <Textarea value={form.description_ibi || ""} onChange={e => setForm(f => ({ ...f, description_ibi: e.target.value }))} rows={2} />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Estilo Visual</label>
-                <select
-                  value={form.color_type || "accent"}
-                  onChange={e => setForm(f => ({ ...f, color_type: e.target.value }))}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  {COLOR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Natureza (Irê/Ibi)</label>
+                  <select
+                    value={form.default_ire_ibi || "ibi"}
+                    onChange={e => setForm(f => ({ ...f, default_ire_ibi: e.target.value }))}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="ire">Irê (Caminho positivo)</option>
+                    <option value="ibi">Ibi (Precisa de cuidado)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Estilo Visual</label>
+                  <select
+                    value={form.color_type || "accent"}
+                    onChange={e => setForm(f => ({ ...f, color_type: e.target.value }))}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    {COLOR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
               </div>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setEditingId(null)} className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted">Cancelar</button>
@@ -83,6 +96,9 @@ const AdminOracleConfigs = () => {
                 <div className="flex items-center gap-2">
                   <span className="font-display font-bold text-lg">{c.name}</span>
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{c.result_key}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${c.default_ire_ibi === 'ire' ? 'bg-primary/15 text-primary' : 'bg-destructive/15 text-destructive'}`}>
+                    {c.default_ire_ibi === 'ire' ? 'Irê' : 'Ibi'}
+                  </span>
                 </div>
                 <p className="text-sm text-muted-foreground">{c.meaning}</p>
               </div>

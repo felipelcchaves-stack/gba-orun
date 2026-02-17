@@ -10,6 +10,7 @@ export interface OracleConfig {
   description_ire: string;
   description_ibi: string;
   color_type: string;
+  default_ire_ibi: string;
   display_order: number;
 }
 

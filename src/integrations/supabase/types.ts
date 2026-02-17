@@ -207,6 +207,7 @@ export type Database = {
       oracle_configs: {
         Row: {
           color_type: string
+          default_ire_ibi: string
           description_ibi: string
           description_ire: string
           display_order: number
@@ -217,6 +218,7 @@ export type Database = {
         }
         Insert: {
           color_type?: string
+          default_ire_ibi?: string
           description_ibi?: string
           description_ire?: string
           display_order?: number
@@ -227,6 +229,7 @@ export type Database = {
         }
         Update: {
           color_type?: string
+          default_ire_ibi?: string
           description_ibi?: string
           description_ire?: string
           display_order?: number
