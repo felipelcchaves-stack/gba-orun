@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllGuidanceBubbles } from "@/hooks/useGuidance";
 import { useAppSettings, useUpdateAppSetting } from "@/hooks/useAppSettings";
+import { useProfile } from "@/hooks/useProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Save, Eye, EyeOff } from "lucide-react";
@@ -36,6 +37,7 @@ const AdminGuidance = () => {
   const { data: bubbles, isLoading } = useAllGuidanceBubbles();
   const { data: settings } = useAppSettings();
   const updateSetting = useUpdateAppSetting();
+  const { data: profile } = useProfile();
   const qc = useQueryClient();
 
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -114,6 +116,11 @@ const AdminGuidance = () => {
         <Label className="font-bold">Avatar do Orientador (URL da imagem)</Label>
         <div className="flex gap-2">
           <Input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." className="flex-1" />
+          {profile?.avatar_url && (
+            <button onClick={() => setAvatarUrl(profile.avatar_url!)} className="bg-primary/10 text-primary px-3 py-2 rounded-xl text-sm font-semibold shrink-0">
+              Usar minha foto
+            </button>
+          )}
           <button onClick={saveAvatar} className="bg-secondary text-secondary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shrink-0">
             <Save className="h-4 w-4" /> Salvar
           </button>
