@@ -42,6 +42,8 @@ export const useCreateRitual = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (ritual: Omit<Ritual, "id" | "created_at" | "updated_at">) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { data, error } = await supabase.from("rituals").insert(ritual).select().single();
       if (error) throw error;
       return data;
@@ -54,6 +56,8 @@ export const useUpdateRitual = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...ritual }: Partial<Ritual> & { id: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { data, error } = await supabase.from("rituals").update(ritual).eq("id", id).select().single();
       if (error) throw error;
       return data;
@@ -66,6 +70,8 @@ export const useDeleteRitual = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const { error } = await supabase.from("rituals").delete().eq("id", id);
       if (error) throw error;
     },
