@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { useJourneyTasks } from "@/hooks/useJourney";
 import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
 import { Progress } from "@/components/ui/progress";
+import GuidanceBubble from "@/components/GuidanceBubble";
 
 const JourneyEntryCard = ({
   entry,
@@ -65,6 +66,8 @@ const JourneyEntryCard = ({
           <Progress value={progress} className="h-2" />
         </div>
       )}
+
+      <GuidanceBubble pointKey="journey_task_card" className="mb-4" />
 
       {morningTasks.length > 0 && <TaskSection icon={Sunrise} label="Manhã" tasks={morningTasks} onComplete={onCompleteTask} />}
       {otherTasks.length > 0 && <TaskSection icon={Compass} label="Rituais & Oferendas" tasks={otherTasks} onComplete={onCompleteTask} />}

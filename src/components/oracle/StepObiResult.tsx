@@ -2,6 +2,7 @@ import { ChevronRight, AlertTriangle, Shield, CheckCircle, Sparkles, Heart, Load
 import obiOracle from "@/assets/obi-oracle.jpg";
 import { useOracleConfigs, type OracleConfig } from "@/hooks/useOracleConfig";
 import RitualHelpButton from "@/components/RitualHelpButton";
+import GuidanceBubble from "@/components/GuidanceBubble";
 
 // Fallback hardcoded values
 export const OBI_RESULTS_FALLBACK = [
@@ -69,9 +70,11 @@ const StepObiResult = ({ onSelect }: Props) => {
       </div>
       <p className="text-center text-muted-foreground text-sm mb-8">Qual foi o resultado do seu Obi hoje?</p>
 
-      <div className="w-24 h-24 mx-auto mb-8 rounded-full overflow-hidden shadow-soft">
+      <div className="w-24 h-24 mx-auto mb-6 rounded-full overflow-hidden shadow-soft">
         <img src={obiOracle} alt="Obi" className="w-full h-full object-cover" />
       </div>
+
+      <GuidanceBubble pointKey="oracle_step_obi" className="mb-6" />
 
       <div className="space-y-3">
         {configs.map(r => {

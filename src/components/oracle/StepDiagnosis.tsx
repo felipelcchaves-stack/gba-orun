@@ -11,6 +11,7 @@ import { getObiIcon, getObiColor, OBI_RESULTS_FALLBACK } from "./StepObiResult";
 import { Progress } from "@/components/ui/progress";
 import RitualCombobox from "@/components/RitualCombobox";
 import RitualHelpButton from "@/components/RitualHelpButton";
+import GuidanceBubble from "@/components/GuidanceBubble";
 
 export interface WizardState {
   intention: "cuidado_semanal" | "orientacao";
@@ -203,7 +204,9 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
         <h2 className="text-2xl font-display font-bold text-center flex-1">Diagnóstico Completo</h2>
         <RitualHelpButton point="oracle_step_diagnosis" />
       </div>
-      <p className="text-center text-muted-foreground text-sm mb-6">Resumo da sua consulta ao Obi</p>
+      <p className="text-center text-muted-foreground text-sm mb-4">Resumo da sua consulta ao Obi</p>
+
+      <GuidanceBubble pointKey="oracle_step_diagnosis" className="mb-6" />
 
       {/* Summary card */}
       <div className="bg-card rounded-2xl p-5 shadow-card mb-6 animate-fade-up">

@@ -2,7 +2,7 @@ import { LayoutDashboard, Users, BookOpen, Sparkles, Settings, FileJson, LogOut,
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
-export type AdminSection = "dashboard" | "users" | "plans" | "rituals" | "oracle" | "links" | "community" | "promotions" | "settings" | "import";
+export type AdminSection = "dashboard" | "users" | "plans" | "rituals" | "oracle" | "links" | "community" | "promotions" | "guidance" | "settings" | "import";
 
 interface AdminSidebarProps {
   active: AdminSection;
@@ -19,6 +19,7 @@ const NAV_ITEMS: { key: AdminSection; label: string; icon: React.ElementType }[]
   { key: "links", label: "Links de Ajuda", icon: Link2 },
   { key: "community", label: "Comunidade", icon: MessageCircle },
   { key: "promotions", label: "Promoções", icon: Tag },
+  { key: "guidance", label: "Orientações", icon: MessageCircle },
   { key: "settings", label: "Configurações", icon: Settings },
   { key: "import", label: "Importar", icon: FileJson },
 ];

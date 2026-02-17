@@ -1,5 +1,6 @@
 import { CalendarDays, Compass } from "lucide-react";
 import { useStepText } from "@/hooks/useOracleConfig";
+import GuidanceBubble from "@/components/GuidanceBubble";
 
 type Intention = "cuidado_semanal" | "orientacao";
 
@@ -32,7 +33,9 @@ const StepIntention = ({ onSelect }: Props) => {
   return (
     <div className="animate-fade-up">
       <h2 className="text-2xl font-display font-bold text-center mb-1">{title}</h2>
-      <p className="text-center text-muted-foreground text-sm mb-8">{description}</p>
+      <p className="text-center text-muted-foreground text-sm mb-4">{description}</p>
+
+      <GuidanceBubble pointKey="oracle_step_intention" className="mb-6" />
 
       <div className="space-y-4">
         {OPTIONS.map((opt) => {
