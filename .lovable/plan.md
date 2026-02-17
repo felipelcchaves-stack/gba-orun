@@ -1,55 +1,56 @@
 
-# Corrigir banner do modal e avatar do orientador
 
-## Problema 1: Modal sem banner
+# Compactar modal de ritual e remover link
 
-O ritual "Iba" (e provavelmente outros) tem `image_url: null` no banco de dados. O codigo atual so renderiza o banner quando `ritual.image_url` existe. Quando nao existe, mostra apenas o titulo simples sem nenhum visual.
+## Problema
 
-**Solucao:** Usar `getCategoryImage(ritual.category)` como imagem de fallback. Assim, mesmo sem imagem propria, o modal sempre tera um banner baseado na categoria do ritual (Ebó, Ibori, Orikis, Geral, etc.).
+1. O espacamento entre paragrafos ainda esta grande. Cada `<p>` gerado pelo Markdown tem `mb-2` (8px) e `leading-6` (24px), mas como textos rituais tem muitas linhas curtas, o espaco acumulado impede ver o conteudo todo sem rolar muito.
 
-## Problema 2: Avatar do orientador
+2. O link "Ver ritual completo" tira o aluno da jornada do oraculo. Deve ser removido.
 
-O componente `InlineGuidance` busca `settings?.guidance_avatar_url` da tabela `app_settings`, mas essa chave nao existe no banco. Resultado: mostra o emoji 🧙 em vez de uma foto.
+## Solucao
 
-**Solucao:** Inserir a chave `guidance_avatar_url` na tabela `app_settings` (valor vazio por padrao). O admin pode configurar a URL da imagem do orientador no painel. Enquanto isso, o fallback emoji continua funcionando.
+### 1. Reduzir espacamento no CSS
+
+Ajustar `.prose-ritual` para ser mais compacto:
+- Trocar `leading-relaxed` por `leading-snug` no container
+- Trocar `mb-2 leading-6` por `mb-1 leading-5` nos paragrafos
+- Reduzir margens dos headings (`mb-3` para `mb-2`, `mb-4` para `mb-2`)
+- Reduzir espaco das listas (`mb-4` para `mb-2`)
+
+### 2. Remover link "Ver ritual completo"
+
+Remover o bloco `<Link to={/rituais/...}>` dos dois componentes: `FlowStepRenderer.tsx` e `RitualHelpButton.tsx`. Tambem remover os imports de `Link` e `ExternalLink` que ficam sem uso.
+
+### 3. Reduzir padding interno
+
+Trocar `p-4 sm:p-6` por `p-3 sm:p-4` na area de conteudo dos modais para ganhar mais espaco.
 
 ## Arquivos modificados
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/components/oracle/FlowStepRenderer.tsx` | No `LinkedRitualButton`, importar `getCategoryImage` e usar como fallback: `const imageUrl = ritual.image_url \|\| getCategoryImage(ritual.category)`. Remover a condicional `ritual.image_url &&` do banner, mostrando-o sempre. |
-| `src/components/RitualHelpButton.tsx` | Mesmo ajuste: importar `getCategoryImage`, definir `imageUrl` com fallback, e mostrar o banner sempre. |
-| Migracao SQL | Inserir `guidance_avatar_url` na tabela `app_settings` para que o admin possa configurar. |
+| `src/index.css` | Ajustar `.prose-ritual` container para `leading-snug`. Paragrafos para `mb-1 text-sm leading-5`. Headings e listas com margens menores. |
+| `src/components/oracle/FlowStepRenderer.tsx` | Remover link "Ver ritual completo" (linhas 115-122). Remover imports de `Link` e `ExternalLink`. Reduzir padding para `p-3 sm:p-4`. |
+| `src/components/RitualHelpButton.tsx` | Remover link "Ver ritual completo" (linhas 63-70). Remover imports de `Link` e `ExternalLink`. Reduzir padding para `p-3 sm:p-4`. |
 
 ## Detalhe tecnico
 
-**Fallback de imagem nos modais (ambos componentes):**
+**CSS atualizado (index.css):**
 
-```tsx
-import { getCategoryImage } from "@/lib/categories";
-
-// Dentro do componente:
-const imageUrl = ritual.image_url || getCategoryImage(ritual.category);
-
-// No JSX - remover a condicional, sempre mostrar o banner:
-<div className="relative w-full h-36 sm:h-44 rounded-t-2xl overflow-hidden">
-  <img src={imageUrl} alt={ritual.title} className="w-full h-full object-cover" />
-  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-  <div className="absolute bottom-3 left-4 right-4">
-    <h2 className="text-white font-display font-bold text-lg leading-tight">{ritual.title}</h2>
-    <span className="text-white/70 text-xs capitalize">{ritual.category}</span>
-  </div>
-</div>
-
-// Remover o bloco de fallback que mostra DialogHeader sem imagem
+```css
+.prose-ritual {
+  @apply leading-snug;
+}
+.prose-ritual h1 { @apply text-2xl font-display font-bold mb-2; color: hsl(var(--foreground)); }
+.prose-ritual h2 { @apply text-xl font-display font-bold mb-2; color: hsl(var(--foreground)); }
+.prose-ritual h3 { @apply text-lg font-display font-bold mb-1; }
+.prose-ritual p { @apply mb-1 text-sm leading-5; color: hsl(var(--muted-foreground)); white-space: pre-line; }
+.prose-ritual ul { @apply list-disc pl-6 mb-2 space-y-0.5; }
+.prose-ritual ol { @apply list-decimal pl-6 mb-2 space-y-0.5; }
 ```
 
-**Migracao SQL para avatar do orientador:**
+**Remocao do link (ambos componentes):**
 
-```sql
-INSERT INTO app_settings (key, value)
-VALUES ('guidance_avatar_url', '')
-ON CONFLICT (key) DO NOTHING;
-```
+Deletar o bloco inteiro do `<Link>` e os imports nao utilizados (`Link` de react-router-dom, `ExternalLink` de lucide-react).
 
-Depois de implementar, o admin pode acessar as configuracoes do app e colar a URL de uma foto para o avatar do orientador. Enquanto nao configurar, o emoji 🧙 continua aparecendo normalmente.
