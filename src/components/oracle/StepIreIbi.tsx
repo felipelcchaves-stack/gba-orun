@@ -200,9 +200,11 @@ const StepIreIbi = ({ obiResult, defaultCategory, onSelect }: Props) => {
         </h2>
         <RitualHelpButton point="oracle_step_ire_ibi" />
       </div>
-      <p className="text-center text-muted-foreground text-sm mb-6">
+      <p className="text-center text-muted-foreground text-sm mb-4">
         Selecione o tipo específico que veio para <strong>{resultName}</strong>
       </p>
+
+      <GuidanceBubble pointKey={isIre ? "oracle_step_ire_subtype" : "oracle_step_ibi_subtype"} className="mb-6" />
 
       {isLoading ? (
         <div className="flex justify-center py-12">

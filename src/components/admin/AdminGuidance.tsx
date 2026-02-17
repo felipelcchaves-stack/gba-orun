@@ -14,6 +14,8 @@ const GUIDANCE_POINTS = [
   { key: "oracle_step_intention", label: "Oráculo: Intenção" },
   { key: "oracle_step_obi", label: "Oráculo: Resultado do Obi" },
   
+  { key: "oracle_step_ire_subtype", label: "Oráculo: Subtipos de Irê" },
+  { key: "oracle_step_ibi_subtype", label: "Oráculo: Subtipos de Ibi" },
   { key: "oracle_step_ebo", label: "Oráculo: Ebó" },
   { key: "oracle_step_ori", label: "Oráculo: Ori" },
   { key: "oracle_step_iyami", label: "Oráculo: Iyami / Egbe" },
