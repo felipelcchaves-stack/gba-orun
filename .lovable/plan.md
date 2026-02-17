@@ -1,48 +1,40 @@
 
-# Corrigir imagem do orientador que nao aparece
+
+# Corrigir upload direto de imagem do orientador
 
 ## Problema
 
-A imagem do orientador aparece como icone (emoji) porque a configuracao `guidance_avatar_url` nao existe na tabela `app_settings`. Isso aconteceu porque o admin tentou salvar antes, mas foi deslogado pelo bug de autenticacao (ja corrigido).
+O erro "new row violates row-level security policy" acontece porque a politica de seguranca do bucket `avatars` exige que o caminho do arquivo comece com o ID do usuario logado (ex: `user-id/arquivo.png`). O codigo atual usa `guidance-avatar/timestamp.png`, que nao bate com a regra.
 
 ## Solucao
 
-O problema principal ja foi resolvido (bug de logout). Agora so falta garantir que o fluxo funcione sem friccao. Vou fazer duas coisas:
-
-### 1. Salvar automaticamente ao clicar "Usar minha foto"
-
-Atualmente o admin precisa clicar "Usar minha foto" e depois "Salvar" separadamente. Vou unificar: ao clicar "Usar minha foto", o sistema ja salva direto no banco, eliminando um passo e evitando esquecimento.
-
-### 2. Tratar caso de URL nula no GuidanceBubble
-
-O componente `GuidanceBubble` ja trata o caso sem avatar (mostra emoji), mas vou garantir que mesmo com string vazia funcione bem.
+Alterar o caminho do upload para incluir o ID do usuario, respeitando a politica existente.
 
 ## Detalhe tecnico
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/components/admin/AdminGuidance.tsx` | No onClick de "Usar minha foto": alem de preencher o campo, chamar `saveAvatar()` automaticamente com a URL do perfil. Mostrar toast de sucesso. |
+| `src/components/admin/AdminGuidance.tsx` | Corrigir o `filePath` no `handleFileUpload` para usar `${user.id}/guidance-avatar-${Date.now()}.${ext}` em vez de `guidance-avatar/${Date.now()}.${ext}`. Importar `useAuth` para obter o `user.id`. |
 
 ### Codigo
 
-No botao "Usar minha foto", alterar o onClick para:
+No `handleFileUpload`, mudar de:
 
 ```tsx
-onClick={async () => {
-  if (profile?.avatar_url) {
-    setAvatarUrl(profile.avatar_url);
-    // Salvar direto no banco
-    const { error } = await supabase
-      .from("app_settings")
-      .upsert({ key: "guidance_avatar_url", value: profile.avatar_url, updated_at: new Date().toISOString() }, { onConflict: "key" });
-    if (!error) {
-      qc.invalidateQueries({ queryKey: ["app_settings"] });
-      toast.success("Foto do orientador salva!");
-    }
-  } else {
-    toast.info("Voce ainda nao tem foto de perfil. Va em Meu Perfil para enviar uma.");
-  }
-}}
+const filePath = `guidance-avatar/${Date.now()}.${ext}`;
 ```
 
-Nenhuma alteracao de banco de dados necessaria. O `upsert` ja lida com criacao e atualizacao.
+Para:
+
+```tsx
+const filePath = `${user.id}/guidance-avatar-${Date.now()}.${ext}`;
+```
+
+E adicionar no topo do componente:
+
+```tsx
+const { user } = useAuth();
+```
+
+Isso garante que o caminho respeita a politica RLS do bucket e o upload funciona sem erro.
+
