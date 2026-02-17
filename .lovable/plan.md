@@ -1,64 +1,71 @@
 
 
-# Implementar campo "Status em Ifa" (continuacao do plano aprovado)
+# Implementar campo "Status em Ifa" - Execucao completa
 
-O plano ja foi aprovado anteriormente. Aqui esta o resumo completo para execucao imediata.
+## Situacao atual
 
-## 1. Migracao SQL
+As colunas `ifa_status` NAO existem no banco de dados. Nenhuma parte do plano foi implementada ainda.
 
-Adicionar coluna `ifa_status text DEFAULT NULL` nas tabelas `user_knowledge` e `profiles`. Recriar as funcoes RPC `admin_list_profiles` e `admin_get_knowledge_stats` para incluir o novo campo e estatisticas.
+## O que sera feito
+
+### Passo 1 - Migracao SQL
+
+Adicionar coluna `ifa_status text DEFAULT NULL` nas tabelas `user_knowledge` e `profiles`. Recriar as funcoes RPC `admin_list_profiles` e `admin_get_knowledge_stats` para incluir o novo campo e estatisticas (`total_babalawo`, `total_iyanifa`, `total_omo_ifa`, `total_sem_ifa`).
+
+### Passo 2 - Hook de Onboarding (`src/hooks/useOnboarding.ts`)
+
+Adicionar `ifa_status` ao tipo `UserKnowledge` e salvar em ambas as tabelas.
+
+### Passo 3 - Wizard de Onboarding (`src/components/onboarding/OnboardingWizard.tsx`)
+
+Adicionar pergunta condicional no Step 1: "Voce tem Ifa?" com 4 opcoes:
+- Babalawo
+- Iyanifa
+- Omo Ifa (Isefa)
+- Nao tenho Ifa
+
+So aparece se religiao for `candomble`, `ifa` ou `umbanda`.
+
+### Passo 4 - Hook de Perfil (`src/hooks/useProfile.ts`)
+
+Adicionar `ifa_status` ao tipo `Profile` e ao `useUpdateProfile`.
+
+### Passo 5 - Formulario de Perfil (`src/components/profile/ProfileForm.tsx`)
+
+Adicionar Select "Status em Ifa" com as 4 opcoes, visivel quando religiao for relevante.
+
+### Passo 6 - Hook Admin (`src/hooks/useAdminData.ts`)
+
+Adicionar `ifa_status` ao `AdminProfile` e contadores ao `KnowledgeStats`.
+
+### Passo 7 - Dashboard Admin (`src/components/admin/AdminDashboard.tsx`)
+
+Adicionar grafico de pizza com distribuicao dos titulos Ifa e barra no grafico de lacunas.
+
+### Passo 8 - Tabela Admin Users (`src/components/admin/AdminUsers.tsx`)
+
+Mostrar badge com titulo Ifa e adicionar filtro.
+
+## Detalhe tecnico
+
+### SQL da migracao
 
 ```sql
 ALTER TABLE public.user_knowledge ADD COLUMN ifa_status text DEFAULT NULL;
 ALTER TABLE public.profiles ADD COLUMN ifa_status text DEFAULT NULL;
 ```
 
-Recriar `admin_list_profiles` adicionando `COALESCE(uk.ifa_status, p.ifa_status) as ifa_status` ao SELECT e ao RETURNS TABLE.
+Recriar `admin_list_profiles` adicionando:
+- `COALESCE(uk.ifa_status, p.ifa_status) as ifa_status` ao SELECT
+- `ifa_status text` ao RETURNS TABLE
 
-Recriar `admin_get_knowledge_stats` adicionando contadores:
-- `total_babalawo`
-- `total_iyanifa`
-- `total_omo_ifa`
-- `total_sem_ifa`
+Recriar `admin_get_knowledge_stats` adicionando:
+- `count(*) FILTER (WHERE ifa_status = 'babalawo') as total_babalawo`
+- `count(*) FILTER (WHERE ifa_status = 'iyanifa') as total_iyanifa`
+- `count(*) FILTER (WHERE ifa_status = 'omo_ifa') as total_omo_ifa`
+- `count(*) FILTER (WHERE ifa_status = 'nao' OR ifa_status IS NULL) as total_sem_ifa`
 
-## 2. Hook de Onboarding (`src/hooks/useOnboarding.ts`)
-
-- Adicionar `ifa_status: string | null` ao tipo `UserKnowledge`
-- Salvar `ifa_status` tanto em `user_knowledge` quanto em `profiles`
-
-## 3. Wizard de Onboarding (`src/components/onboarding/OnboardingWizard.tsx`)
-
-- Adicionar estado `ifaStatus`
-- No Step 1, mostrar pergunta condicional "Voce tem Ifa?" com 4 opcoes (Babalawo, Iyanifa, Omo Ifa/Isefa, Nao tenho Ifa) -- so aparece se religiao for `candomble`, `ifa` ou `umbanda`
-- Passar `ifa_status` ao `saveOnboarding`
-
-## 4. Hook de Perfil (`src/hooks/useProfile.ts`)
-
-- Adicionar `ifa_status: string | null` ao tipo `Profile`
-- Adicionar `ifa_status` ao `useUpdateProfile`
-
-## 5. Formulario de Perfil (`src/components/profile/ProfileForm.tsx`)
-
-- Adicionar estado `ifaStatus` e Select com as 4 opcoes
-- Visivel apenas quando religiao for `candomble`, `ifa` ou `umbanda`
-- Incluir no `handleSave`
-
-## 6. Hook Admin (`src/hooks/useAdminData.ts`)
-
-- Adicionar `ifa_status: string | null` ao `AdminProfile`
-- Adicionar `total_babalawo`, `total_iyanifa`, `total_omo_ifa`, `total_sem_ifa` ao `KnowledgeStats`
-
-## 7. Dashboard Admin (`src/components/admin/AdminDashboard.tsx`)
-
-- Adicionar grafico de pizza com distribuicao dos titulos Ifa
-- Adicionar barra "Ifa" ao grafico de lacunas de conhecimento
-
-## 8. Tabela Admin Users (`src/components/admin/AdminUsers.tsx`)
-
-- Mostrar badge com titulo Ifa na coluna de conhecimento
-- Adicionar filtro "Nao tem Ifa" no dropdown de filtros
-
-## Opcoes no formulario
+### Valores do campo
 
 | Label | Valor |
 |---|---|
@@ -67,11 +74,11 @@ Recriar `admin_get_knowledge_stats` adicionando contadores:
 | Omo Ifa (Isefa) | `omo_ifa` |
 | Nao tenho Ifa | `nao` |
 
-## Logica condicional
+### Logica condicional
 
 A pergunta so aparece quando `religion` esta em `['candomble', 'ifa', 'umbanda']`. Se mudar para outra religiao, o valor reseta para `null`.
 
-## Arquivos modificados (8 no total)
+### Arquivos modificados (8 no total)
 
 1. Migracao SQL (2 ALTER TABLE + 2 funcoes RPC)
 2. `src/hooks/useOnboarding.ts`
@@ -81,3 +88,4 @@ A pergunta so aparece quando `religion` esta em `['candomble', 'ifa', 'umbanda']
 6. `src/hooks/useAdminData.ts`
 7. `src/components/admin/AdminDashboard.tsx`
 8. `src/components/admin/AdminUsers.tsx`
+
