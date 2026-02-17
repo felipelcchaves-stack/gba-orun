@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useRituals, useCreateRitual, useUpdateRitual, useDeleteRitual, Ritual } from "@/hooks/useRituals";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Shield, Sunrise } from "lucide-react";
 import { toast } from "sonner";
 import JsonImporter from "@/components/JsonImporter";
 import AdminRitualForm from "@/components/admin/AdminRitualForm";
@@ -141,8 +141,13 @@ const AdminPage = () => {
                 {[1, 2, 3].map(i => <div key={i} className="h-20 bg-card rounded-2xl animate-pulse" />)}
               </div>
             ) : rituals && rituals.length > 0 ? (
-              <div className="space-y-3">
-                {rituals.filter(r => !filterCat || r.category === filterCat).map(r => (
+              (() => {
+                const PRAYER_CATS = ["oracao_manha", "oracao_noite", "oracao_ori", "oracao_iyami"];
+                const filtered = rituals.filter(r => !filterCat || r.category === filterCat);
+                const prayers = filtered.filter(r => PRAYER_CATS.includes(r.category));
+                const others = filtered.filter(r => !PRAYER_CATS.includes(r.category));
+
+                const renderItem = (r: Ritual) => (
                   <div key={r.id} className="bg-card rounded-2xl p-4 border border-border flex items-center justify-between">
                     <div>
                       <h3 className="font-display font-bold flex items-center gap-2">
@@ -156,8 +161,32 @@ const AdminPage = () => {
                       <button onClick={() => handleDelete(r.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+
+                return (
+                  <div className="space-y-6">
+                    {others.length > 0 && (
+                      <div className="space-y-3">
+                        <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2 border-b border-border pb-2">
+                          <Shield className="h-5 w-5 text-primary" /> Rituais ({others.length})
+                        </h2>
+                        {others.map(renderItem)}
+                      </div>
+                    )}
+                    {prayers.length > 0 && (
+                      <div className="space-y-3">
+                        <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2 border-b border-border pb-2">
+                          <Sunrise className="h-5 w-5 text-primary" /> Orações ({prayers.length})
+                        </h2>
+                        {prayers.map(renderItem)}
+                      </div>
+                    )}
+                    {filtered.length === 0 && (
+                      <p className="text-center text-muted-foreground py-12">Nenhum item encontrado.</p>
+                    )}
+                  </div>
+                );
+              })()
             ) : (
               <p className="text-center text-muted-foreground py-12">Nenhum ritual cadastrado.</p>
             )}
