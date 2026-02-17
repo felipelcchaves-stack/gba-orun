@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle, ChevronRight, Loader2, Play, Pause, BookOpen, ExternalLink } from "lucide-react";
+import { CheckCircle, ChevronRight, Loader2, Play, Pause, BookOpen } from "lucide-react";
 import { type OracleFlowNode } from "@/hooks/useOracleFlows";
 import { useOracleConfigs } from "@/hooks/useOracleConfig";
 import { useIreIbiTypes } from "@/hooks/useIreIbiTypes";
@@ -100,10 +100,10 @@ const LinkedRitualButton = ({ ritualId }: { ritualId: string }) => {
             </div>
           </div>
 
-          <div className="p-4 sm:p-6">
+          <div className="p-3 sm:p-4">
 
             {ritual.audio_url && (
-              <div className="mb-4">
+              <div className="mb-3">
                 <AudioPlayer url={ritual.audio_url} />
               </div>
             )}
@@ -111,15 +111,6 @@ const LinkedRitualButton = ({ ritualId }: { ritualId: string }) => {
             <div className="prose-ritual">
               <ReactMarkdown remarkPlugins={[remarkBreaks]}>{ritual.content_full}</ReactMarkdown>
             </div>
-
-            <Link
-              to={`/rituais/${ritual.id}`}
-              className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline"
-              onClick={() => setOpen(false)}
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Ver ritual completo
-            </Link>
           </div>
         </DialogContent>
       </Dialog>

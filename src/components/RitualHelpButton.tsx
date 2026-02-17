@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, ExternalLink } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRitualLinkForPoint } from "@/hooks/useRitualLinks";
 import { useRitual } from "@/hooks/useRituals";
@@ -7,7 +7,7 @@ import { getCategoryImage } from "@/lib/categories";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import AudioPlayer from "@/components/AudioPlayer";
-import { Link } from "react-router-dom";
+
 
 interface Props {
   point: string;
@@ -48,10 +48,10 @@ const RitualHelpButton = ({ point, className = "" }: Props) => {
             );
           })()}
 
-          <div className="p-4 sm:p-6">
+          <div className="p-3 sm:p-4">
 
             {(ritual as any).audio_url && (
-              <div className="mb-4">
+              <div className="mb-3">
                 <AudioPlayer url={(ritual as any).audio_url} />
               </div>
             )}
@@ -59,15 +59,6 @@ const RitualHelpButton = ({ point, className = "" }: Props) => {
             <div className="prose-ritual">
               <ReactMarkdown remarkPlugins={[remarkBreaks]}>{ritual.content_full}</ReactMarkdown>
             </div>
-
-            <Link
-              to={`/rituais/${ritual.id}`}
-              className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline"
-              onClick={() => setOpen(false)}
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Ver ritual completo
-            </Link>
           </div>
         </DialogContent>
       </Dialog>
