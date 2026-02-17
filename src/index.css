@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,33 +6,33 @@
 
 @layer base {
   :root {
-    --background: 30 25% 95%;
-    --foreground: 25 40% 12%;
+    --background: 30 33% 97%;
+    --foreground: 20 20% 20%;
 
-    --card: 36 30% 96%;
-    --card-foreground: 25 40% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 20% 20%;
 
-    --popover: 30 25% 95%;
-    --popover-foreground: 25 40% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 20% 20%;
 
-    --primary: 120 61% 34%;
+    --primary: 25 50% 30%;
     --primary-foreground: 40 100% 97%;
 
-    --secondary: 25 66% 31%;
+    --secondary: 25 60% 35%;
     --secondary-foreground: 40 100% 97%;
 
-    --muted: 33 20% 88%;
-    --muted-foreground: 25 20% 45%;
+    --muted: 30 15% 93%;
+    --muted-foreground: 20 10% 50%;
 
-    --accent: 45 100% 50%;
-    --accent-foreground: 25 40% 12%;
+    --accent: 45 90% 52%;
+    --accent-foreground: 20 20% 12%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 30 20% 82%;
-    --input: 30 20% 82%;
-    --ring: 120 61% 34%;
+    --border: 30 10% 92%;
+    --input: 30 10% 92%;
+    --ring: 25 50% 30%;
 
     --radius: 1rem;
 
@@ -46,44 +46,44 @@
     --sidebar-ring: 45 100% 50%;
 
     /* Custom tokens */
-    --gold: 45 100% 50%;
-    --gold-foreground: 25 40% 12%;
-    --earth: 25 66% 31%;
+    --gold: 45 90% 52%;
+    --gold-foreground: 20 20% 12%;
+    --earth: 25 60% 35%;
     --earth-foreground: 40 100% 97%;
-    --leaf: 120 61% 34%;
+    --leaf: 120 40% 38%;
     --leaf-foreground: 40 100% 97%;
-    --warm-bg: 36 40% 98%;
-    --dark-wood: 25 40% 12%;
+    --warm-bg: 30 33% 97%;
+    --dark-wood: 20 20% 20%;
   }
 
   .dark {
-    --background: 25 30% 8%;
-    --foreground: 33 30% 92%;
+    --background: 25 20% 8%;
+    --foreground: 33 20% 92%;
 
-    --card: 25 30% 12%;
-    --card-foreground: 33 30% 92%;
+    --card: 25 20% 12%;
+    --card-foreground: 33 20% 92%;
 
-    --popover: 25 30% 12%;
-    --popover-foreground: 33 30% 92%;
+    --popover: 25 20% 12%;
+    --popover-foreground: 33 20% 92%;
 
-    --primary: 120 50% 40%;
+    --primary: 25 40% 45%;
     --primary-foreground: 40 100% 97%;
 
-    --secondary: 25 50% 35%;
+    --secondary: 25 40% 40%;
     --secondary-foreground: 40 100% 97%;
 
-    --muted: 25 20% 18%;
-    --muted-foreground: 30 15% 55%;
+    --muted: 25 15% 18%;
+    --muted-foreground: 30 10% 55%;
 
-    --accent: 45 100% 50%;
-    --accent-foreground: 25 40% 12%;
+    --accent: 45 90% 52%;
+    --accent-foreground: 20 20% 12%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 25 20% 22%;
-    --input: 25 20% 22%;
-    --ring: 120 50% 40%;
+    --border: 25 15% 20%;
+    --input: 25 15% 20%;
+    --ring: 25 40% 45%;
   }
 }
 
@@ -94,10 +94,14 @@
 
   body {
     @apply bg-background text-foreground font-body;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif;
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
 }
 
@@ -106,7 +110,7 @@
     font-family: 'Playfair Display', serif;
   }
   .font-body {
-    font-family: 'Nunito', sans-serif;
+    font-family: 'Inter', sans-serif;
   }
   .text-gold {
     color: hsl(var(--gold));
@@ -130,13 +134,19 @@
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--earth)));
   }
   .gradient-gold {
-    background: linear-gradient(135deg, hsl(var(--gold)), hsl(45 80% 60%));
+    background: linear-gradient(135deg, hsl(var(--gold)), hsl(45 70% 62%));
   }
   .shadow-sacred {
-    box-shadow: 0 10px 40px -10px hsl(var(--primary) / 0.3);
+    box-shadow: 0 10px 40px -10px hsl(var(--primary) / 0.15);
   }
   .shadow-gold {
-    box-shadow: 0 8px 30px -8px hsl(var(--gold) / 0.4);
+    box-shadow: 0 8px 30px -8px hsl(var(--gold) / 0.25);
+  }
+  .shadow-soft {
+    box-shadow: 0 2px 12px 0 hsl(0 0% 0% / 0.04), 0 1px 4px 0 hsl(0 0% 0% / 0.03);
+  }
+  .shadow-card {
+    box-shadow: 0 1px 8px 0 hsl(0 0% 0% / 0.05);
   }
 }
 
@@ -159,8 +169,8 @@
 }
 
 @keyframes pulse-gold {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(45 100% 50% / 0.4); }
-  50% { box-shadow: 0 0 0 15px hsl(45 100% 50% / 0); }
+  0%, 100% { box-shadow: 0 0 0 0 hsl(45 90% 52% / 0.3); }
+  50% { box-shadow: 0 0 0 12px hsl(45 90% 52% / 0); }
 }
 
 .animate-shell-wobble {
@@ -183,25 +193,24 @@
 .prose-ritual {
   @apply leading-relaxed;
 }
-.prose-ritual h1 { @apply text-3xl font-display font-bold mb-4 text-earth; }
-.prose-ritual h2 { @apply text-2xl font-display font-semibold mb-3 text-earth; }
-.prose-ritual h3 { @apply text-xl font-display font-semibold mb-2; }
-.prose-ritual p { @apply mb-4 text-base leading-7; }
+.prose-ritual h1 { @apply text-3xl font-display font-medium mb-4; color: hsl(var(--foreground)); }
+.prose-ritual h2 { @apply text-2xl font-display font-medium mb-3; color: hsl(var(--foreground)); }
+.prose-ritual h3 { @apply text-xl font-display font-medium mb-2; }
+.prose-ritual p { @apply mb-4 text-base leading-7; color: hsl(var(--muted-foreground)); }
 .prose-ritual ul { @apply list-disc pl-6 mb-4 space-y-1; }
 .prose-ritual ol { @apply list-decimal pl-6 mb-4 space-y-1; }
 .prose-ritual blockquote {
-  @apply border-l-4 pl-4 italic my-4;
+  @apply border-l-4 pl-4 italic my-4 py-3 rounded-r-lg;
   border-color: hsl(var(--gold));
   background: hsl(var(--muted));
-  @apply py-2 rounded-r-lg;
 }
-.prose-ritual strong { @apply font-bold; }
+.prose-ritual strong { @apply font-semibold; color: hsl(var(--foreground)); }
 .prose-ritual em { @apply italic; }
-.prose-ritual hr { @apply my-6 border-border; }
+.prose-ritual hr { @apply my-8 border-border; }
 
 /* Card elevated */
 .card-elevated {
-  @apply bg-card rounded-3xl border border-border shadow-sm;
+  @apply bg-card rounded-2xl shadow-card;
 }
 
 /* Confetti animation for achievements */

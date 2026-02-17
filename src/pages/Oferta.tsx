@@ -1,4 +1,4 @@
-import { ExternalLink, CheckCircle, Star, Shield, BookOpen, Compass, Headphones, Lock } from "lucide-react";
+import { ExternalLink, CheckCircle, Star, Shield, BookOpen, Compass, Headphones } from "lucide-react";
 import { trackInitiateCheckout } from "@/lib/pixel";
 import { useAppSettings } from "@/hooks/useAppSettings";
 
@@ -24,56 +24,55 @@ const OfertaPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-secondary via-earth to-secondary text-secondary-foreground py-16 px-5">
+      <section className="py-20 px-6">
         <div className="max-w-2xl mx-auto text-center">
-          <span className="inline-block bg-secondary-foreground/20 text-sm font-semibold px-4 py-1 rounded-full mb-4">
-            🔮 Acesso Vitalício
+          <span className="inline-block bg-foreground text-background text-xs font-medium px-4 py-1.5 rounded-full mb-6">
+            Acesso Vitalício
           </span>
-          <h1 className="text-4xl md:text-5xl font-display font-bold mb-4 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-display font-medium mb-5 leading-tight">
             {headline}
           </h1>
-          <p className="text-lg opacity-90 mb-8 max-w-xl mx-auto">
+          <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed">
             O guia digital mais completo de Obi, Rituais e Orikis da tradição Yorubá. Tudo na palma da sua mão.
           </p>
-          {/* Price */}
-          <div className="mb-6">
-            <span className="text-lg line-through opacity-60">R$ {originalPrice}</span>
-            <span className="text-4xl font-display font-bold ml-3">R$ {price}</span>
+          <div className="mb-8">
+            <span className="text-base line-through text-muted-foreground">R$ {originalPrice}</span>
+            <span className="text-4xl font-display font-medium ml-3">R$ {price}</span>
           </div>
           <button
             onClick={handleCheckout}
-            className="bg-accent text-accent-foreground px-8 py-4 rounded-2xl font-bold text-lg shadow-gold transition-transform hover:scale-[1.02] active:scale-[0.98] animate-pulse-gold inline-flex items-center gap-2"
+            className="bg-foreground text-background px-10 py-4 rounded-full font-medium text-base transition-transform hover:scale-[1.02] active:scale-[0.98] inline-flex items-center gap-2"
           >
-            {ctaText} <ExternalLink className="h-5 w-5" />
+            {ctaText} <ExternalLink className="h-4 w-4" />
           </button>
         </div>
       </section>
 
       {/* VSL */}
       {videoUrl ? (
-        <section className="py-12 px-5">
+        <section className="pb-16 px-6">
           <div className="max-w-2xl mx-auto">
-            <div className="aspect-video rounded-3xl overflow-hidden border border-border">
+            <div className="aspect-video rounded-2xl overflow-hidden bg-card shadow-card">
               <iframe src={videoUrl} className="w-full h-full" allowFullScreen allow="autoplay" />
             </div>
           </div>
         </section>
       ) : (
-        <section className="py-12 px-5">
+        <section className="pb-16 px-6">
           <div className="max-w-2xl mx-auto">
-            <div className="aspect-video bg-card rounded-3xl border border-border flex items-center justify-center">
-              <p className="text-muted-foreground text-sm">📹 Vídeo de apresentação</p>
+            <div className="aspect-video bg-card rounded-2xl shadow-card flex items-center justify-center">
+              <p className="text-muted-foreground text-sm">Vídeo de apresentação</p>
             </div>
           </div>
         </section>
       )}
 
       {/* Benefits */}
-      <section className="py-12 px-5">
+      <section className="py-16 px-6">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-display font-bold text-center mb-8">O que você vai receber</h2>
+          <h2 className="text-3xl font-display font-medium text-center mb-10">O que você vai receber</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {[
               { icon: Compass, title: "Sem dúvida no Obi", desc: "Aprenda a interpretar cada caída com precisão e confiança." },
@@ -81,12 +80,10 @@ const OfertaPage = () => {
               { icon: Headphones, title: "Áudios Exclusivos", desc: "Áudios gravados para guiar sua prática ritual." },
               { icon: Shield, title: "Proteção de Iyami", desc: "Rituais de proteção e cuidado espiritual ancestral." },
             ].map((b, i) => (
-              <div key={i} className="bg-card rounded-3xl p-6 border border-border shadow-sm">
-                <div className="w-12 h-12 rounded-xl bg-secondary/15 flex items-center justify-center mb-3">
-                  <b.icon className="h-6 w-6 text-secondary" />
-                </div>
-                <h3 className="font-display font-bold text-lg mb-1">{b.title}</h3>
-                <p className="text-sm text-muted-foreground">{b.desc}</p>
+              <div key={i} className="bg-card rounded-2xl p-6 shadow-card">
+                <b.icon className="h-6 w-6 text-primary mb-3" strokeWidth={1.5} />
+                <h3 className="font-display font-medium text-lg mb-1">{b.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{b.desc}</p>
               </div>
             ))}
           </div>
@@ -94,19 +91,19 @@ const OfertaPage = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-12 px-5 bg-card">
+      <section className="py-16 px-6">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-display font-bold text-center mb-8">O que dizem nossos alunos</h2>
+          <h2 className="text-3xl font-display font-medium text-center mb-10">O que dizem nossos alunos</h2>
           <div className="space-y-4">
             {testimonials.map((t, i) => (
-              <div key={i} className="bg-background rounded-3xl p-5 border border-border shadow-sm">
-                <div className="flex items-center gap-1 mb-2">
+              <div key={i} className="bg-card rounded-2xl p-6 shadow-card">
+                <div className="flex items-center gap-0.5 mb-3">
                   {Array.from({ length: t.stars }).map((_, j) => (
                     <Star key={j} className="h-4 w-4 fill-accent text-accent" />
                   ))}
                 </div>
-                <p className="text-sm mb-2 italic">"{t.text}"</p>
-                <span className="text-xs text-muted-foreground font-semibold">{t.name}</span>
+                <p className="text-sm mb-3 leading-relaxed italic text-muted-foreground">"{t.text}"</p>
+                <span className="text-xs font-medium">{t.name}</span>
               </div>
             ))}
           </div>
@@ -114,17 +111,17 @@ const OfertaPage = () => {
       </section>
 
       {/* Final CTA */}
-      <section className="py-16 px-5">
+      <section className="py-16 px-6">
         <div className="max-w-lg mx-auto text-center">
-          <h2 className="text-3xl font-display font-bold mb-4">Pronto para transformar sua prática?</h2>
-          <p className="text-muted-foreground mb-4">Acesso imediato a todo o conteúdo. Sem mensalidade.</p>
-          <div className="mb-6">
+          <h2 className="text-3xl font-display font-medium mb-4">Pronto para transformar sua prática?</h2>
+          <p className="text-muted-foreground text-sm mb-6">Acesso imediato a todo o conteúdo. Sem mensalidade.</p>
+          <div className="mb-8">
             <span className="text-base line-through text-muted-foreground">R$ {originalPrice}</span>
-            <span className="text-3xl font-display font-bold ml-3">R$ {price}</span>
+            <span className="text-3xl font-display font-medium ml-3">R$ {price}</span>
           </div>
           <button
             onClick={handleCheckout}
-            className="w-full bg-accent text-accent-foreground py-4 rounded-2xl font-bold text-lg shadow-gold transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+            className="w-full bg-foreground text-background py-4 rounded-full font-medium text-base transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
           >
             <CheckCircle className="h-5 w-5" /> {ctaText}
           </button>
