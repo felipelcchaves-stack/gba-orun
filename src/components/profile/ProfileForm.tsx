@@ -23,6 +23,13 @@ const GENDERS = [
   { value: "prefiro_nao_dizer", label: "Prefiro não dizer" },
 ];
 
+const IFA_STATUSES = [
+  { value: "babalawo", label: "Babalawo" },
+  { value: "iyanifa", label: "Iyanifa" },
+  { value: "omo_ifa", label: "Omo Ifá (Isefá)" },
+  { value: "nao", label: "Não tenho Ifá" },
+];
+
 const DAYS = [
   { value: "0", label: "Domingo" },
   { value: "1", label: "Segunda" },
@@ -43,6 +50,7 @@ const ProfileForm = () => {
   const [gender, setGender] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [careDay, setCareDay] = useState("");
+  const [ifaStatus, setIfaStatus] = useState("");
 
   useEffect(() => {
     if (profile) {
@@ -51,8 +59,11 @@ const ProfileForm = () => {
       setGender(profile.gender || "");
       setBirthDate(profile.birth_date || "");
       setCareDay(profile.care_day !== null && profile.care_day !== undefined ? String(profile.care_day) : "");
+      setIfaStatus(profile.ifa_status || "");
     }
   }, [profile]);
+
+  const showIfaField = ["candomble", "ifa", "umbanda"].includes(religion);
 
   const handleSave = async () => {
     await updateProfile.mutateAsync({
@@ -61,6 +72,7 @@ const ProfileForm = () => {
       gender: gender || null,
       birth_date: birthDate || null,
       care_day: careDay !== "" ? parseInt(careDay) : null,
+      ifa_status: showIfaField ? (ifaStatus || null) : null,
     } as any);
 
     // Request notification permission when care day is set
@@ -117,6 +129,20 @@ const ProfileForm = () => {
           </SelectContent>
         </Select>
       </div>
+
+      {showIfaField && (
+        <div className="space-y-1.5">
+          <Label>Status em Ifá</Label>
+          <Select value={ifaStatus} onValueChange={setIfaStatus}>
+            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>
+              {IFA_STATUSES.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label>Dia de Cuidado Espiritual</Label>

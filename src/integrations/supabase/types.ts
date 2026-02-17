@@ -593,6 +593,7 @@ export type Database = {
           guru_id: string | null
           guru_subscription_id: string | null
           id: string
+          ifa_status: string | null
           is_premium: boolean
           onboarding_completed: boolean
           religion: string | null
@@ -614,6 +615,7 @@ export type Database = {
           guru_id?: string | null
           guru_subscription_id?: string | null
           id?: string
+          ifa_status?: string | null
           is_premium?: boolean
           onboarding_completed?: boolean
           religion?: string | null
@@ -635,6 +637,7 @@ export type Database = {
           guru_id?: string | null
           guru_subscription_id?: string | null
           id?: string
+          ifa_status?: string | null
           is_premium?: boolean
           onboarding_completed?: boolean
           religion?: string | null
@@ -869,6 +872,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          ifa_status: string | null
           knows_ebo: boolean
           knows_egbe_orun: boolean
           knows_iyami: boolean
@@ -881,6 +885,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          ifa_status?: string | null
           knows_ebo?: boolean
           knows_egbe_orun?: boolean
           knows_iyami?: boolean
@@ -893,6 +898,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          ifa_status?: string | null
           knows_ebo?: boolean
           knows_egbe_orun?: boolean
           knows_iyami?: boolean
@@ -998,7 +1004,11 @@ export type Database = {
           not_knows_iyami: number
           not_knows_obi: number
           not_knows_ori: number
+          total_babalawo: number
+          total_iyanifa: number
+          total_omo_ifa: number
           total_onboarded: number
+          total_sem_ifa: number
         }[]
       }
       admin_get_stats: {
@@ -1032,6 +1042,7 @@ export type Database = {
           guru_id: string
           guru_subscription_id: string
           id: string
+          ifa_status: string
           is_premium: boolean
           knows_ebo: boolean
           knows_egbe_orun: boolean

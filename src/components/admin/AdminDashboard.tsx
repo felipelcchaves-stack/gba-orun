@@ -109,7 +109,18 @@ const AdminDashboard = () => {
       { name: "Ori", pct: Math.round((knowledgeStats.not_knows_ori / t) * 100) },
       { name: "Iyami", pct: Math.round((knowledgeStats.not_knows_iyami / t) * 100) },
       { name: "Egbe", pct: Math.round((knowledgeStats.not_knows_egbe_orun / t) * 100) },
+      { name: "Sem Ifá", pct: Math.round((knowledgeStats.total_sem_ifa / t) * 100) },
     ].sort((a, b) => b.pct - a.pct);
+  })();
+
+  const ifaPieData = (() => {
+    if (!knowledgeStats) return [];
+    return [
+      { name: "Babalawo", value: knowledgeStats.total_babalawo },
+      { name: "Iyanifa", value: knowledgeStats.total_iyanifa },
+      { name: "Omo Ifá", value: knowledgeStats.total_omo_ifa },
+      { name: "Sem Ifá", value: knowledgeStats.total_sem_ifa },
+    ].filter(d => d.value > 0);
   })();
 
   const filteredProfiles = (() => {
@@ -120,6 +131,7 @@ const AdminDashboard = () => {
     else if (knowledgeFilter === "not_ori") list = list.filter(p => p.knows_ori === false);
     else if (knowledgeFilter === "not_iyami") list = list.filter(p => p.knows_iyami === false);
     else if (knowledgeFilter === "not_egbe") list = list.filter(p => p.knows_egbe_orun === false);
+    else if (knowledgeFilter === "not_ifa") list = list.filter(p => !p.ifa_status || p.ifa_status === "nao");
     return list;
   })();
 
@@ -186,6 +198,26 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {ifaPieData.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardContent className="p-5">
+              <h3 className="font-display font-semibold text-sm mb-3">Distribuição por Status em Ifá</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={ifaPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    {ifaPieData.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {knowledgeBarData.length > 0 && (
         <Card>
           <CardContent className="p-5">
@@ -219,6 +251,7 @@ const AdminDashboard = () => {
               <SelectItem value="not_ori">Não sabe Ori</SelectItem>
               <SelectItem value="not_iyami">Não sabe Iyami</SelectItem>
               <SelectItem value="not_egbe">Não sabe Egbe</SelectItem>
+              <SelectItem value="not_ifa">Não tem Ifá</SelectItem>
             </SelectContent>
           </Select>
         </div>

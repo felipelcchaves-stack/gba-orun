@@ -26,6 +26,7 @@ export interface AdminProfile {
   knows_egbe_orun: boolean | null;
   device_id: string | null;
   device_changed_at: string | null;
+  ifa_status: string | null;
 }
 
 export interface KnowledgeStats {
@@ -35,6 +36,10 @@ export interface KnowledgeStats {
   not_knows_ori: number;
   not_knows_iyami: number;
   not_knows_egbe_orun: number;
+  total_babalawo: number;
+  total_iyanifa: number;
+  total_omo_ifa: number;
+  total_sem_ifa: number;
 }
 
 export interface AdminStats {
@@ -82,7 +87,7 @@ export const useAdminKnowledgeStats = () => {
       const { data, error } = await supabase.rpc("admin_get_knowledge_stats" as any);
       if (error) throw error;
       const row = (data as unknown as KnowledgeStats[])?.[0];
-      return row ?? { total_onboarded: 0, not_knows_obi: 0, not_knows_ebo: 0, not_knows_ori: 0, not_knows_iyami: 0, not_knows_egbe_orun: 0 };
+      return row ?? { total_onboarded: 0, not_knows_obi: 0, not_knows_ebo: 0, not_knows_ori: 0, not_knows_iyami: 0, not_knows_egbe_orun: 0, total_babalawo: 0, total_iyanifa: 0, total_omo_ifa: 0, total_sem_ifa: 0 };
     },
   });
 };
