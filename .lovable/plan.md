@@ -1,76 +1,55 @@
 
-# Adicionar banner horizontal nos modais de ritual
+# Corrigir banner do modal e avatar do orientador
 
-## Problema
+## Problema 1: Modal sem banner
 
-O modal de ritual mostra apenas uma pequena imagem redonda (12x12) ao lado do titulo, que e pouco visivel. O usuario quer um **banner horizontal** no topo do modal, como uma capa, para dar mais destaque visual ao ritual.
+O ritual "Iba" (e provavelmente outros) tem `image_url: null` no banco de dados. O codigo atual so renderiza o banner quando `ritual.image_url` existe. Quando nao existe, mostra apenas o titulo simples sem nenhum visual.
 
-## Solucao
+**Solucao:** Usar `getCategoryImage(ritual.category)` como imagem de fallback. Assim, mesmo sem imagem propria, o modal sempre tera um banner baseado na categoria do ritual (Ebó, Ibori, Orikis, Geral, etc.).
 
-Substituir a imagem redonda por um banner horizontal no topo do modal, antes do titulo. O banner usara a `image_url` do ritual como imagem de fundo com overlay escuro para garantir legibilidade do titulo sobre ele.
+## Problema 2: Avatar do orientador
 
-Layout proposto:
+O componente `InlineGuidance` busca `settings?.guidance_avatar_url` da tabela `app_settings`, mas essa chave nao existe no banco. Resultado: mostra o emoji 🧙 em vez de uma foto.
 
-```text
-+----------------------------------+
-| [BANNER IMAGE - full width]      |
-| Titulo sobre o banner (overlay)  |
-| Categoria                        |
-+----------------------------------+
-| Audio player (se houver)         |
-| Conteudo markdown...             |
-| Ver ritual completo              |
-+----------------------------------+
-```
+**Solucao:** Inserir a chave `guidance_avatar_url` na tabela `app_settings` (valor vazio por padrao). O admin pode configurar a URL da imagem do orientador no painel. Enquanto isso, o fallback emoji continua funcionando.
 
 ## Arquivos modificados
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/components/oracle/FlowStepRenderer.tsx` | No `LinkedRitualButton`, substituir imagem redonda por banner horizontal no topo do modal com overlay e titulo sobreposto |
-| `src/components/RitualHelpButton.tsx` | Mesmo ajuste: banner horizontal no topo do modal |
+| `src/components/oracle/FlowStepRenderer.tsx` | No `LinkedRitualButton`, importar `getCategoryImage` e usar como fallback: `const imageUrl = ritual.image_url \|\| getCategoryImage(ritual.category)`. Remover a condicional `ritual.image_url &&` do banner, mostrando-o sempre. |
+| `src/components/RitualHelpButton.tsx` | Mesmo ajuste: importar `getCategoryImage`, definir `imageUrl` com fallback, e mostrar o banner sempre. |
+| Migracao SQL | Inserir `guidance_avatar_url` na tabela `app_settings` para que o admin possa configurar. |
 
 ## Detalhe tecnico
 
-**Estrutura do banner (ambos componentes):**
+**Fallback de imagem nos modais (ambos componentes):**
 
 ```tsx
-<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-0">
-  {/* Banner no topo - sem padding */}
-  {ritual.image_url && (
-    <div className="relative w-full h-36 sm:h-44 rounded-t-2xl overflow-hidden">
-      <img
-        src={ritual.image_url}
-        alt={ritual.title}
-        className="w-full h-full object-cover"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-      <div className="absolute bottom-3 left-4 right-4">
-        <h2 className="text-white font-display font-bold text-lg">{ritual.title}</h2>
-        <span className="text-white/70 text-xs capitalize">{ritual.category}</span>
-      </div>
-    </div>
-  )}
+import { getCategoryImage } from "@/lib/categories";
 
-  {/* Conteudo com padding */}
-  <div className="p-4 sm:p-6">
-    {/* fallback titulo quando nao tem imagem */}
-    {!ritual.image_url && (
-      <DialogHeader>
-        <DialogTitle className="font-display">{ritual.title}</DialogTitle>
-        <span className="text-xs text-muted-foreground capitalize">{ritual.category}</span>
-      </DialogHeader>
-    )}
+// Dentro do componente:
+const imageUrl = ritual.image_url || getCategoryImage(ritual.category);
 
-    {/* audio, conteudo, link... */}
+// No JSX - remover a condicional, sempre mostrar o banner:
+<div className="relative w-full h-36 sm:h-44 rounded-t-2xl overflow-hidden">
+  <img src={imageUrl} alt={ritual.title} className="w-full h-full object-cover" />
+  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+  <div className="absolute bottom-3 left-4 right-4">
+    <h2 className="text-white font-display font-bold text-lg leading-tight">{ritual.title}</h2>
+    <span className="text-white/70 text-xs capitalize">{ritual.category}</span>
   </div>
-</DialogContent>
+</div>
+
+// Remover o bloco de fallback que mostra DialogHeader sem imagem
 ```
 
-Pontos-chave:
-- `DialogContent` muda de `p-4 sm:p-6` para `p-0` (padding zero) para o banner encostar nas bordas
-- O conteudo abaixo do banner recebe padding via wrapper `div` interno
-- O banner tem `h-36` em mobile e `h-44` em desktop
-- Overlay gradiente escuro na parte inferior para o titulo ficar legivel sobre a imagem
-- Quando nao houver imagem, o titulo aparece normalmente como fallback
-- O botao X de fechar do Dialog precisa ter `z-10` e cor branca quando houver banner
+**Migracao SQL para avatar do orientador:**
+
+```sql
+INSERT INTO app_settings (key, value)
+VALUES ('guidance_avatar_url', '')
+ON CONFLICT (key) DO NOTHING;
+```
+
+Depois de implementar, o admin pode acessar as configuracoes do app e colar a URL de uma foto para o avatar do orientador. Enquanto nao configurar, o emoji 🧙 continua aparecendo normalmente.
