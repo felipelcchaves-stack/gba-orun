@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 import OracleProgressBar from "@/components/oracle/OracleProgressBar";
 import StepIntention from "@/components/oracle/StepIntention";
-import StepObiResult from "@/components/oracle/StepObiResult";
+import StepObiResult, { OBI_RESULTS_FALLBACK } from "@/components/oracle/StepObiResult";
 import StepIreIbi from "@/components/oracle/StepIreIbi";
 import StepEbo from "@/components/oracle/StepEbo";
 import StepOri from "@/components/oracle/StepOri";
@@ -59,7 +59,10 @@ const OraclePage = () => {
           {step === 2 && (
             <>
               <StepObiResult onSelect={(key) => {
-                setState(s => ({ ...s, result: key }));
+                const config = dbConfigs?.find(c => c.result_key === key);
+                const fallback = OBI_RESULTS_FALLBACK.find(r => r.key === key);
+                const defaultIreIbi = config?.default_ire_ibi || fallback?.default_ire_ibi || "ibi";
+                setState(s => ({ ...s, result: key, defaultIreIbi }));
                 setStep(3);
               }} />
               {!user && (
@@ -73,6 +76,7 @@ const OraclePage = () => {
           {step === 3 && (
             <StepIreIbi
               obiResult={state.result!}
+              defaultCategory={state.defaultIreIbi as "ire" | "ibi" | undefined}
               onSelect={(category, typeId, typeName) => {
                 setState(s => ({ ...s, ireOrIbi: category, ireIbiTypeId: typeId, ireIbiTypeName: typeName }));
                 setStep(4);

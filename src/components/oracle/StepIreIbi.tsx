@@ -8,14 +8,15 @@ import GuidanceBubble from "@/components/GuidanceBubble";
 
 interface Props {
   obiResult: string;
+  defaultCategory?: "ire" | "ibi";
   onSelect: (category: "ire" | "ibi", typeId: string, typeName: string) => void;
 }
 
-const StepIreIbi = ({ obiResult, onSelect }: Props) => {
+const StepIreIbi = ({ obiResult, defaultCategory, onSelect }: Props) => {
   const { data: dbConfigs } = useOracleConfigs();
   const { data: types, isLoading } = useIreIbiTypes();
   const stepText = useStepText("ire_ibi", "Veio em Irê ou Ibi?", "");
-  const [selectedCategory, setSelectedCategory] = useState<"ire" | "ibi" | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<"ire" | "ibi" | null>(defaultCategory || null);
 
   const dbResult = dbConfigs?.find(c => c.result_key === obiResult);
   const fallback = OBI_RESULTS_FALLBACK.find(r => r.key === obiResult);
