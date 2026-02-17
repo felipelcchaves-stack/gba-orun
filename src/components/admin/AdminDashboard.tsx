@@ -1,11 +1,12 @@
-import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare } from "lucide-react";
+import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare, UserCheck, AlertTriangle, DollarSign } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useAdminStats, useAdminProfiles } from "@/hooks/useAdminData";
+import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const GENDER_LABELS: Record<string, string> = {
   masculino: "Masculino",
@@ -34,19 +35,39 @@ const CHART_COLORS = [
 const AdminDashboard = () => {
   const { data: stats, isLoading: statsLoading } = useAdminStats();
   const { data: profiles, isLoading: profilesLoading } = useAdminProfiles();
+  const { data: plans } = useSubscriptionPlans();
+
+  // Revenue forecast: active subscribers × their plan price
+  const revenueForecast = (() => {
+    if (!profiles || !plans) return 0;
+    let total = 0;
+    const planMap = new Map(plans.map(p => [p.id, p]));
+    for (const p of profiles) {
+      if (p.subscription_status === "active" && p.subscription_plan_id) {
+        const plan = planMap.get(p.subscription_plan_id);
+        if (plan) total += Number(plan.price);
+      }
+    }
+    // If active subscribers exist but no plan linked, estimate with cheapest plan
+    const activeWithoutPlan = (profiles || []).filter(p => p.subscription_status === "active" && !p.subscription_plan_id).length;
+    if (activeWithoutPlan > 0 && plans.length > 0) {
+      const cheapest = Math.min(...plans.filter(p => p.is_active).map(p => Number(p.price)));
+      total += activeWithoutPlan * cheapest;
+    }
+    return total;
+  })();
 
   const KPI_CARDS = [
     { label: "Total de Usuários", value: stats?.total_users ?? 0, icon: Users, color: "text-primary" },
+    { label: "Assinantes Ativos", value: stats?.active_subscribers ?? 0, icon: UserCheck, color: "text-green-600" },
+    { label: "Inadimplentes", value: stats?.overdue_users ?? 0, icon: AlertTriangle, color: "text-destructive" },
+    { label: "Previsão Receita/Mês", value: `R$ ${revenueForecast.toFixed(2)}`, icon: DollarSign, color: "text-accent" },
     { label: "Premium (Pagantes)", value: stats?.premium_users ?? 0, icon: Crown, color: "text-accent" },
     { label: "Gratuitos", value: stats?.free_users ?? 0, icon: UserX, color: "text-muted-foreground" },
-    { label: "Consultas (Total)", value: stats?.total_consultations ?? 0, icon: Compass, color: "text-primary" },
-    { label: "Consultas Hoje", value: stats?.consultations_today ?? 0, icon: CalendarDays, color: "text-accent" },
+    { label: "Consultas Hoje", value: stats?.consultations_today ?? 0, icon: CalendarDays, color: "text-primary" },
     { label: "Rituais Cadastrados", value: stats?.total_rituals ?? 0, icon: BookOpen, color: "text-primary" },
-    { label: "Posts Comunidade", value: stats?.total_posts ?? 0, icon: MessageCircle, color: "text-accent" },
-    { label: "Respostas", value: stats?.total_replies ?? 0, icon: MessageSquare, color: "text-muted-foreground" },
   ];
 
-  // Compute demographic data from profiles
   const genderData = (() => {
     if (!profiles) return [];
     const counts: Record<string, number> = {};
@@ -82,7 +103,6 @@ const AdminDashboard = () => {
         <p className="text-sm text-muted-foreground mt-1">Visão geral do aplicativo</p>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {KPI_CARDS.map(({ label, value, icon: Icon, color }) => (
           <Card key={label}>
@@ -101,7 +121,6 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Demographics Charts */}
       {profiles && profiles.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
@@ -138,7 +157,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Recent Users */}
       <div>
         <h2 className="text-lg font-display font-semibold text-foreground mb-3">Últimos Usuários Cadastrados</h2>
         <Card>
@@ -147,8 +165,7 @@ const AdminDashboard = () => {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Gênero</TableHead>
-                <TableHead>Religião</TableHead>
+                <TableHead>Assinatura</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Cadastro</TableHead>
               </TableRow>
@@ -156,29 +173,43 @@ const AdminDashboard = () => {
             <TableBody>
               {profilesLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                 </TableRow>
               ) : recentProfiles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado.</TableCell>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado.</TableCell>
                 </TableRow>
               ) : (
-                recentProfiles.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.display_name || "—"}</TableCell>
-                    <TableCell>{p.email}</TableCell>
-                    <TableCell>{GENDER_LABELS[p.gender || ""] || "—"}</TableCell>
-                    <TableCell>{RELIGION_LABELS[p.religion || ""] || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={p.is_premium ? "default" : "secondary"} className={p.is_premium ? "bg-green-600 hover:bg-green-700" : ""}>
-                        {p.is_premium ? "Premium" : "Gratuito"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </TableCell>
-                  </TableRow>
-                ))
+                recentProfiles.map((p) => {
+                  const subStatus = p.subscription_status || "free";
+                  const statusConfig: Record<string, { label: string; className: string }> = {
+                    active: { label: "Ativo", className: "bg-green-600 hover:bg-green-700" },
+                    overdue: { label: "Inadimplente", className: "bg-destructive hover:bg-destructive/90" },
+                    cancelled: { label: "Cancelado", className: "bg-yellow-600 hover:bg-yellow-700" },
+                    free: { label: "Gratuito", className: "" },
+                  };
+                  const cfg = statusConfig[subStatus] || statusConfig.free;
+
+                  return (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.display_name || "—"}</TableCell>
+                      <TableCell>{p.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={subStatus === "free" ? "secondary" : "default"} className={cfg.className}>
+                          {cfg.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={p.is_premium ? "default" : "secondary"} className={p.is_premium ? "bg-green-600 hover:bg-green-700" : ""}>
+                          {p.is_premium ? "Premium" : "Gratuito"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

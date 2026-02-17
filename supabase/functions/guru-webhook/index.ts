@@ -18,9 +18,9 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log("Guru webhook received:", JSON.stringify(body));
 
-    // Digital Manager Guru sends different event types
     const status = body?.status || body?.transaction?.status;
     const email = body?.buyer?.email || body?.customer?.email || body?.email;
+    const guruSubId = body?.subscription?.id || body?.guru_subscription_id || null;
 
     if (!email) {
       return new Response(JSON.stringify({ error: "No email found in payload" }), {
@@ -29,31 +29,79 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (status === "approved" || status === "payment_approved" || status === "completed") {
-      // Find user by email
-      const { data: users } = await supabase.auth.admin.listUsers();
-      const user = users?.users?.find((u: any) => u.email === email);
+    // Find user by email
+    const { data: users } = await supabase.auth.admin.listUsers();
+    const user = users?.users?.find((u: any) => u.email === email);
 
-      if (user) {
-        // Set premium
-        const { error } = await supabase
-          .from("profiles")
-          .update({ is_premium: true, guru_id: body?.transaction?.id || body?.id || null })
-          .eq("user_id", user.id);
+    if (!user) {
+      console.log(`User ${email} not found — will be marked premium on signup`);
+      return new Response(JSON.stringify({ success: true, note: "user not found" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-        if (error) {
-          console.error("Error updating profile:", error);
-          return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+    const now = new Date();
 
-        console.log(`User ${email} set to premium`);
-      } else {
-        console.log(`User ${email} not found — will be marked premium on signup`);
-        // You could store pending premium grants in a separate table here
+    // Determine action based on status
+    if (
+      status === "approved" || status === "payment_approved" || status === "completed" ||
+      status === "subscription_created" || status === "subscription_renewed"
+    ) {
+      // Activate subscription
+      const expiresAt = new Date(now);
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          is_premium: true,
+          subscription_status: "active",
+          subscription_started_at: now.toISOString(),
+          subscription_expires_at: expiresAt.toISOString(),
+          guru_id: body?.transaction?.id || body?.id || null,
+          guru_subscription_id: guruSubId,
+        } as any)
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Error activating subscription:", error);
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      console.log(`User ${email} subscription activated`);
+
+    } else if (
+      status === "subscription_overdue" || status === "payment_refunded" || status === "overdue"
+    ) {
+      // Mark overdue — lock access
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          is_premium: false,
+          subscription_status: "overdue",
+        } as any)
+        .eq("user_id", user.id);
+
+      if (error) console.error("Error marking overdue:", error);
+      console.log(`User ${email} marked overdue`);
+
+    } else if (
+      status === "subscription_cancelled" || status === "cancelled" || status === "refunded"
+    ) {
+      // Cancel subscription
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          is_premium: false,
+          subscription_status: "cancelled",
+        } as any)
+        .eq("user_id", user.id);
+
+      if (error) console.error("Error cancelling:", error);
+      console.log(`User ${email} subscription cancelled`);
     }
 
     return new Response(JSON.stringify({ success: true }), {

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { ExternalLink, CheckCircle, Star, Shield, BookOpen, Compass, Headphones, Zap, Eye, Heart, HelpCircle, ChevronRight } from "lucide-react";
 import { trackInitiateCheckout } from "@/lib/pixel";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const testimonials = [
@@ -14,7 +15,7 @@ const testimonials = [
 const faqs = [
   { q: "Preciso ter experiência religiosa para usar?", a: "Não! O Gba-Orun foi criado tanto para iniciantes quanto para praticantes experientes. O conteúdo é didático e acessível." },
   { q: "Funciona no celular?", a: "Sim! O app é 100% responsivo e pode ser instalado como aplicativo no seu celular, sem precisar da App Store." },
-  { q: "O acesso é vitalício?", a: "Sim! Você paga uma única vez e tem acesso para sempre, incluindo todas as atualizações futuras." },
+  { q: "Posso cancelar a qualquer momento?", a: "Sim! Você pode cancelar sua assinatura quando quiser, sem burocracia. Seu acesso continua até o fim do período pago." },
   { q: "Posso usar offline?", a: "Após instalar o app, as páginas já visitadas ficam disponíveis offline. Novos conteúdos precisam de conexão para carregar pela primeira vez." },
   { q: "Como funciona a garantia?", a: "Se por qualquer motivo não ficar satisfeito, basta solicitar o reembolso dentro do prazo de garantia. Sem perguntas." },
 ];
@@ -26,19 +27,26 @@ const pains = [
   "Perde tempo procurando Orikis em livros e cadernos espalhados?",
 ];
 
+const PERIOD_LABELS: Record<string, string> = {
+  monthly: "/mês",
+  quarterly: "/trimestre",
+  yearly: "/ano",
+};
+
 const OfertaPage = () => {
   const { data: settings } = useAppSettings();
+  const { data: plans } = useActivePlans();
 
-  const checkoutUrl = settings?.checkout_url || "#";
-  const price = settings?.offer_price || "97";
-  const originalPrice = settings?.offer_original_price || "297";
+  const mainPlan = plans?.[0];
+  const checkoutUrl = mainPlan?.guru_checkout_url || settings?.checkout_url || "#";
+  const price = mainPlan ? Number(mainPlan.price).toFixed(2).replace(".", ",") : (settings?.offer_price || "29,90");
+  const periodLabel = mainPlan ? (PERIOD_LABELS[mainPlan.billing_period] || "/mês") : "/mês";
   const headline = settings?.offer_headline || "Descubra o que o Orixá quer de você agora.";
   const videoUrl = settings?.offer_video_url || "";
   const ctaText = settings?.offer_cta_text || "Quero Começar Agora";
   const urgencyText = settings?.offer_urgency_text || "🔥 Oferta por tempo limitado!";
   const guaranteeDays = settings?.offer_guarantee_days || "7";
 
-  // JSON-LD structured data
   useEffect(() => {
     const script = document.createElement("script");
     script.type = "application/ld+json";
@@ -49,7 +57,7 @@ const OfertaPage = () => {
       description: "O guia digital mais completo de Obi, Rituais e Orikis da tradição Yorubá.",
       offers: {
         "@type": "Offer",
-        price,
+        price: mainPlan?.price || price,
         priceCurrency: "BRL",
         availability: "https://schema.org/InStock",
       },
@@ -61,27 +69,21 @@ const OfertaPage = () => {
     });
     document.head.appendChild(script);
     return () => { document.head.removeChild(script); };
-  }, [price]);
+  }, [price, mainPlan]);
 
-  const handleCheckout = () => {
+  const handleCheckout = (url?: string) => {
     trackInitiateCheckout();
-    if (checkoutUrl && checkoutUrl !== "#") window.open(checkoutUrl, "_blank");
+    const targetUrl = url || checkoutUrl;
+    if (targetUrl && targetUrl !== "#") window.open(targetUrl, "_blank");
   };
 
-  const CTAButton = ({ full = false }: { full?: boolean }) => (
+  const CTAButton = ({ full = false, url }: { full?: boolean; url?: string }) => (
     <button
-      onClick={handleCheckout}
+      onClick={() => handleCheckout(url)}
       className={`${full ? "w-full" : ""} bg-accent text-accent-foreground px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] animate-pulse-gold inline-flex items-center justify-center gap-2 shadow-gold`}
     >
       {ctaText} <ChevronRight className="h-5 w-5" />
     </button>
-  );
-
-  const PriceBlock = () => (
-    <div className="flex items-baseline justify-center gap-3 mb-6">
-      <span className="text-base line-through text-muted-foreground">R$ {originalPrice}</span>
-      <span className="text-5xl font-display font-bold text-foreground">R$ {price}</span>
-    </div>
   );
 
   return (
@@ -95,7 +97,7 @@ const OfertaPage = () => {
       <section className="py-16 md:py-24 px-6">
         <div className="max-w-2xl mx-auto text-center">
           <span className="inline-block bg-primary/10 text-primary text-xs font-bold px-4 py-1.5 rounded-full mb-6 uppercase tracking-wider">
-            Acesso Vitalício
+            Assinatura Mensal
           </span>
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-5 leading-tight text-foreground">
             {headline}
@@ -103,9 +105,37 @@ const OfertaPage = () => {
           <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed">
             O guia digital mais completo de Obi, Rituais e Orikis da tradição Yorubá. Tudo na palma da sua mão.
           </p>
-          <PriceBlock />
-          <CTAButton />
-          <p className="text-xs text-muted-foreground mt-4">Pagamento seguro • Acesso imediato</p>
+
+          {/* Plan cards */}
+          {plans && plans.length > 1 ? (
+            <div className="grid gap-4 sm:grid-cols-2 mb-8 max-w-lg mx-auto">
+              {plans.map((plan) => (
+                <div key={plan.id} className="bg-card rounded-2xl p-6 border border-border shadow-soft text-center">
+                  <h3 className="font-display font-bold text-lg mb-1">{plan.name}</h3>
+                  <div className="text-3xl font-bold text-foreground mb-1">
+                    R$ {Number(plan.price).toFixed(2).replace(".", ",")}
+                    <span className="text-sm font-normal text-muted-foreground">{PERIOD_LABELS[plan.billing_period] || "/mês"}</span>
+                  </div>
+                  {plan.description && <p className="text-xs text-muted-foreground mb-4">{plan.description}</p>}
+                  <button
+                    onClick={() => handleCheckout(plan.guru_checkout_url || undefined)}
+                    className="w-full bg-accent text-accent-foreground py-3 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    Assinar {plan.name}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="flex items-baseline justify-center gap-3 mb-6">
+                <span className="text-5xl font-display font-bold text-foreground">R$ {price}</span>
+                <span className="text-base text-muted-foreground">{periodLabel}</span>
+              </div>
+              <CTAButton />
+              <p className="text-xs text-muted-foreground mt-4">Pagamento seguro • Cancele quando quiser</p>
+            </>
+          )}
         </div>
       </section>
 
@@ -174,7 +204,7 @@ const OfertaPage = () => {
               { icon: Headphones, title: "Áudios Exclusivos", desc: "Áudios gravados para guiar sua prática ritual." },
               { icon: Shield, title: "Proteção de Iyami", desc: "Rituais de proteção e cuidado espiritual ancestral." },
               { icon: Zap, title: "Jornada Gamificada", desc: "Acompanhe seu progresso espiritual com XP e conquistas." },
-              { icon: Star, title: "Atualizações Gratuitas", desc: "Novos conteúdos e funcionalidades sem custo adicional." },
+              { icon: Star, title: "Atualizações Contínuas", desc: "Novos conteúdos e funcionalidades inclusos na assinatura." },
             ].map((b, i) => (
               <div key={i} className="bg-background rounded-2xl p-6 shadow-soft">
                 <b.icon className="h-6 w-6 text-accent mb-3" strokeWidth={1.5} />
@@ -192,7 +222,7 @@ const OfertaPage = () => {
           <h2 className="text-3xl font-display font-bold mb-10 text-foreground">Como funciona</h2>
           <div className="grid gap-6 sm:grid-cols-3">
             {[
-              { step: "1", title: "Acesse", desc: "Crie sua conta em segundos e entre no app." },
+              { step: "1", title: "Assine", desc: "Escolha seu plano e crie sua conta em segundos." },
               { step: "2", title: "Consulte", desc: "Use o Oráculo do Obi e descubra o caminho." },
               { step: "3", title: "Pratique", desc: "Siga os rituais indicados e evolua espiritualmente." },
             ].map((s, i) => (
@@ -264,8 +294,11 @@ const OfertaPage = () => {
       <section className="py-20 px-6">
         <div className="max-w-lg mx-auto text-center">
           <h2 className="text-3xl font-display font-bold mb-4 text-foreground">Pronto para transformar sua prática?</h2>
-          <p className="text-muted-foreground text-sm mb-8">Acesso imediato a todo o conteúdo. Sem mensalidade. Garantia total.</p>
-          <PriceBlock />
+          <p className="text-muted-foreground text-sm mb-8">Acesso imediato a todo o conteúdo. Cancele quando quiser. Garantia total.</p>
+          <div className="flex items-baseline justify-center gap-3 mb-6">
+            <span className="text-5xl font-display font-bold text-foreground">R$ {price}</span>
+            <span className="text-base text-muted-foreground">{periodLabel}</span>
+          </div>
           <CTAButton full />
           <p className="text-xs text-muted-foreground mt-4">Pagamento seguro via cartão, Pix ou boleto</p>
         </div>
