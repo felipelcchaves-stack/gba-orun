@@ -1,6 +1,7 @@
 import { Sun, AlertTriangle } from "lucide-react";
 import { useOracleConfigs, useStepText } from "@/hooks/useOracleConfig";
 import { OBI_RESULTS_FALLBACK } from "./StepObiResult";
+import RitualHelpButton from "@/components/RitualHelpButton";
 
 interface Props {
   obiResult: string;
@@ -17,7 +18,10 @@ const StepIreIbi = ({ obiResult, onSelect }: Props) => {
 
   return (
     <>
-      <h2 className="text-2xl font-display font-bold text-center mb-1">{stepText.title}</h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-2xl font-display font-bold text-center flex-1">{stepText.title}</h2>
+        <RitualHelpButton point="oracle_step_ire_ibi" />
+      </div>
       <p className="text-center text-muted-foreground text-sm mb-2">
         O resultado <strong>{resultName}</strong> veio em caminho positivo ou negativo?
       </p>
