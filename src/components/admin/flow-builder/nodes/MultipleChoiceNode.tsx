@@ -2,7 +2,8 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { List } from "lucide-react";
 
 const MultipleChoiceNode = ({ data, selected }: NodeProps) => {
-  const options: string[] = (data as any)?.config?.options || [];
+  const rawOptions: any[] = (data as any)?.config?.options || [];
+  const options: string[] = rawOptions.map((o: any) => typeof o === "string" ? o : o?.label || "");
   return (
     <div className={`min-w-[180px] rounded-2xl bg-card border-2 shadow-md ${selected ? "border-primary" : "border-border"}`}>
       <Handle type="target" position={Position.Top} className="!bg-primary !w-3 !h-3" />
