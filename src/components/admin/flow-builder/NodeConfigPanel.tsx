@@ -3,7 +3,7 @@ import { X, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import RitualCombobox from "@/components/RitualCombobox";
+import MultiRitualCombobox from "@/components/MultiRitualCombobox";
 import OfferingCombobox from "@/components/OfferingCombobox";
 
 interface DiagnosisTask {
@@ -11,6 +11,7 @@ interface DiagnosisTask {
   task_type: string;
   category: string;
   ritual_id?: string | null;
+  ritual_ids?: string[];
   offering_id?: string | null;
   guidance_message?: string;
   guidance_audio_url?: string | null;
@@ -134,9 +135,13 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
           {openSections.links && (
             <div className="space-y-2 mt-1">
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Ritual / Oração</label>
+                <label className="text-xs font-medium text-muted-foreground">Rituais / Orações</label>
                 <div className="mt-1">
-                  <RitualCombobox value={localConfig.ritual_id || null} onChange={(id) => updateField("ritual_id", id)} placeholder="Vincular ritual..." />
+                  <MultiRitualCombobox
+                    value={localConfig.ritual_ids || (localConfig.ritual_id ? [localConfig.ritual_id] : [])}
+                    onChange={(ids) => { updateField("ritual_ids", ids); updateField("ritual_id", null); }}
+                    placeholder="Adicionar ritual..."
+                  />
                 </div>
               </div>
               <div>
@@ -314,7 +319,11 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
                   </div>
                   <Input value={task.guidance_audio_url || ""} onChange={(e) => updateTask(i, "guidance_audio_url", e.target.value)} placeholder="URL áudio da tarefa" className="text-xs" />
                   <div className="space-y-1">
-                    <RitualCombobox value={task.ritual_id || null} onChange={(id) => updateTask(i, "ritual_id", id)} placeholder="Ritual..." />
+                    <MultiRitualCombobox
+                      value={task.ritual_ids || (task.ritual_id ? [task.ritual_id] : [])}
+                      onChange={(ids) => { updateTask(i, "ritual_ids", ids); updateTask(i, "ritual_id", null); }}
+                      placeholder="Adicionar ritual..."
+                    />
                     <OfferingCombobox value={task.offering_id || null} onChange={(id) => updateTask(i, "offering_id", id)} placeholder="Oferenda..." />
                   </div>
                 </div>

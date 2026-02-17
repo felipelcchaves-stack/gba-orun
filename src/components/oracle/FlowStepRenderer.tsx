@@ -11,7 +11,7 @@ import { useRituals, useRitual } from "@/hooks/useRituals";
 import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
 import { Progress } from "@/components/ui/progress";
 import AudioPlayer from "@/components/AudioPlayer";
-import RitualCombobox from "@/components/RitualCombobox";
+// RitualCombobox removed — rituals are now linked via config.ritual_ids
 import OfferingCombobox from "@/components/OfferingCombobox";
 import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -128,11 +128,14 @@ const StepHeader = ({ node }: { node: OracleFlowNode }) => {
       {config.guidance_message && (
         <InlineGuidance message={config.guidance_message} audioUrl={config.guidance_audio_url} />
       )}
-      {config.ritual_id && (
-        <div className="mt-2">
-          <LinkedRitualButton ritualId={config.ritual_id} />
-        </div>
-      )}
+      {(() => {
+        const ritualIds = config.ritual_ids || (config.ritual_id ? [config.ritual_id] : []);
+        return ritualIds.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {ritualIds.map((id: string) => <LinkedRitualButton key={id} ritualId={id} />)}
+          </div>
+        ) : null;
+      })()}
     </>
   );
 };
@@ -444,6 +447,7 @@ interface DiagnosisTask {
   task_type: string;
   category: string;
   ritual_id?: string | null;
+  ritual_ids?: string[];
   offering_id?: string | null;
   guidance_message?: string;
   guidance_audio_url?: string | null;
@@ -477,7 +481,6 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [taskRitualOverrides, setTaskRitualOverrides] = useState<Record<number, string | null>>({});
   const [taskOfferingOverrides, setTaskOfferingOverrides] = useState<Record<number, string | null>>({});
 
   const config = node.config || {};
@@ -485,18 +488,6 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
 
   // Filter tasks by condition
   const tasks = configTasks.filter(t => evaluateCondition(t.condition, answers));
-
-  // Auto-suggest rituals
-  useEffect(() => {
-    if (!rituals || rituals.length === 0 || tasks.length === 0) return;
-    const defaults: Record<number, string | null> = {};
-    tasks.forEach((t, i) => {
-      if (taskRitualOverrides[i] !== undefined) return;
-      const match = t.ritual_id ? rituals.find(r => r.id === t.ritual_id) : rituals.find(r => r.category === t.category);
-      if (match) defaults[i] = match.id;
-    });
-    if (Object.keys(defaults).length > 0) setTaskRitualOverrides(prev => ({ ...defaults, ...prev }));
-  }, [rituals, tasks.length]);
 
   const handleSave = async () => {
     if (!user || saving || saved) return;
@@ -513,7 +504,8 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
 
       if (entry) {
         const taskRows = tasks.map((t, i) => {
-          const ritualId = taskRitualOverrides[i] ?? t.ritual_id ?? (rituals?.find(r => r.category === t.category)?.id) ?? undefined;
+          const ritualIds = t.ritual_ids || (t.ritual_id ? [t.ritual_id] : []);
+          const ritualId = ritualIds[0] || (rituals?.find(r => r.category === t.category)?.id) || undefined;
           return {
             journey_id: (entry as any).id,
             task_type: t.task_type,
@@ -573,13 +565,16 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
                 {t.guidance_message && (
                   <TaskGuidanceBubble message={t.guidance_message} audioUrl={t.guidance_audio_url} className="mt-2" />
                 )}
+                {/* Show linked rituals as buttons */}
+                {(() => {
+                  const ritualIds = t.ritual_ids || (t.ritual_id ? [t.ritual_id] : []);
+                  return ritualIds.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {ritualIds.map((id: string) => <LinkedRitualButton key={id} ritualId={id} />)}
+                    </div>
+                  ) : null;
+                })()}
                 <div className="mt-2 space-y-1">
-                  <RitualCombobox
-                    value={taskRitualOverrides[i] ?? t.ritual_id ?? null}
-                    onChange={(ritualId) => setTaskRitualOverrides(prev => ({ ...prev, [i]: ritualId }))}
-                    filterCategory={t.category}
-                    placeholder="Vincular reza/ritual..."
-                  />
                   <OfferingCombobox
                     value={taskOfferingOverrides[i] ?? t.offering_id ?? null}
                     onChange={(offeringId) => setTaskOfferingOverrides(prev => ({ ...prev, [i]: offeringId }))}
