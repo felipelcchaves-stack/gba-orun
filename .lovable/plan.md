@@ -1,139 +1,134 @@
 
-# Plano: Balao de Orientacao do Mestre (Speech Bubble com Avatar)
 
-Um componente visual estilo "balao de fala" de desenho animado, com a foto do mestre/orientador, que aparece em cada etapa do oraculo e nos rituais/oracoes. O admin pode configurar o texto e o audio de orientacao para cada ponto do app.
+# Plano: Orientacoes Vinculadas a Tarefas (Guidance por Task Template)
 
----
-
-## Conceito Visual
-
-O balao sera um card estilizado com:
-- Foto/avatar do orientador (configuravel pelo admin) no canto esquerdo, com borda dourada
-- Um "rabo" de balao (triangulo CSS) apontando para o avatar, como nos quadrinhos
-- Texto da orientacao dentro do balao
-- Botao de audio integrado (mini player) quando houver audio disponivel
-- Cores suaves (fundo creme/amarelado) para destacar sem competir com o conteudo principal
-- Animacao de entrada suave (fade-up)
+Evoluir o sistema de orientacoes do mestre para que cada tarefa criada no Admin (oracle_task_templates) possa ter sua propria orientacao com texto e audio, alem dos pontos fixos do oraculo.
 
 ---
 
-## 1. Tabela de Orientacoes no Banco de Dados
+## Problema Atual
 
-Nova tabela `guidance_bubbles` para armazenar as orientacoes por ponto do app:
+As orientacoes (`guidance_bubbles`) so podem ser associadas a pontos fixos do app (ex: "oracle_step_intention", "ritual_reader"). Nao ha como o mestre deixar uma orientacao especifica para uma tarefa como "Fazer Ebo de Limpeza" ou "Ibori de Protecao". Isso limita a capacidade de guiar o aluno em cada atividade da sua rotina espiritual.
+
+---
+
+## Solucao: Orientacoes por Task Template
+
+Adicionar dois campos opcionais na tabela `oracle_task_templates`:
 
 ```text
-guidance_bubbles
-- id UUID PK
-- point_key TEXT NOT NULL UNIQUE (ex: "oracle_step_intention", "oracle_step_obi", "ritual_reader")
-- message TEXT NOT NULL (texto da orientacao)
-- audio_url TEXT (URL do audio, opcional)
-- is_active BOOLEAN DEFAULT true
-- created_at TIMESTAMPTZ DEFAULT now()
-- updated_at TIMESTAMPTZ DEFAULT now()
+oracle_task_templates (campos novos):
+- guidance_message TEXT (orientacao do mestre para essa tarefa)
+- guidance_audio_url TEXT (audio do mestre para essa tarefa)
 ```
 
-Uma linha em `app_settings` para armazenar a URL do avatar do mestre: chave `guidance_avatar_url`.
-
-**RLS:**
-- SELECT publico (todos podem ler)
-- ALL para admin
+Isso elimina a necessidade de criar entradas separadas na tabela `guidance_bubbles` para cada tarefa. A orientacao vive diretamente no template da tarefa.
 
 ---
 
-## 2. Componente `GuidanceBubble`
+## 1. Migracao do Banco de Dados
 
-Novo componente reutilizavel: `src/components/GuidanceBubble.tsx`
+Adicionar 2 colunas a tabela `oracle_task_templates`:
 
-**Props:**
-- `pointKey: string` -- identifica qual orientacao carregar
-- `className?: string` -- customizacao opcional
+```text
+ALTER TABLE oracle_task_templates
+  ADD COLUMN guidance_message TEXT DEFAULT '',
+  ADD COLUMN guidance_audio_url TEXT;
+```
 
-**Comportamento:**
-- Busca a orientacao da tabela `guidance_bubbles` onde `point_key` = prop e `is_active = true`
-- Busca o avatar do mestre de `app_settings` (chave `guidance_avatar_url`)
-- Se nao houver orientacao cadastrada para aquele ponto, nao renderiza nada (retorna null)
-- Se houver audio, exibe um mini botao de play ao lado do texto
-
-**Estilo visual:**
-- Container com `bg-amber-50 dark:bg-amber-950/30` e `rounded-2xl`
-- Avatar circular (48x48) com `ring-2 ring-amber-400` posicionado a esquerda
-- Triangulo CSS (pseudo-elemento) criando o efeito de "rabo" do balao
-- Texto em tamanho `text-sm` com fonte suave
-- Mini player de audio inline (icone de play/pause com barra de progresso compacta)
+Nenhuma tabela nova. Nenhuma mudanca de RLS (a tabela ja tem politicas corretas).
 
 ---
 
-## 3. Pontos de Insercao no App
+## 2. Propagar Orientacao para journey_tasks
 
-O componente `GuidanceBubble` sera inserido nos seguintes locais:
+Quando o diagnostico salva as tarefas na `journey_tasks`, os campos de orientacao precisam ser salvos junto. Adicionar 2 colunas em `journey_tasks`:
 
-### Oraculo (cada etapa do wizard):
-| Arquivo | point_key | Posicao |
-|---|---|---|
-| `StepIntention.tsx` | `oracle_step_intention` | Abaixo do subtitulo, antes das opcoes |
-| `StepObiResult.tsx` | `oracle_step_obi` | Abaixo da imagem do Obi, antes das opcoes |
-| `StepIreIbi.tsx` | `oracle_step_ire_ibi` | Abaixo da descricao, antes dos botoes Ire/Ibi |
-| `StepEbo.tsx` | `oracle_step_ebo` | Abaixo do titulo, antes das perguntas |
-| `StepOri.tsx` | `oracle_step_ori` | Abaixo do titulo, antes das perguntas |
-| `StepIyamiEgbe.tsx` | `oracle_step_iyami` | Abaixo do titulo, antes das perguntas |
-| `StepDiagnosis.tsx` | `oracle_step_diagnosis` | Abaixo do subtitulo, antes do card de resumo |
+```text
+ALTER TABLE journey_tasks
+  ADD COLUMN guidance_message TEXT DEFAULT '',
+  ADD COLUMN guidance_audio_url TEXT;
+```
 
-### Rituais e Oracoes:
-| Arquivo | point_key | Posicao |
-|---|---|---|
-| `RitualReader.tsx` | `ritual_reader` | Acima do conteudo Markdown, abaixo do header |
-
-### Jornada:
-| Arquivo | point_key | Posicao |
-|---|---|---|
-| `JourneyEntryCard.tsx` | `journey_task_card` | Abaixo do progresso, antes das secoes de tarefas |
+Assim, quando o `StepDiagnosis` cria as tarefas, copia `guidance_message` e `guidance_audio_url` do template para a tarefa do usuario. Isso "congela" a orientacao no momento da criacao (mesmo que o admin mude depois, o aluno ve o que era valido quando consultou).
 
 ---
 
-## 4. Hook `useGuidance`
+## 3. Componente TaskGuidanceBubble
 
-Novo hook: `src/hooks/useGuidance.ts`
+Novo componente leve: `src/components/TaskGuidanceBubble.tsx`
 
-- `useGuidanceBubble(pointKey: string)` -- retorna `{ message, audio_url, avatar_url, isLoading }`
-- Combina query de `guidance_bubbles` filtrado por `point_key` e `is_active = true` com query de `app_settings` para `guidance_avatar_url`
-- Cache agressivo via React Query (staleTime longo, pois esse conteudo muda pouco)
+Reutiliza o visual do `GuidanceBubble` mas recebe as props diretamente (sem buscar do banco):
 
----
+```text
+Props:
+- message: string
+- audioUrl?: string
+- className?: string
+```
 
-## 5. Painel Admin -- Gestao de Orientacoes
-
-Nova secao "Orientacoes" no admin: `src/components/admin/AdminGuidance.tsx`
-
-**Funcionalidades:**
-- Campo para definir a URL do avatar do mestre (salva em `app_settings`)
-- Lista de todos os `point_key` possiveis com label amigavel (ex: "Etapa 1: Intencao", "Leitor de Ritual")
-- Para cada ponto: campo de texto (textarea) e campo de URL de audio
-- Toggle ativo/inativo por ponto
-- Botao salvar por linha
-- Preview do balao em tempo real ao digitar
-
-**Atualizacoes no admin:**
-- `AdminSidebar.tsx`: adicionar item "Orientacoes" com icone `MessageCircle`
-- `Admin.tsx`: renderizar secao "guidance" com `AdminGuidance`
+Busca o avatar do mestre do `app_settings` (mesmo hook `useAppSettings`). Se `message` estiver vazio, retorna null.
 
 ---
 
-## Resumo de arquivos
+## 4. Alteracoes no Admin (oracle_task_templates)
+
+No `AdminOracleTaskTemplates.tsx`, adicionar ao formulario de cada regra:
+
+- Textarea "Orientacao do Mestre" (campo `guidance_message`)
+- Input "URL do Audio" (campo `guidance_audio_url`)
+- Preview do balao ao lado, em tempo real
+
+Fica integrado no mesmo formulario de criacao/edicao de regra de tarefa, sem precisar ir a outra tela.
+
+---
+
+## 5. Alteracoes no StepDiagnosis
+
+No `StepDiagnosis.tsx`:
+
+- Incluir `guidance_message` e `guidance_audio_url` no mapeamento de templates para `TaskDef`
+- Ao salvar as tarefas (`handleSave`), copiar esses campos para cada linha de `journey_tasks`
+- Exibir `TaskGuidanceBubble` abaixo de cada card de tarefa no diagnostico, para o aluno ja ver a orientacao antes de iniciar
+
+---
+
+## 6. Alteracoes no JourneyEntryCard
+
+No `JourneyEntryCard.tsx`:
+
+- Para cada tarefa individual na lista, renderizar `TaskGuidanceBubble` abaixo do titulo se `guidance_message` existir
+- O balao aparece compacto, integrado ao item da tarefa, com botao de audio se disponivel
+
+---
+
+## Fluxo Completo
+
+```text
+1. Admin cria regra de tarefa "Ebo de Limpeza" com orientacao:
+   "Separe 1 ovo, mel e azeite de dende..."
+
+2. Usuario consulta o Oraculo -> Diagnostico gera tarefa "Ebo de Limpeza"
+   -> Balao do mestre aparece no card da tarefa com a orientacao
+
+3. Usuario vai para Jornada -> Cada tarefa mostra o balao do mestre
+   com texto e audio especificos daquela tarefa
+
+4. Orientacao fica "congelada" na journey_task (snapshot do momento)
+```
+
+---
+
+## Resumo de Arquivos
 
 | Arquivo | Acao |
 |---|---|
-| Migration SQL | Criar tabela `guidance_bubbles` com RLS |
-| `src/hooks/useGuidance.ts` | Criar: hook para buscar orientacao e avatar |
-| `src/components/GuidanceBubble.tsx` | Criar: componente visual do balao |
-| `src/components/admin/AdminGuidance.tsx` | Criar: gestao de orientacoes no admin |
-| `src/components/admin/AdminSidebar.tsx` | Adicionar item "Orientacoes" |
-| `src/pages/Admin.tsx` | Renderizar secao "guidance" |
-| `src/components/oracle/StepIntention.tsx` | Inserir `GuidanceBubble` |
-| `src/components/oracle/StepObiResult.tsx` | Inserir `GuidanceBubble` |
-| `src/components/oracle/StepIreIbi.tsx` | Inserir `GuidanceBubble` |
-| `src/components/oracle/StepEbo.tsx` | Inserir `GuidanceBubble` |
-| `src/components/oracle/StepOri.tsx` | Inserir `GuidanceBubble` |
-| `src/components/oracle/StepIyamiEgbe.tsx` | Inserir `GuidanceBubble` |
-| `src/components/oracle/StepDiagnosis.tsx` | Inserir `GuidanceBubble` |
-| `src/pages/RitualReader.tsx` | Inserir `GuidanceBubble` |
-| `src/components/journey/JourneyEntryCard.tsx` | Inserir `GuidanceBubble` |
+| Migration SQL | ADD COLUMN guidance_message e guidance_audio_url em oracle_task_templates e journey_tasks |
+| `src/components/TaskGuidanceBubble.tsx` | Criar: balao de orientacao com props diretas |
+| `src/components/admin/AdminOracleTaskTemplates.tsx` | Adicionar campos de orientacao no formulario |
+| `src/components/oracle/StepDiagnosis.tsx` | Mapear guidance dos templates; salvar nos tasks; exibir balao |
+| `src/components/journey/JourneyEntryCard.tsx` | Exibir balao por tarefa individual |
+| `src/integrations/supabase/types.ts` | Atualizado automaticamente apos migracao |
+
+Os pontos fixos existentes (oracle_step_intention, ritual_reader, etc.) continuam funcionando normalmente via `GuidanceBubble`. O novo `TaskGuidanceBubble` e complementar e especifico para tarefas.
+
