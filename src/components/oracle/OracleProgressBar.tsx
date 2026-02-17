@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-const STEP_LABELS = ["Obi", "Irê/Ibi", "Ebó", "Ori", "Iyami & Egbe", "Resultado"];
+const STEP_LABELS = ["Obi", "Irê/Ibi", "Ebó", "Ori", "Iyami & Egbe", "Diagnóstico"];
 
 interface Props {
   currentStep: number;

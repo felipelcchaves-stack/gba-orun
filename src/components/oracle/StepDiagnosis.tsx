@@ -13,6 +13,7 @@ import RitualCombobox from "@/components/RitualCombobox";
 import RitualHelpButton from "@/components/RitualHelpButton";
 
 export interface WizardState {
+  intention: "cuidado_semanal" | "orientacao";
   result: string;
   ireOrIbi: "ire" | "ibi";
   eboApurado: boolean;
@@ -106,6 +107,7 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
       .filter(t => {
         if (t.oracle_result_key && t.oracle_result_key !== state.result) return false;
         if (t.ire_or_ibi && t.ire_or_ibi !== state.ireOrIbi) return false;
+        if ((t as any).intention && (t as any).intention !== state.intention) return false;
         if (!matchCondition(t.condition, state)) return false;
         return true;
       })
@@ -146,6 +148,7 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
 
     try {
       const contextJson = JSON.stringify({
+        intention: state.intention,
         ireOrIbi: state.ireOrIbi,
         eboApurado: state.eboApurado,
         eboTipo: state.eboTipo,
@@ -155,7 +158,8 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
         egbeOrunQuer: state.egbeOrunQuer,
       });
 
-      const notes = `${obiName} em ${state.ireOrIbi === "ire" ? "Irê" : "Ibi"}. ` +
+      const intentionLabel = state.intention === "cuidado_semanal" ? "Cuidado Semanal" : "Orientação";
+      const notes = `[${intentionLabel}] ${obiName} em ${state.ireOrIbi === "ire" ? "Irê" : "Ibi"}. ` +
         `Ebó: ${state.eboApurado ? state.eboTipo : "pendente"}. ` +
         `Ori: ${state.oriPrecisa ? state.oriAcao : "ok"}. ` +
         `Iyami: ${state.iyamiQuer ? "sim" : "não"}. ` +

@@ -23,6 +23,7 @@ export interface OracleTaskTemplate {
   category: string;
   ritual_id: string | null;
   display_order: number;
+  intention: string | null;
 }
 
 export interface OracleStepText {

@@ -1,0 +1,1 @@
+ALTER TABLE public.oracle_task_templates ADD COLUMN intention TEXT DEFAULT NULL;
