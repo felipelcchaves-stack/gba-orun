@@ -1,64 +1,85 @@
 
-
-# Plano: Painel Admin Desktop com Sidebar, Dashboard e Gestao de Usuarios
+# Plano: Dashboard Espiritual com Graficos de Cuidado + Fonte Poppins
 
 ## Resumo
 
-Transformar a pagina `/admin` de um layout mobile com tabs horizontais para um painel profissional focado em **notebook/desktop**, com menu lateral fixo (sidebar), dashboard com indicadores e gestao de usuarios/assinaturas.
-
-## O Que Vai Mudar
-
-### 1. Layout Desktop com Sidebar
-
-Trocar o layout atual (tabs horizontais, max-w-3xl) por um layout com:
-- **Sidebar fixa a esquerda** (~240px) com icones e labels para cada secao
-- **Area de conteudo principal** ocupando o resto da tela
-- Sem usar o componente BottomNav na rota `/admin`
-- A sidebar tera: Dashboard, Usuarios, Rituais, Oraculo, Configuracoes, Importar
-
-### 2. Dashboard (nova secao principal)
-
-A secao inicial ao abrir `/admin` sera um **Dashboard** com cards de indicadores:
-
-| Indicador | Fonte |
-|---|---|
-| Total de Usuarios | Contagem de `profiles` |
-| Usuarios Premium (pagantes) | `profiles` onde `is_premium = true` |
-| Usuarios Gratuitos | `profiles` onde `is_premium = false` |
-| Consultas ao Oraculo (total) | Contagem de `user_journey` |
-| Consultas Hoje | `user_journey` filtrado por data de hoje |
-| Rituais Cadastrados | Contagem de `rituals` |
-
-Abaixo dos cards: uma tabela com os **ultimos usuarios cadastrados** (nome, email, religiao, premium sim/nao, data de cadastro).
-
-### 3. Secao "Usuarios" (nova)
-
-Uma pagina de lista de usuarios com:
-- Tabela completa: Nome, Email, Religiao, Premium (sim/nao), Dia de Cuidado, Data de Cadastro
-- Filtro por status: Todos / Premium / Gratuito
-- Badge de cor para status (verde = premium, cinza = gratuito)
-- Por ora, dados reais do banco. O "historico de inadimplencia" sera mockup (coluna visual com status fixo)
-
-### 4. Esconder BottomNav no Admin
-
-O `BottomNav` nao aparecera na rota `/admin` -- o admin tera sua propria navegacao pela sidebar.
+Adicionar ao Dashboard do usuario (Home) um painel inteligente que analisa as 4 energias espirituais (Ebo, Ori, Iyami, Egbe Orun) com base no historico de consultas e tarefas, mostrando graficos de evolucao e sugestoes de cuidado. Alem disso, trocar toda a tipografia do app de Playfair Display/Inter para **Poppins**.
 
 ---
 
-## Migracao de Banco de Dados
+## Parte 1: Logica de Analise Espiritual
 
-Necessaria uma **edge function** (ou query via service role) para listar usuarios, ja que a tabela `profiles` tem RLS restrita ao dono. Vou criar uma **database function** com `SECURITY DEFINER` que so admins podem chamar:
+### Fonte de Dados
 
-```sql
-CREATE FUNCTION admin_list_profiles()
-  RETURNS SETOF profiles
-  LANGUAGE sql STABLE SECURITY DEFINER
-AS $$ SELECT * FROM profiles $$;
-```
+Os dados ja existem nas tabelas:
+- **`user_journey`**: cada consulta ao oraculo salva `oracle_result` e `context` (JSON com `eboApurado`, `oriPrecisa`, `iyamiQuer`, `egbeOrunQuer`)
+- **`journey_tasks`**: cada tarefa tem `task_type` (ebo, ibori, oracao_ori, iyami, egbe_orun, cantiga, etc.) e `completed` (boolean)
 
-Com uma RPC call protegida: so funciona se `has_role(auth.uid(), 'admin')`.
+### Calculo do "Nivel de Atencao" por Energia
 
-Tambem criarei uma funcao para contar stats agregadas (total usuarios, premium, consultas).
+Para cada uma das 4 energias, o sistema vai calcular um score de 0-100 baseado em:
+
+| Energia | task_types relevantes | Logica de score |
+|---|---|---|
+| **Ebo** | `ebo` | Quantas vezes foi pedido vs quantas vezes foi completado |
+| **Ori** | `ibori`, `oracao_ori` | Idem - demanda vs conclusao |
+| **Iyami** | `iyami`, `oracao_iyami` | Idem |
+| **Egbe Orun** | `egbe_orun` | Idem |
+
+**Formula**: `score = (total_pedidos - total_completados) / total_pedidos * 100`
+- Score alto = muitas demandas nao atendidas = precisa de atencao urgente
+- Score baixo = usuario esta em dia = energia equilibrada
+- Se nao tem dados, score = 50 (neutro)
+
+### Sugestoes Automaticas por Nivel
+
+| Energia | Score > 70 (Critico) | Score 40-70 (Atencao) | Score < 40 (Equilibrado) |
+|---|---|---|---|
+| **Ebo** | "Consulte um Awo (Babalawo/Iyanifa)" | "Faca um Ebo de manutencao" | "Ebo em dia!" |
+| **Ori** | "Precisa de um Igba Ori (assento de Ori)" | "Faca um Ibori de fortalecimento" | "Ori fortalecido!" |
+| **Iyami** | "Considere fazer Imule (pacto com as Maes)" | "Faca oracoes para Iyami" | "Iyami em paz!" |
+| **Egbe Orun** | "Considere fazer Idi Egbe (1a mao de Egbe)" | "Oferenda ao Egbe Orun" | "Egbe Orun satisfeito!" |
+
+---
+
+## Parte 2: Componentes Visuais
+
+### Novo Componente: `SpiritualEnergyDashboard`
+
+Card na Home que mostra:
+
+1. **4 barras de progresso radiais** (ou barras horizontais) coloridas, uma por energia
+2. **Indicador de urgencia** com cores: verde (equilibrado), amarelo (atencao), vermelho (critico)
+3. **Sugestao principal**: a energia que mais precisa de cuidado, com a recomendacao adequada
+4. **Botao de acao**: link para o Oraculo ou para o Ritual sugerido
+
+### Novo Componente: `SpiritualEvolutionChart`
+
+Grafico de linha (usando Recharts, ja instalado) mostrando a evolucao das 4 energias ao longo do tempo:
+- Eixo X: ultimas 4 semanas (ou ultimos 30 dias agrupados por semana)
+- Eixo Y: score de atencao (0-100)
+- 4 linhas coloridas, uma por energia
+- Tooltip com detalhes
+
+### Hook: `useSpiritualAnalysis`
+
+Hook que:
+1. Busca todas as `journey_tasks` do usuario
+2. Agrupa por `task_type` nas 4 categorias
+3. Calcula os scores
+4. Gera as sugestoes
+5. Prepara os dados para o grafico de evolucao (agrupando por semana)
+
+---
+
+## Parte 3: Troca de Fonte para Poppins
+
+### Mudancas
+
+1. **`index.html`** ou **`src/index.css`**: trocar o import do Google Fonts de `Playfair Display + Inter` para `Poppins` (com pesos 300, 400, 500, 600, 700)
+2. **`tailwind.config.ts`**: alterar `fontFamily.display` e `fontFamily.body` ambas para `["Poppins", "sans-serif"]`
+3. **`src/index.css`**: atualizar as regras de `h1-h6` e `.font-display` / `.font-body` para usar Poppins
+4. Nao precisa mexer nos componentes individualmente - as classes `font-display` e `font-body` ja sao usadas em todo o app e vao herdar a nova fonte
 
 ---
 
@@ -68,63 +89,47 @@ Tambem criarei uma funcao para contar stats agregadas (total usuarios, premium, 
 
 | Arquivo | Descricao |
 |---|---|
-| `src/components/admin/AdminSidebar.tsx` | Sidebar fixa com navegacao entre secoes do admin |
-| `src/components/admin/AdminDashboard.tsx` | Dashboard com cards KPI e tabela de usuarios recentes |
-| `src/components/admin/AdminUsers.tsx` | Lista completa de usuarios com filtros |
-| `src/hooks/useAdminData.ts` | Hook para buscar dados administrativos (RPC calls para perfis e stats) |
+| `src/hooks/useSpiritualAnalysis.ts` | Hook que calcula scores e sugestoes das 4 energias |
+| `src/components/home/SpiritualEnergyDashboard.tsx` | Card com barras de progresso e sugestao principal |
+| `src/components/home/SpiritualEvolutionChart.tsx` | Grafico de linha com evolucao semanal das energias |
 
 ### Arquivos a Modificar
 
 | Arquivo | Mudanca |
 |---|---|
-| `src/pages/Admin.tsx` | Refatorar: layout com sidebar + area de conteudo, adicionar secoes Dashboard e Usuarios |
-| `src/components/BottomNav.tsx` | Esconder quando a rota for `/admin` |
+| `src/index.css` | Trocar import de fontes para Poppins |
+| `tailwind.config.ts` | Atualizar fontFamily para Poppins |
+| `src/pages/Home.tsx` | Adicionar os novos componentes de energia abaixo do SpiritualCareCard |
 
-### Estrutura do Layout Admin
+### Cores das Energias
+
+| Energia | Cor | Referencia |
+|---|---|---|
+| Ebo | Marrom Terra (`hsl(var(--earth))`) | Cor do earth token |
+| Ori | Amarelo Ouro (`hsl(var(--gold))`) | Cor do gold token |
+| Iyami | Roxo (`#800080`) | Cor de alerta Iyami do briefing |
+| Egbe Orun | Verde Folha (`hsl(var(--leaf))`) | Cor do leaf token |
+
+### Estrutura do Grafico (Recharts)
+
+Usando `LineChart` com `ResponsiveContainer` do Recharts (ja instalado). Dados no formato:
 
 ```text
-+------------------+----------------------------------------+
-|                  |                                        |
-|   SIDEBAR        |   CONTEUDO PRINCIPAL                   |
-|                  |                                        |
-|   [Logo]         |   Dashboard / Usuarios / Rituais /     |
-|   Dashboard      |   Oraculo / Config / Importar          |
-|   Usuarios       |                                        |
-|   Rituais        |                                        |
-|   Oraculo        |                                        |
-|   Configuracoes  |                                        |
-|   Importar       |                                        |
-|                  |                                        |
-|   [Sair]         |                                        |
-+------------------+----------------------------------------+
+[
+  { semana: "Sem 1", ebo: 80, ori: 40, iyami: 20, egbe: 60 },
+  { semana: "Sem 2", ebo: 60, ori: 50, iyami: 30, egbe: 50 },
+  ...
+]
 ```
 
-### Cards do Dashboard
+### Integracao na Home
 
-Cada card tera: icone, numero grande, label descritivo e cor de destaque. Usando o componente `Card` do shadcn ja existente.
-
-### Tabela de Usuarios
-
-Usando o componente `Table` do shadcn ja existente. Colunas: Nome, Email, Religiao, Status (badge), Cadastro.
-
-### Database Functions (SQL)
-
-Duas funcoes `SECURITY DEFINER` restritas a admins:
-
-1. `admin_list_profiles()` -- retorna todos os perfis com email do auth.users
-2. `admin_get_stats()` -- retorna contagens agregadas (total usuarios, premium, consultas hoje, total consultas)
-
-### Fluxo
-
-1. Admin abre `/admin` -> ve sidebar + dashboard
-2. Dashboard carrega stats via `admin_get_stats()` RPC
-3. Clica em "Usuarios" na sidebar -> ve tabela completa via `admin_list_profiles()` RPC
-4. Filtros de Premium/Gratuito sao client-side sobre os dados ja carregados
-5. As secoes existentes (Rituais, Oraculo, Config, Importar) continuam funcionando igual, so mudam de tabs horizontais para itens na sidebar
+O novo dashboard de energias aparecera logo abaixo do `SpiritualCareCard` existente, somente para usuarios logados. Tera dois blocos:
+1. O card com as 4 barras e a sugestao principal
+2. O grafico de evolucao (colapsavel, inicia fechado para nao sobrecarregar a tela)
 
 ---
 
 ## Resultado Esperado
 
-O admin abre `/admin` no notebook e ve um painel profissional com sidebar fixa, dashboard mostrando KPIs (total usuarios, premium, gratuitos, consultas), tabela de usuarios recentes, e navegacao lateral para todas as secoes de gestao. A experiencia e 100% focada em desktop, sem bottom nav, com uso eficiente do espaco horizontal.
-
+O usuario logado vera na Home, alem do card de cuidado semanal, um painel mostrando o estado das 4 energias espirituais com barras coloridas, indicadores visuais de urgencia, sugestoes personalizadas (como "Consulte um Awo" ou "Faca Idi Egbe"), e um grafico de evolucao ao longo das semanas. Toda a tipografia do app sera Poppins, mantendo a hierarquia de tamanhos e pesos existente.
