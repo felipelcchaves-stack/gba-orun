@@ -2,9 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useRituals, useCreateRitual, useUpdateRitual, useDeleteRitual, Ritual } from "@/hooks/useRituals";
-import { useAppSettings, useUpdateAppSetting } from "@/hooks/useAppSettings";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, LogOut, Settings, BookOpen, Users, FileJson, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JsonImporter from "@/components/JsonImporter";
 import AdminRitualForm from "@/components/admin/AdminRitualForm";
@@ -12,6 +10,9 @@ import AdminOfferSettings from "@/components/admin/AdminOfferSettings";
 import AdminOracleConfigs from "@/components/admin/AdminOracleConfigs";
 import AdminOracleTaskTemplates from "@/components/admin/AdminOracleTaskTemplates";
 import AdminOracleStepTexts from "@/components/admin/AdminOracleStepTexts";
+import AdminSidebar, { AdminSection } from "@/components/admin/AdminSidebar";
+import AdminDashboard from "@/components/admin/AdminDashboard";
+import AdminUsers from "@/components/admin/AdminUsers";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -28,7 +29,7 @@ const AdminPage = () => {
   const [password, setPassword] = useState("");
   const [editing, setEditing] = useState<Ritual | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<"rituals" | "settings" | "import" | "oracle">("rituals");
+  const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [oracleSubTab, setOracleSubTab] = useState<"configs" | "tasks" | "texts">("configs");
   const [filterCat, setFilterCat] = useState("");
 
@@ -38,15 +39,8 @@ const AdminPage = () => {
     if (error) toast.error(error.message);
   };
 
-  const openEdit = (r: Ritual) => {
-    setEditing(r);
-    setShowForm(true);
-  };
-
-  const openNew = () => {
-    setEditing(null);
-    setShowForm(true);
-  };
+  const openEdit = (r: Ritual) => { setEditing(r); setShowForm(true); };
+  const openNew = () => { setEditing(null); setShowForm(true); };
 
   const handleSave = async (payload: any) => {
     try {
@@ -110,49 +104,22 @@ const AdminPage = () => {
     );
   }
 
-  const TABS = [
-    { key: "rituals" as const, label: "Rituais", icon: BookOpen },
-    { key: "oracle" as const, label: "Oráculo", icon: Sparkles },
-    { key: "settings" as const, label: "Configurações", icon: Settings },
-    { key: "import" as const, label: "Importar", icon: FileJson },
-  ];
-
   return (
-    <div className="min-h-screen pb-24 px-5">
-      <div className="max-w-3xl mx-auto pt-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2">
-              <ArrowLeft className="h-4 w-4" /> Início
-            </Link>
-            <h1 className="text-3xl font-display font-bold">Painel Admin</h1>
-          </div>
-          <button onClick={signOut} className="p-2 rounded-xl border border-border hover:bg-muted" title="Sair">
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
+    <div className="flex min-h-screen w-full bg-background">
+      <AdminSidebar active={activeSection} onNavigate={setActiveSection} onSignOut={signOut} />
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === tab.key
-                  ? "bg-secondary text-secondary-foreground"
-                  : "bg-card border border-border hover:bg-muted"
-              }`}
-            >
-              <tab.icon className="h-4 w-4" /> {tab.label}
-            </button>
-          ))}
-        </div>
+      <main className="flex-1 p-8 overflow-auto">
+        {activeSection === "dashboard" && <AdminDashboard />}
 
-        {/* Tab content */}
-        {activeTab === "rituals" && (
-          <>
-            <div className="flex items-center justify-between mb-4 gap-3">
+        {activeSection === "users" && <AdminUsers />}
+
+        {activeSection === "rituals" && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-display font-bold text-foreground">Rituais</h1>
+              <p className="text-sm text-muted-foreground mt-1">Gerencie os rituais do aplicativo</p>
+            </div>
+            <div className="flex items-center justify-between gap-3">
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-1">
                 <button onClick={() => setFilterCat("")} className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-all ${!filterCat ? "bg-foreground text-background" : "border border-border text-muted-foreground"}`}>Todos</button>
                 {CATEGORIES.map(c => (
@@ -165,11 +132,7 @@ const AdminPage = () => {
             </div>
 
             {showForm && (
-              <AdminRitualForm
-                editing={editing}
-                onSave={handleSave}
-                onCancel={() => setShowForm(false)}
-              />
+              <AdminRitualForm editing={editing} onSave={handleSave} onCancel={() => setShowForm(false)} />
             )}
 
             {isLoading ? (
@@ -197,12 +160,16 @@ const AdminPage = () => {
             ) : (
               <p className="text-center text-muted-foreground py-12">Nenhum ritual cadastrado.</p>
             )}
-          </>
+          </div>
         )}
 
-        {activeTab === "oracle" && (
-          <>
-            <div className="flex gap-2 mb-6">
+        {activeSection === "oracle" && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-display font-bold text-foreground">Oráculo</h1>
+              <p className="text-sm text-muted-foreground mt-1">Configure o motor de decisão</p>
+            </div>
+            <div className="flex gap-2">
               {([
                 { key: "configs" as const, label: "Resultados do Obi" },
                 { key: "tasks" as const, label: "Tarefas Sugeridas" },
@@ -224,12 +191,29 @@ const AdminPage = () => {
             {oracleSubTab === "configs" && <AdminOracleConfigs />}
             {oracleSubTab === "tasks" && <AdminOracleTaskTemplates />}
             {oracleSubTab === "texts" && <AdminOracleStepTexts />}
-          </>
+          </div>
         )}
 
-        {activeTab === "settings" && <AdminOfferSettings />}
-        {activeTab === "import" && <JsonImporter />}
-      </div>
+        {activeSection === "settings" && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-display font-bold text-foreground">Configurações</h1>
+              <p className="text-sm text-muted-foreground mt-1">Ajustes gerais do aplicativo</p>
+            </div>
+            <AdminOfferSettings />
+          </div>
+        )}
+
+        {activeSection === "import" && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-display font-bold text-foreground">Importar Dados</h1>
+              <p className="text-sm text-muted-foreground mt-1">Importe rituais e conteúdo via JSON</p>
+            </div>
+            <JsonImporter />
+          </div>
+        )}
+      </main>
     </div>
   );
 };

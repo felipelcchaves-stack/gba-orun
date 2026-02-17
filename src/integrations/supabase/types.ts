@@ -401,6 +401,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_stats: {
+        Args: never
+        Returns: {
+          consultations_today: number
+          free_users: number
+          premium_users: number
+          total_consultations: number
+          total_rituals: number
+          total_users: number
+        }[]
+      }
+      admin_list_profiles: {
+        Args: never
+        Returns: {
+          care_day: number
+          created_at: string
+          display_name: string
+          email: string
+          guru_id: string
+          id: string
+          is_premium: boolean
+          religion: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
