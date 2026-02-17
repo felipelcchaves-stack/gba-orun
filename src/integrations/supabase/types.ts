@@ -211,6 +211,8 @@ export type Database = {
           description_ibi: string
           description_ire: string
           display_order: number
+          guidance_audio_url: string | null
+          guidance_message: string
           id: string
           meaning: string
           name: string
@@ -222,6 +224,8 @@ export type Database = {
           description_ibi?: string
           description_ire?: string
           display_order?: number
+          guidance_audio_url?: string | null
+          guidance_message?: string
           id?: string
           meaning?: string
           name: string
@@ -233,6 +237,8 @@ export type Database = {
           description_ibi?: string
           description_ire?: string
           display_order?: number
+          guidance_audio_url?: string | null
+          guidance_message?: string
           id?: string
           meaning?: string
           name?: string

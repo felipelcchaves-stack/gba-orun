@@ -20,7 +20,7 @@ const AdminOracleConfigs = () => {
 
   const startEdit = (c: OracleConfig) => {
     setEditingId(c.id);
-    setForm({ name: c.name, meaning: c.meaning, description_ire: c.description_ire, description_ibi: c.description_ibi, color_type: c.color_type, default_ire_ibi: c.default_ire_ibi || "ibi" });
+    setForm({ name: c.name, meaning: c.meaning, description_ire: c.description_ire, description_ibi: c.description_ibi, color_type: c.color_type, default_ire_ibi: c.default_ire_ibi || "ibi", guidance_message: c.guidance_message || "", guidance_audio_url: c.guidance_audio_url || "" });
   };
 
   const handleSave = async (id: string) => {
@@ -82,6 +82,14 @@ const AdminOracleConfigs = () => {
                     {COLOR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Orientação do Mestre (texto)</label>
+                <Textarea value={form.guidance_message || ""} onChange={e => setForm(f => ({ ...f, guidance_message: e.target.value }))} rows={3} placeholder="Texto que o mestre fala quando esse resultado aparece..." />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Áudio do Mestre (URL)</label>
+                <Input value={form.guidance_audio_url || ""} onChange={e => setForm(f => ({ ...f, guidance_audio_url: e.target.value }))} placeholder="https://..." />
               </div>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setEditingId(null)} className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted">Cancelar</button>
