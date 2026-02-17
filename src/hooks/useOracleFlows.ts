@@ -116,6 +116,7 @@ export const useFlowNodes = (flowId: string | undefined) =>
   useQuery({
     queryKey: ["oracle_flow_nodes", flowId],
     enabled: !!flowId,
+    staleTime: 1000 * 60 * 30,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("oracle_flow_nodes")
@@ -130,6 +131,7 @@ export const useFlowEdges = (flowId: string | undefined) =>
   useQuery({
     queryKey: ["oracle_flow_edges", flowId],
     enabled: !!flowId,
+    staleTime: 1000 * 60 * 30,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("oracle_flow_edges")

@@ -17,6 +17,7 @@ export interface Ritual {
 export const useRituals = (category?: string) => {
   return useQuery({
     queryKey: ["rituals", category],
+    staleTime: 1000 * 60 * 30,
     queryFn: async () => {
       let query = supabase.from("rituals").select("*").order("created_at", { ascending: false });
       if (category) query = query.eq("category", category);
