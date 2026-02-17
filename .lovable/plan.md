@@ -1,40 +1,57 @@
 
-# Usar foto do perfil como avatar do mentor
 
-## O que muda
+# Corrigir logout ao fazer upload de foto
 
-No painel admin de Orientações do Mestre, adicionar um botao "Usar minha foto" ao lado do campo de URL do avatar. Ao clicar, o sistema busca a foto do perfil do admin logado e preenche automaticamente o campo, salvando como avatar do orientador.
+## Problema
 
-## Como funciona
+Ao fazer upload da foto de perfil, o usuario e deslogado. Isso acontece porque o hook `useAuth` tem uma condicao de corrida: o `onAuthStateChange` pode disparar durante o upload (por refresh de token ou evento interno do Supabase), e a forma como o estado e gerenciado causa perda da sessao.
 
-1. O admin clica em "Usar minha foto"
-2. O sistema busca o `avatar_url` do perfil do usuario logado (tabela `profiles`)
-3. Preenche o campo de URL com essa foto
-4. O admin clica em "Salvar" normalmente (fluxo ja existente)
+O problema esta no `useAuth.ts` -- o listener `onAuthStateChange` e registrado DEPOIS do `getSession`, mas o listener pode disparar antes do `getSession` resolver, causando estados inconsistentes. Alem disso, o `useAdmin` faz uma query separada que tambem pode sofrer com timing.
 
-## Detalhe tecnico
+## Solucao
 
-### Arquivo modificado
+Reorganizar o `useAuth.ts` seguindo o padrao recomendado:
+
+1. Registrar o `onAuthStateChange` ANTES de chamar `getSession`
+2. Garantir que o `loading` so vira `false` depois que tudo estiver estavel
+3. Evitar que eventos intermediarios (como `TOKEN_REFRESHED`) causem flickering
+
+## Arquivo modificado
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/components/admin/AdminGuidance.tsx` | Importar `useProfile`. Adicionar botao "Usar minha foto" que copia `profile.avatar_url` para o campo `avatarUrl`. |
+| `src/hooks/useAuth.ts` | Reorganizar: registrar listener antes de getSession, tratar eventos de forma mais robusta |
 
-### Alteracao no componente
-
-- Importar `useProfile` de `@/hooks/useProfile`
-- Chamar `const { data: profile } = useProfile()` no componente
-- Adicionar um botao ao lado do campo de URL do avatar:
+## Detalhe tecnico
 
 ```tsx
-{profile?.avatar_url && (
-  <button
-    onClick={() => setAvatarUrl(profile.avatar_url!)}
-    className="bg-primary/10 text-primary px-3 py-2 rounded-xl text-sm font-semibold shrink-0"
-  >
-    Usar minha foto
-  </button>
-)}
+// useAuth.ts corrigido
+useEffect(() => {
+  let isMounted = true;
+
+  // 1. Registrar listener PRIMEIRO (evita perder eventos)
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      if (isMounted) {
+        setUser(session?.user ?? null);
+      }
+    }
+  );
+
+  // 2. Buscar sessao inicial DEPOIS
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (isMounted) {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    }
+  });
+
+  return () => {
+    isMounted = false;
+    subscription.unsubscribe();
+  };
+}, []);
 ```
 
-Nenhuma alteracao de banco de dados necessaria. O campo `guidance_avatar_url` em `app_settings` ja existe e continua sendo usado normalmente.
+A mudanca principal e a ordem: listener primeiro, getSession depois. Isso garante que nenhum evento de auth e perdido durante a inicializacao. O flag `isMounted` previne updates em componentes desmontados.
+
