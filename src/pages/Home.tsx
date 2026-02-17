@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
-import { Compass, BookOpen, GraduationCap, Flame, Map, Heart, Bookmark } from "lucide-react";
+import { Compass, BookOpen, GraduationCap, Flame, Map, Heart, Bookmark, Sunrise, Moon, Music } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserStats } from "@/hooks/useUserStats";
 import { useRituals } from "@/hooks/useRituals";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { getCategoryLabel } from "@/lib/categories";
 
 import heroBanner from "@/assets/hero-banner.jpg";
 import obiOracle from "@/assets/obi-oracle.jpg";
@@ -22,15 +23,10 @@ const QUICK_ACCESS = [
   { to: "/rituais?cat=ibori", icon: Heart, label: "Ibori", image: iboriCategory },
   { to: "/rituais?cat=oriki", icon: BookOpen, label: "Oriki", image: orikiCategory },
   { to: "/rituais?cat=ebo", icon: Flame, label: "Ebó", image: eboCategory },
+  { to: "/rituais?cat=oracao_manha", icon: Sunrise, label: "Orações", image: dailyRoutine },
+  { to: "/rituais?cat=cantiga", icon: Music, label: "Cantigas", image: egbeOrunCategory },
   { to: "/jornada", icon: Map, label: "Jornada", image: dailyRoutine },
 ];
-
-const CATEGORY_IMAGES: Record<string, string> = {
-  ebo: eboCategory,
-  ibori: iboriCategory,
-  oriki: orikiCategory,
-  geral: egbeOrunCategory,
-};
 
 const FALLBACK_IMAGES = [ritualPlaceholder1, ritualPlaceholder2, eboCategory, iboriCategory, orikiCategory, dailyRoutine];
 
@@ -42,6 +38,13 @@ const HomePage = () => {
 
   const displayName = user?.user_metadata?.display_name || "Visitante";
   const featured = rituals?.slice(0, 6) ?? [];
+
+  // Show morning or night prayers based on time of day
+  const hour = new Date().getHours();
+  const prayerCategory = hour < 12 ? "oracao_manha" : "oracao_noite";
+  const prayerLabel = hour < 12 ? "Orações da Manhã" : "Orações da Noite";
+  const prayerIcon = hour < 12 ? Sunrise : Moon;
+  const dailyPrayers = rituals?.filter((r: any) => r.category === prayerCategory).slice(0, 3) ?? [];
   const dailyRituals = rituals?.slice(0, 4) ?? [];
 
   return (
@@ -62,13 +65,13 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Quick access - horizontal scroll with images */}
+      {/* Quick access */}
       <div className="px-6 mt-5 mb-6">
         <div className="max-w-lg mx-auto">
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
             {QUICK_ACCESS.map(item => (
               <Link
-                key={item.to}
+                key={item.to + item.label}
                 to={item.to}
                 className="shrink-0 w-[72px] flex flex-col items-center gap-2 group"
               >
@@ -82,12 +85,11 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Hero banner - image right, text left */}
+      {/* Hero banner */}
       <div className="px-6 mb-6">
         <div className="max-w-lg mx-auto">
           <Link to="/jornada" className="block">
             <div className="relative overflow-hidden rounded-2xl bg-secondary h-[160px] flex">
-              {/* Text side */}
               <div className="flex-1 p-5 flex flex-col justify-center z-10">
                 <p className="text-secondary-foreground/70 text-[10px] uppercase tracking-[0.15em] mb-1.5 font-medium">Jornada Espiritual</p>
                 <h2 className="font-display text-lg font-bold text-secondary-foreground leading-snug mb-3">
@@ -95,7 +97,6 @@ const HomePage = () => {
                 </h2>
                 <span className="text-xs font-medium text-secondary-foreground/80">Começar →</span>
               </div>
-              {/* Image side */}
               <div className="w-[140px] shrink-0 relative">
                 <img src={heroBanner} alt="Jornada" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-r from-secondary via-secondary/60 to-transparent" />
@@ -105,7 +106,41 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Destaques - horizontal scroll with large image cards */}
+      {/* Daily Prayers section */}
+      {dailyPrayers.length > 0 && (
+        <div className="px-6 mb-6">
+          <div className="max-w-lg mx-auto">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                {(() => { const PIcon = prayerIcon; return <PIcon className="h-4 w-4 text-accent" strokeWidth={1.5} />; })()}
+                <h3 className="font-display font-bold text-lg">{prayerLabel}</h3>
+              </div>
+              <Link to={`/rituais?cat=${prayerCategory}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ver todas</Link>
+            </div>
+            <div className="space-y-1">
+              {dailyPrayers.map((ritual: any, i: number) => (
+                <Link
+                  key={ritual.id}
+                  to={`/rituais/${ritual.id}`}
+                  className="flex items-center gap-3.5 py-3 border-b border-border/40 last:border-b-0"
+                >
+                  <img
+                    src={ritual.image_url || FALLBACK_IMAGES[i % FALLBACK_IMAGES.length]}
+                    alt={ritual.title}
+                    className="w-12 h-12 rounded-full object-cover shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-display font-bold text-sm truncate">{ritual.title}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">{getCategoryLabel(ritual.category)}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Destaques */}
       {featured.length > 0 && (
         <div className="px-6 mb-6">
           <div className="max-w-lg mx-auto">
@@ -127,7 +162,7 @@ const HomePage = () => {
                   />
                   <div className="p-3">
                     <h4 className="font-display font-bold text-sm truncate">{ritual.title}</h4>
-                    <span className="text-[11px] text-muted-foreground capitalize mt-0.5 block">{ritual.category}</span>
+                    <span className="text-[11px] text-muted-foreground mt-0.5 block">{getCategoryLabel(ritual.category)}</span>
                   </div>
                 </Link>
               ))}
@@ -136,7 +171,7 @@ const HomePage = () => {
         </div>
       )}
 
-      {/* Rituais do Dia - vertical list with round images */}
+      {/* Rituais do Dia */}
       {dailyRituals.length > 0 && (
         <div className="px-6">
           <div className="max-w-lg mx-auto">
@@ -155,7 +190,7 @@ const HomePage = () => {
                   />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-display font-bold text-sm truncate">{ritual.title}</h4>
-                    <p className="text-xs text-muted-foreground capitalize mt-0.5">{ritual.category}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{getCategoryLabel(ritual.category)}</p>
                   </div>
                   <Bookmark className="h-4 w-4 text-muted-foreground/40 shrink-0" strokeWidth={1.5} />
                 </Link>

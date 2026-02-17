@@ -1,10 +1,12 @@
-import { useJourney, useCompleteJourney } from "@/hooks/useJourney";
+import { useJourney, useJourneyTasks, useCompleteJourney, useCompleteTask } from "@/hooks/useJourney";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
-import { Compass, BookOpen, CheckCircle, Circle, Plus, Calendar, Sunrise, Sun, Moon } from "lucide-react";
+import { Compass, CheckCircle, Circle, Plus, Calendar, Sunrise, Moon } from "lucide-react";
 import { useState } from "react";
 import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getCategoryLabel, getCategoryImage } from "@/lib/categories";
+import { Progress } from "@/components/ui/progress";
 
 import dailyRoutine from "@/assets/daily-routine.jpg";
 import obiOracle from "@/assets/obi-oracle.jpg";
@@ -13,20 +15,14 @@ const JourneyPage = () => {
   const { user } = useAuth();
   const { data: entries, isLoading } = useJourney();
   const completeJourney = useCompleteJourney();
+  const completeTask = useCompleteTask();
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  // Generate week days
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  // Filter entries for selected date
   const dayEntries = entries?.filter((e: any) => {
-    const entryDate = new Date(e.created_at);
-    return isSameDay(entryDate, selectedDate);
-  }) ?? [];
-
-  const todayEntries = entries?.filter((e: any) => {
-    return isSameDay(new Date(e.created_at), new Date());
+    return isSameDay(new Date(e.created_at), selectedDate);
   }) ?? [];
 
   if (!user) {
@@ -42,7 +38,6 @@ const JourneyPage = () => {
   return (
     <div className="min-h-screen pb-24 bg-background">
       <div className="max-w-lg mx-auto pt-10 px-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-display font-bold">Plano de Vida</h1>
@@ -91,50 +86,14 @@ const JourneyPage = () => {
           </div>
         ) : dayEntries.length > 0 ? (
           <div className="space-y-6">
-            {/* Manhã */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Sunrise className="h-4 w-4 text-accent" strokeWidth={1.5} />
-                <h3 className="font-display font-bold text-sm">Manhã</h3>
-              </div>
-              <div className="space-y-2">
-                {dayEntries.map((entry: any) => (
-                  <div key={entry.id} className="bg-card rounded-2xl p-4 shadow-card flex items-center gap-3">
-                    <img src={obiOracle} alt="Obi" className="w-12 h-12 rounded-xl object-cover shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[10px] bg-foreground text-background px-2 py-0.5 rounded-full font-medium">
-                          {entry.oracle_result}
-                        </span>
-                      </div>
-                      {entry.rituals ? (
-                        <Link
-                          to={`/rituais/${entry.suggested_ritual_id}`}
-                          className="font-display font-bold text-sm hover:text-primary transition-colors truncate block"
-                        >
-                          {entry.rituals.title}
-                        </Link>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Sem ritual sugerido</p>
-                      )}
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {format(new Date(entry.created_at), "HH:mm")}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => !entry.completed && completeJourney.mutate(entry.id)}
-                      className="shrink-0"
-                    >
-                      {entry.completed ? (
-                        <CheckCircle className="h-6 w-6 text-primary" strokeWidth={1.5} />
-                      ) : (
-                        <Circle className="h-6 w-6 text-muted-foreground/30" strokeWidth={1.5} />
-                      )}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {dayEntries.map((entry: any) => (
+              <JourneyEntryCard
+                key={entry.id}
+                entry={entry}
+                onComplete={() => !entry.completed && completeJourney.mutate(entry.id)}
+                onCompleteTask={(taskId: string) => completeTask.mutate(taskId)}
+              />
+            ))}
           </div>
         ) : (
           <div className="text-center py-12">
@@ -153,5 +112,135 @@ const JourneyPage = () => {
     </div>
   );
 };
+
+// Sub-component for each journey entry with its tasks
+const JourneyEntryCard = ({
+  entry,
+  onComplete,
+  onCompleteTask,
+}: {
+  entry: any;
+  onComplete: () => void;
+  onCompleteTask: (taskId: string) => void;
+}) => {
+  const { data: tasks } = useJourneyTasks(entry.id);
+  const completedCount = tasks?.filter((t: any) => t.completed).length ?? 0;
+  const totalCount = tasks?.length ?? 0;
+  const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  // Group tasks by period
+  const morningTypes = ["oracao_manha", "oracao_ori"];
+  const nightTypes = ["oracao_noite", "oracao_iyami"];
+
+  const morningTasks = tasks?.filter((t: any) => morningTypes.includes(t.task_type)) ?? [];
+  const nightTasks = tasks?.filter((t: any) => nightTypes.includes(t.task_type)) ?? [];
+  const otherTasks = tasks?.filter((t: any) => !morningTypes.includes(t.task_type) && !nightTypes.includes(t.task_type)) ?? [];
+
+  return (
+    <div className="bg-card rounded-2xl p-5 shadow-card">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <img src={getCategoryImage("geral")} alt="Obi" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-[10px] bg-foreground text-background px-2 py-0.5 rounded-full font-medium">
+              {entry.oracle_result}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {format(new Date(entry.created_at), "HH:mm")}
+            </span>
+          </div>
+          {entry.rituals?.title && (
+            <Link
+              to={`/rituais/${entry.suggested_ritual_id}`}
+              className="font-display font-bold text-sm hover:text-primary transition-colors truncate block"
+            >
+              {entry.rituals.title}
+            </Link>
+          )}
+        </div>
+        <button onClick={onComplete} className="shrink-0">
+          {entry.completed ? (
+            <CheckCircle className="h-6 w-6 text-primary" strokeWidth={1.5} />
+          ) : (
+            <Circle className="h-6 w-6 text-muted-foreground/30" strokeWidth={1.5} />
+          )}
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      {totalCount > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] text-muted-foreground font-medium">Progresso</span>
+            <span className="text-[10px] text-muted-foreground">{completedCount}/{totalCount}</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+      )}
+
+      {/* Task sections */}
+      {morningTasks.length > 0 && (
+        <TaskSection icon={Sunrise} label="Manhã" tasks={morningTasks} onComplete={onCompleteTask} />
+      )}
+      {otherTasks.length > 0 && (
+        <TaskSection icon={Compass} label="Rituais & Oferendas" tasks={otherTasks} onComplete={onCompleteTask} />
+      )}
+      {nightTasks.length > 0 && (
+        <TaskSection icon={Moon} label="Noite" tasks={nightTasks} onComplete={onCompleteTask} />
+      )}
+    </div>
+  );
+};
+
+const TaskSection = ({
+  icon: Icon,
+  label,
+  tasks,
+  onComplete,
+}: {
+  icon: typeof Sunrise;
+  label: string;
+  tasks: any[];
+  onComplete: (id: string) => void;
+}) => (
+  <div className="mb-3 last:mb-0">
+    <div className="flex items-center gap-1.5 mb-2">
+      <Icon className="h-3.5 w-3.5 text-accent" strokeWidth={1.5} />
+      <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</span>
+    </div>
+    <div className="space-y-1.5">
+      {tasks.map((task: any) => (
+        <div key={task.id} className="flex items-center gap-3 py-1.5">
+          <button onClick={() => !task.completed && onComplete(task.id)} className="shrink-0">
+            {task.completed ? (
+              <CheckCircle className="h-5 w-5 text-primary" strokeWidth={1.5} />
+            ) : (
+              <Circle className="h-5 w-5 text-muted-foreground/30" strokeWidth={1.5} />
+            )}
+          </button>
+          <div className="flex-1 min-w-0">
+            {task.ritual_id ? (
+              <Link
+                to={`/rituais/${task.ritual_id}`}
+                className={`text-sm font-medium hover:text-primary transition-colors truncate block ${task.completed ? "line-through text-muted-foreground" : ""}`}
+              >
+                {task.task_title}
+              </Link>
+            ) : (
+              <Link
+                to={`/rituais?cat=${task.task_type}`}
+                className={`text-sm font-medium hover:text-primary transition-colors truncate block ${task.completed ? "line-through text-muted-foreground" : ""}`}
+              >
+                {task.task_title}
+              </Link>
+            )}
+            <span className="text-[10px] text-muted-foreground">{getCategoryLabel(task.task_type)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 export default JourneyPage;

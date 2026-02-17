@@ -5,14 +5,10 @@ import { useCheckAchievements } from "@/hooks/useAchievements";
 import { useAddJourneyEntry, useCreateJourneyTasks } from "@/hooks/useJourney";
 import { useRituals } from "@/hooks/useRituals";
 import { Link } from "react-router-dom";
-import { BookOpen, ArrowLeft, CheckCircle, ChevronRight, AlertTriangle, Shield, Heart, Users, Sparkles } from "lucide-react";
+import { BookOpen, ArrowLeft, CheckCircle, ChevronRight, AlertTriangle, Shield, Heart, Users, Sparkles, Sunrise, Moon, Sun, Music } from "lucide-react";
+import { CATEGORIES_MAP, getCategoryImage } from "@/lib/categories";
 
 import obiOracle from "@/assets/obi-oracle.jpg";
-import eboCategory from "@/assets/ebo-category.jpg";
-import iboriCategory from "@/assets/ibori-category.jpg";
-import iyamiCategory from "@/assets/iyami-category.jpg";
-import egbeOrunCategory from "@/assets/egbe-orun-category.jpg";
-import orikiCategory from "@/assets/oriki-category.jpg";
 
 type OracleResult = {
   key: string;
@@ -28,7 +24,6 @@ type OracleResult = {
     title: string;
     description: string;
     category: string;
-    image: string;
     icon: typeof Shield;
   }>;
 };
@@ -44,9 +39,11 @@ const ORACLE_RESULTS: OracleResult[] = [
     icon: AlertTriangle,
     color: "bg-destructive/10 text-destructive",
     suggestions: [
-      { type: "ebo", title: "Fazer Ebó de Limpeza", description: "Limpeza espiritual urgente para remover bloqueios", category: "ebo", image: eboCategory, icon: Shield },
-      { type: "ibori", title: "Cuidar do Ori", description: "Fortalecer e proteger seu Ori com Ibori", category: "ibori", image: iboriCategory, icon: Heart },
-      { type: "iyami", title: "Verificar Iyami", description: "Checar se há influência das Mães Ancestrais", category: "geral", image: iyamiCategory, icon: AlertTriangle },
+      { type: "ebo", title: "Fazer Ebó de Limpeza", description: "Limpeza espiritual urgente para remover bloqueios", category: "ebo", icon: Shield },
+      { type: "ibori", title: "Cuidar do Ori", description: "Fortalecer e proteger seu Ori com Ibori", category: "ibori", icon: Heart },
+      { type: "iyami", title: "Verificar Iyami", description: "Checar se há influência das Mães Ancestrais", category: "iyami", icon: AlertTriangle },
+      { type: "oracao_ori", title: "Rezar Oração de Ori", description: "Oração específica para fortalecer o Ori", category: "oracao_ori", icon: Sun },
+      { type: "oracao_noite", title: "Oração da Noite", description: "Recolha-se com uma oração noturna", category: "oracao_noite", icon: Moon },
     ],
   },
   {
@@ -59,8 +56,9 @@ const ORACLE_RESULTS: OracleResult[] = [
     icon: Shield,
     color: "bg-accent/15 text-accent-foreground",
     suggestions: [
-      { type: "ebo", title: "Ebó Leve", description: "Oferenda simples para abrir caminhos", category: "ebo", image: eboCategory, icon: Shield },
-      { type: "ibori", title: "Fortalecer o Ori", description: "Ibori para clareza nas decisões", category: "ibori", image: iboriCategory, icon: Heart },
+      { type: "ebo", title: "Ebó Leve", description: "Oferenda simples para abrir caminhos", category: "ebo", icon: Shield },
+      { type: "ibori", title: "Fortalecer o Ori", description: "Ibori para clareza nas decisões", category: "ibori", icon: Heart },
+      { type: "oracao_manha", title: "Oração da Manhã", description: "Comece o dia com orientação espiritual", category: "oracao_manha", icon: Sunrise },
     ],
   },
   {
@@ -73,7 +71,8 @@ const ORACLE_RESULTS: OracleResult[] = [
     icon: CheckCircle,
     color: "bg-primary/10 text-primary",
     suggestions: [
-      { type: "oriki", title: "Oriki de Agradecimento", description: "Reze um Oriki em gratidão aos Orixás", category: "oriki", image: orikiCategory, icon: Sparkles },
+      { type: "oriki", title: "Oriki de Agradecimento", description: "Reze um Oriki em gratidão aos Orixás", category: "oriki", icon: Sparkles },
+      { type: "cantiga", title: "Cantiga de Louvor", description: "Cante em louvor pela confirmação recebida", category: "cantiga", icon: Music },
     ],
   },
   {
@@ -86,8 +85,9 @@ const ORACLE_RESULTS: OracleResult[] = [
     icon: Sparkles,
     color: "bg-primary/10 text-primary",
     suggestions: [
-      { type: "oriki", title: "Oriki de Louvor", description: "Louve os Orixás pela força recebida", category: "oriki", image: orikiCategory, icon: Sparkles },
-      { type: "egbe_orun", title: "Oferenda ao Egbe Orun", description: "Agradeça aos ancestrais com oferenda", category: "geral", image: egbeOrunCategory, icon: Users },
+      { type: "oriki", title: "Oriki de Louvor", description: "Louve os Orixás pela força recebida", category: "oriki", icon: Sparkles },
+      { type: "egbe_orun", title: "Oferenda ao Egbe Orun", description: "Agradeça aos ancestrais com oferenda", category: "egbe_orun", icon: Users },
+      { type: "cantiga", title: "Cantiga Sagrada", description: "Entoe uma cantiga sagrada de celebração", category: "cantiga", icon: Music },
     ],
   },
   {
@@ -100,7 +100,9 @@ const ORACLE_RESULTS: OracleResult[] = [
     icon: Heart,
     color: "bg-accent/15 text-accent-foreground",
     suggestions: [
-      { type: "ibori", title: "Ibori de Proteção", description: "Mantenha a paz fortalecendo seu Ori", category: "ibori", image: iboriCategory, icon: Heart },
+      { type: "ibori", title: "Ibori de Proteção", description: "Mantenha a paz fortalecendo seu Ori", category: "ibori", icon: Heart },
+      { type: "oracao_iyami", title: "Oração de Iyami", description: "Apazigue Iyami para manter a harmonia", category: "oracao_iyami", icon: AlertTriangle },
+      { type: "oracao_manha", title: "Oração da Manhã", description: "Inicie o dia em paz com orientação", category: "oracao_manha", icon: Sunrise },
     ],
   },
 ];
@@ -122,7 +124,7 @@ const OraclePage = () => {
     if (user) {
       addXP.mutate({ xp: 10, field: "oracle_throws" });
 
-      // Find matching ritual
+      // Find matching ritual by trigger
       const matchingRitual = rituals?.find(r =>
         r.trigger_oracle?.toLowerCase() === result.trigger.toLowerCase()
       );
@@ -134,10 +136,13 @@ const OraclePage = () => {
         context: "rotina_diaria",
       });
 
-      // Create suggested tasks
+      // Create suggested tasks from all suggestions
       if (entry) {
         const tasks = result.suggestions.map(s => {
-          const matchRitual = rituals?.find(r => r.category === s.category);
+          // Prioritize ritual with matching trigger, then by category
+          const matchRitual = rituals?.find(r =>
+            r.trigger_oracle?.toLowerCase() === result.trigger.toLowerCase() && r.category === s.category
+          ) || rituals?.find(r => r.category === s.category);
           return {
             journey_id: (entry as any).id,
             task_type: s.type,
@@ -162,16 +167,13 @@ const OraclePage = () => {
       <div className="max-w-lg mx-auto pt-10 px-6">
         {!selectedResult ? (
           <>
-            {/* Selection screen */}
             <h1 className="text-3xl font-display font-bold text-center mb-1">Oráculo do Obi</h1>
             <p className="text-center text-muted-foreground text-sm mb-8">Qual foi o resultado do seu Obi hoje?</p>
 
-            {/* Obi image */}
             <div className="w-24 h-24 mx-auto mb-8 rounded-full overflow-hidden shadow-soft">
               <img src={obiOracle} alt="Obi" className="w-full h-full object-cover" />
             </div>
 
-            {/* Result buttons */}
             <div className="space-y-3">
               {ORACLE_RESULTS.map(result => {
                 const Icon = result.icon;
@@ -202,12 +204,10 @@ const OraclePage = () => {
           </>
         ) : (
           <>
-            {/* Diagnosis screen */}
             <button onClick={reset} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
               <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Nova consulta
             </button>
 
-            {/* Result card */}
             <div className="bg-card rounded-2xl p-6 shadow-card mb-6 animate-fade-up">
               <div className="flex items-center gap-4 mb-4">
                 <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${selectedResult.color}`}>
@@ -226,13 +226,12 @@ const OraclePage = () => {
               )}
             </div>
 
-            {/* Suggested actions */}
             <h3 className="font-display font-bold text-lg mb-3">O que fazer agora</h3>
             <div className="space-y-3">
               {selectedResult.suggestions.map((suggestion, i) => {
                 const Icon = suggestion.icon;
-                // Find a matching ritual to link to
                 const matchRitual = rituals?.find(r => r.category === suggestion.category);
+                const catImage = getCategoryImage(suggestion.category);
 
                 return (
                   <div key={i} className="animate-fade-up" style={{ animationDelay: `${(i + 1) * 100}ms` }}>
@@ -241,7 +240,7 @@ const OraclePage = () => {
                         to={`/rituais/${matchRitual.id}`}
                         className="flex items-center gap-3.5 p-4 bg-card rounded-2xl shadow-card hover:shadow-soft transition-all active:scale-[0.98]"
                       >
-                        <img src={suggestion.image} alt={suggestion.title} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                        <img src={catImage} alt={suggestion.title} className="w-14 h-14 rounded-xl object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
                           <h4 className="font-display font-bold text-sm">{suggestion.title}</h4>
                           <p className="text-xs text-muted-foreground mt-0.5">{suggestion.description}</p>
@@ -253,7 +252,7 @@ const OraclePage = () => {
                         to={`/rituais?cat=${suggestion.category}`}
                         className="flex items-center gap-3.5 p-4 bg-card rounded-2xl shadow-card hover:shadow-soft transition-all active:scale-[0.98]"
                       >
-                        <img src={suggestion.image} alt={suggestion.title} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                        <img src={catImage} alt={suggestion.title} className="w-14 h-14 rounded-xl object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
                           <h4 className="font-display font-bold text-sm">{suggestion.title}</h4>
                           <p className="text-xs text-muted-foreground mt-0.5">{suggestion.description}</p>
@@ -266,7 +265,6 @@ const OraclePage = () => {
               })}
             </div>
 
-            {/* Link to journey */}
             <Link
               to="/jornada"
               className="block mt-6 text-center bg-foreground text-background py-3 rounded-full font-medium text-sm"
