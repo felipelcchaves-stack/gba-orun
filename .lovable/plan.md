@@ -1,125 +1,172 @@
 
-# Plano: Redesign Visual com Imagens IA Yoruba - Replicar UX de Referencia
 
-## O Problema
+# Plano: Expandir Categorias, Oracoes e Fortalecer a Jornada Espiritual
 
-A diferenca fundamental entre o app de referencia e o nosso e **uma so**: **imagens**. O app de referencia usa ilustracoes IA em absolutamente tudo -- banners, cards, listas, categorias. O nosso app tem zero imagens. Sem imagens, qualquer layout parece vazio e amador, nao importa quao boa seja a tipografia.
+## Resumo
 
-Alem disso, alguns padroes de layout da referencia ainda nao estao sendo seguidos com exatidao.
+O app precisa funcionar como complemento dos cursos de Obi, Ebo, Ori, Iyami e Egbe Orun. O aluno consulta o Oraculo, identifica o que caiu, e o app o guia por toda a trajetoria: qual ebo fazer, se precisa de ibori, se precisa apaziguar Iyami ou Egbe Orun. Alem disso, o admin precisa poder cadastrar oracoes da manha, da noite, de Ori, de Iyami, cantigas -- tudo pelo painel.
 
 ---
 
-## O Que Sera Feito
+## O Que Falta Hoje
 
-### Fase 1 - Gerar e Armazenar Imagens IA Yoruba
+1. **Categorias limitadas**: Apenas 4 categorias (oriki, ibori, ebo, geral). Faltam: `oracao_manha`, `oracao_noite`, `oracao_ori`, `oracao_iyami`, `cantiga`, `egbe_orun`, `iyami`.
+2. **Oraculo nao conecta com oracoes**: Quando o resultado cai, as sugestoes linkam para categorias genericas. Deveria sugerir oracoes especificas (ex: "Reze a oracao da manha de Ori" + link direto).
+3. **Admin limitado**: O formulario de ritual so tem 4 categorias no dropdown. O admin nao consegue cadastrar oracoes ou cantigas.
+4. **Jornada nao mostra tarefas detalhadas**: A pagina Journey mostra entradas do oraculo mas nao exibe o checklist de tarefas (journey_tasks) que ja esta no banco.
 
-Criar uma edge function `generate-image` que usa o modelo de geracao de imagens do Lovable AI (`google/gemini-2.5-flash-image`) para gerar ilustracoes com tematica Yoruba e salva-las no Storage do backend.
+---
 
-**Imagens necessarias (conjunto inicial):**
+## Fase 1 - Expandir Categorias no Sistema
 
-| Imagem | Prompt (tematica) |
-|---|---|
-| hero-banner | Mulher africana escrevendo em um livro sagrado, estilo ilustracao quente, tons dourados e terrosos |
-| obi-oracle | Mao segurando nozes de obi (cola nut), estilo ilustracao sagrada africana |
-| ebo-category | Oferenda ritual africana com frutas e velas, estilo ilustracao artistica |
-| ibori-category | Pessoa africana em meditacao tocando a propria cabeca (ori), tons dourados |
-| oriki-category | Anciao africano cantando/recitando, estilo ilustracao quente |
-| egbe-orun-category | Cena espiritual com ancestrais, luz celestial, estilo africano |
-| iyami-category | Passaros sagrados ao entardecer, simbolismo de Iyami Osoronga |
-| daily-routine | Pessoa em devocao matinal com elementos africanos |
-| placeholder-ritual-1 a 4 | Variadas cenas de rituais e praticas espirituais yoruba |
+### Tabela `rituals` (sem migracao necessaria)
+A coluna `category` ja e `text`, nao e enum. Entao basta expandir as opcoes no codigo.
 
-Tambem criar uma pagina admin para gerar mais imagens sob demanda e associa-las a rituais/categorias.
+### Novas categorias:
+| Categoria | Label no App | Descricao |
+|---|---|---|
+| `oriki` | Orikis | Louvacoes aos Orixas |
+| `ibori` | Ibori | Cuidados com o Ori |
+| `ebo` | Ebo | Oferendas e limpezas |
+| `oracao_manha` | Oracoes da Manha | Oracoes para iniciar o dia |
+| `oracao_noite` | Oracoes da Noite | Oracoes antes de dormir |
+| `oracao_ori` | Oracoes de Ori | Oracoes especificas para o Ori |
+| `oracao_iyami` | Oracoes de Iyami | Oracoes para apaziguar Iyami |
+| `cantiga` | Cantigas | Cantigas sagradas |
+| `egbe_orun` | Egbe Orun | Rituais e oracoes do Egbe Orun |
+| `iyami` | Iyami | Rituais de Iyami Osoronga |
+| `geral` | Fundamentos | Conteudo geral |
 
-### Fase 2 - Redesign Home (Pixel-Perfect com Referencia)
+### Arquivos a modificar:
+- `src/components/admin/AdminRitualForm.tsx` -- Expandir o dropdown CATEGORIES
+- `src/pages/Rituals.tsx` -- Expandir filtros e banners de categoria
+- `src/pages/Learn.tsx` -- Expandir modulos/filtros
+- `src/pages/Home.tsx` -- Expandir quick access e destaques
 
-Seguindo exatamente a imagem 7/13 (Home do app de referencia):
+---
 
-**Estrutura de cima para baixo:**
-1. Saudacao "Ola, [Nome]" -- tipografia serif grande e bold (nao leve, BOLD como na referencia)
-2. Cards de atalho horizontais com scroll -- cada um com icone + label embaixo, fundo branco, bordas arredondadas, sombra sutil. **6 cards** (Obi, Rituais, Ibori, Oriki, Ebo, Jornada) em scroll horizontal
-3. Banner hero -- card arredondado com imagem IA a direita e texto a esquerda ("Monte sua rotina espiritual..."), fundo laranja/terroso quente, exatamente como o "Plano de Vida" da referencia
-4. Secao "Destaques" -- scroll horizontal com cards de imagem (imagem grande + titulo + descricao abaixo)
-5. Secao "Rituais do Dia" -- lista vertical com imagem redonda a esquerda + titulo + descricao + icone de bookmark
+## Fase 2 - Oraculo Inteligente com Sugestoes Expandidas
 
-### Fase 3 - Redesign Rituais (Seguir Imagem 8/9)
+### Mapeamento Oracle -> Acoes Detalhadas
 
-**Pagina de categoria (ex: Ebo):**
-1. Titulo grande serif bold no topo
-2. Banner destaque -- card grande com imagem IA e texto por cima (como "Novena das Rosas")
-3. Sub-secao com titulo -- "Ebos este mes" ou similar
-4. Lista vertical -- cada item com imagem arredondada (quadrado) a esquerda + titulo + subtitulo + icone bookmark a direita + separador fino
+Atualizar a constante `ORACLE_RESULTS` em `Oracle.tsx` para que cada resultado sugira acoes mais granulares, incluindo oracoes especificas:
 
-**Pagina de lista geral (Oracoes/Rituais):**
-1. Banners de subcategoria -- cards largos retangulares com imagem IA a direita e titulo a esquerda (como "Oracoes diarias" e "Oracoes a Santissima Trindade")
-2. Secoes agrupadas por categoria com titulo serif bold
-3. Cards horizontais com scroll -- imagem quadrada grande + titulo + descricao abaixo
-4. Botao "Ver todos" em cinza claro abaixo de cada secao
+**Oyekun (NAO):**
+- Fazer Ebo de Limpeza (categoria: ebo)
+- Fazer Ibori (categoria: ibori)
+- Verificar Iyami (categoria: iyami)
+- Rezar Oracao de Ori (categoria: oracao_ori) -- **NOVO**
+- Rezar Oracao da Noite (categoria: oracao_noite) -- **NOVO**
 
-### Fase 4 - Redesign Leitura de Ritual (Seguir Imagem 10)
+**Okaran (TALVEZ):**
+- Ebo Leve (categoria: ebo)
+- Fortalecer Ori (categoria: ibori)
+- Rezar Oracao da Manha (categoria: oracao_manha) -- **NOVO**
 
-1. Card no topo com imagem redonda + titulo + subtitulo + indicador de progresso ("Primeiro dia")
-2. Conteudo em tipografia serif grande, generosa, facil de ler
-3. Subtitulos em serif bold
-4. Fundo branco puro, sem distracao
+**Ejife (SIM):**
+- Oriki de Agradecimento (categoria: oriki)
+- Cantiga de Louvor (categoria: cantiga) -- **NOVO**
 
-### Fase 5 - Redesign Jornada/Plano (Seguir Imagem 11)
+**Etagun (SIM FORTE):**
+- Oriki de Louvor (categoria: oriki)
+- Oferenda ao Egbe Orun (categoria: egbe_orun)
+- Cantiga Sagrada (categoria: cantiga) -- **NOVO**
 
-1. Titulo "Plano de Vida" com icones de calendario e + no header
-2. Faixa de dias da semana -- scroll horizontal com dia selecionado em fundo escuro
-3. Tarefas organizadas por periodo:
-   - "Manha" (icone nascer do sol)
-   - "Tarde" (icone sol)
-   - "Noite" (icone lua)
-4. Cada tarefa: imagem arredondada + titulo + horario + frequencia + checkbox + menu
+**Alafia (PAZ - confirme):**
+- Ibori de Protecao (categoria: ibori)
+- Oracao de Iyami (categoria: oracao_iyami) -- **NOVO**
+- Oracao da Manha (categoria: oracao_manha) -- **NOVO**
 
-### Fase 6 - Bottom Nav Refinada
+### Logica de Match Inteligente
+Quando o usuario seleciona o resultado, o app buscara nos rituais cadastrados os que tem `trigger_oracle` correspondente OU os que pertencem a categoria sugerida, priorizando rituais com trigger_oracle exato.
 
-Seguir exatamente o padrao da referencia:
-- 4-5 itens
-- Icones finos (strokeWidth 1.5)
-- Label pequena abaixo
-- Item ativo: icone preenchido + barra grossa embaixo (nao ponto)
-- Fundo branco solido
+---
+
+## Fase 3 - Jornada com Checklist de Tarefas
+
+A tabela `journey_tasks` ja existe. O que falta e exibir as tarefas na pagina Journey.
+
+### Mudancas em `Journey.tsx`:
+1. Ao exibir uma entrada do dia, buscar as `journey_tasks` associadas
+2. Mostrar cada tarefa como item de checklist com:
+   - Imagem da categoria
+   - Titulo da tarefa
+   - Tipo (ebo, ibori, oracao, cantiga...)
+   - Checkbox para marcar como concluida
+   - Link para o ritual correspondente (se houver)
+3. Organizar por periodos: Manha (oracoes da manha), Tarde (ebos, ibori), Noite (oracoes da noite)
+4. Barra de progresso: "X de Y tarefas concluidas"
+
+### Hook necessario:
+Usar `useJourneyTasks` que ja existe, passando o `journey_id` de cada entrada do dia.
+
+---
+
+## Fase 4 - Admin Expandido
+
+### 4A - Dropdown de Categorias Completo
+Atualizar `AdminRitualForm.tsx` e `Admin.tsx` para incluir todas as 11 categorias no dropdown.
+
+### 4B - Filtro por Categoria no Admin
+Adicionar um filtro na lista de rituais do admin para o usuario poder ver apenas oracoes, apenas cantigas, etc.
+
+### 4C - Labels Amigaveis
+Criar um mapa de traducao `category -> label` para exibir nomes bonitos em vez de slugs (ex: `oracao_manha` -> "Oracoes da Manha").
+
+---
+
+## Fase 5 - Home com Secao de Oracoes do Dia
+
+### Mudancas em `Home.tsx`:
+1. Adicionar secao "Oracoes de Hoje" abaixo dos destaques
+2. Mostrar oracoes da manha ou da noite conforme o horario do dia (antes das 12h = manha, depois = noite)
+3. Quick access expandido com novos icones para Oracoes e Cantigas
 
 ---
 
 ## Detalhes Tecnicos
 
+### Constante Global de Categorias
+Criar um arquivo `src/lib/categories.ts` com o mapeamento completo para reutilizar em todos os lugares:
+
+```text
+CATEGORIES = {
+  oriki: { label: "Orikis", icon: Sparkles, image: orikiCategory },
+  ibori: { label: "Ibori", icon: Heart, image: iboriCategory },
+  ebo: { label: "Ebo", icon: Shield, image: eboCategory },
+  oracao_manha: { label: "Oracoes da Manha", icon: Sunrise, image: ... },
+  oracao_noite: { label: "Oracoes da Noite", icon: Moon, image: ... },
+  oracao_ori: { label: "Oracoes de Ori", icon: Heart, image: iboriCategory },
+  oracao_iyami: { label: "Oracoes de Iyami", icon: AlertTriangle, image: iyamiCategory },
+  cantiga: { label: "Cantigas", icon: Music, image: ... },
+  egbe_orun: { label: "Egbe Orun", icon: Users, image: egbeOrunCategory },
+  iyami: { label: "Iyami", icon: AlertTriangle, image: iyamiCategory },
+  geral: { label: "Fundamentos", icon: BookOpen, image: ... },
+}
+```
+
 ### Arquivos a Criar
 | Arquivo | Descricao |
 |---|---|
-| `supabase/functions/generate-image/index.ts` | Edge function para gerar imagens via Lovable AI e salvar no Storage |
-| `src/hooks/useGenerateImage.ts` | Hook para chamar a edge function |
-| `src/assets/` (multiplos) | Imagens placeholder geradas inicialmente |
+| `src/lib/categories.ts` | Mapa central de categorias com labels, icones e imagens |
 
 ### Arquivos a Modificar
 | Arquivo | Mudanca |
 |---|---|
-| `src/pages/Home.tsx` | Redesign completo com imagens, layout de referencia |
-| `src/pages/Rituals.tsx` | Banners com imagens, sub-secoes agrupadas, cards com scroll |
-| `src/pages/RitualReader.tsx` | Card header com imagem, tipografia maior |
-| `src/pages/Journey.tsx` | Faixa de dias, tarefas por periodo, imagens |
-| `src/pages/Oracle.tsx` | Imagem IA de fundo, visual mais rico |
-| `src/pages/Learn.tsx` | Mesmo padrao visual dos Rituais |
-| `src/pages/Profile.tsx` | Ajustes visuais menores |
-| `src/components/BottomNav.tsx` | Barra grossa para ativo em vez de ponto |
-| `src/index.css` | Tipografia titulos mais bold, ajustes finos |
-| `src/pages/Admin.tsx` | Adicionar secao de geracao de imagens |
+| `src/pages/Oracle.tsx` | Expandir sugestoes com oracoes e cantigas |
+| `src/pages/Journey.tsx` | Exibir checklist de journey_tasks com progresso |
+| `src/pages/Home.tsx` | Secao "Oracoes de Hoje" + quick access expandido |
+| `src/pages/Rituals.tsx` | Mais categorias nos filtros e banners |
+| `src/pages/Learn.tsx` | Mais modulos nos filtros |
+| `src/components/admin/AdminRitualForm.tsx` | Dropdown com 11 categorias |
+| `src/pages/Admin.tsx` | Filtro por categoria na lista de rituais |
 
-### Estrategia de Imagens
-
-1. **Fase inicial**: Gerar um conjunto de ~10 imagens base via edge function e salvar no Storage do backend
-2. **Admin**: Permitir gerar novas imagens via painel com prompt customizado
-3. **Rituais**: Cada ritual pode ter `image_url` populado pelo admin
-4. **Fallback**: Quando nao houver imagem, usar gradientes quentes (terrosos/dourados) em vez de cinza vazio
-
-### Migracao SQL Pendente
-
-A migracao de `journey_tasks` e colunas `notes`/`context` em `user_journey` que foi proposta anteriormente ainda precisa ser aprovada para completar o fluxo da Jornada/Plano de Vida.
+### Nenhuma migracao SQL necessaria
+A coluna `category` na tabela `rituals` ja e do tipo `text`, aceitando qualquer valor. As novas categorias sao apenas convencoes no codigo.
 
 ---
 
 ## Resultado Esperado
 
-O app tera a mesma qualidade visual do app de referencia, com ilustracoes IA tematicas Yoruba (orixas, obi, ebo, ancestrais, passaros sagrados) substituindo as imagens cristas, mantendo toda a terminologia e logica Yoruba intacta.
+O admin podera cadastrar qualquer tipo de conteudo (oracoes da manha, da noite, cantigas, rituais de iyami, etc.) pelo painel. O aluno, ao jogar o Obi e informar o resultado, recebera sugestoes especificas que incluem nao so ebos e ibori, mas tambem oracoes e cantigas relevantes. A jornada mostrara um checklist completo das tarefas espirituais do dia, organizado por periodo, com progresso visual.
+
