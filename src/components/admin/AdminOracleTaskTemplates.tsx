@@ -8,7 +8,9 @@ import {
 } from "@/hooks/useOracleConfig";
 import { useRituals } from "@/hooks/useRituals";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, Pencil, Trash2, Save, X } from "lucide-react";
+import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
 import { toast } from "sonner";
 
 const CONDITIONS = [
@@ -38,6 +40,8 @@ const EMPTY: Partial<OracleTaskTemplate> = {
   ritual_id: null,
   display_order: 0,
   intention: null,
+  guidance_message: "",
+  guidance_audio_url: null,
 };
 
 const AdminOracleTaskTemplates = () => {
@@ -161,6 +165,26 @@ const AdminOracleTaskTemplates = () => {
         <label className="text-xs font-semibold text-muted-foreground mb-1 block">Ordem</label>
         <Input type="number" value={form.display_order || 0} onChange={e => setForm(f => ({ ...f, display_order: parseInt(e.target.value) || 0 }))} className="w-24" />
       </div>
+      {/* Guidance fields */}
+      <div className="border-t border-border pt-3 mt-1">
+        <label className="text-xs font-semibold text-muted-foreground mb-1 block">🧙 Orientação do Mestre (opcional)</label>
+        <Textarea
+          value={form.guidance_message || ""}
+          onChange={e => setForm(f => ({ ...f, guidance_message: e.target.value }))}
+          placeholder="Ex: Separe 1 ovo, mel e azeite de dendê..."
+          rows={3}
+        />
+      </div>
+      <div>
+        <label className="text-xs font-semibold text-muted-foreground mb-1 block">🎧 URL do Áudio (opcional)</label>
+        <Input value={form.guidance_audio_url || ""} onChange={e => setForm(f => ({ ...f, guidance_audio_url: e.target.value || null }))} placeholder="https://..." />
+      </div>
+      {form.guidance_message && (
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Preview</label>
+          <TaskGuidanceBubble message={form.guidance_message} audioUrl={form.guidance_audio_url} />
+        </div>
+      )}
       <div className="flex gap-2 justify-end">
         <button onClick={cancel} className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted flex items-center gap-1"><X className="h-4 w-4" /> Cancelar</button>
         <button onClick={handleSave} disabled={upsert.isPending} className="px-4 py-2 text-sm rounded-xl bg-secondary text-secondary-foreground font-semibold flex items-center gap-2">

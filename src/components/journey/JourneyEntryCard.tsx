@@ -5,6 +5,7 @@ import { useJourneyTasks } from "@/hooks/useJourney";
 import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
 import { Progress } from "@/components/ui/progress";
 import GuidanceBubble from "@/components/GuidanceBubble";
+import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
 
 const JourneyEntryCard = ({
   entry,
@@ -100,6 +101,9 @@ const TaskSection = ({ icon: Icon, label, tasks, onComplete }: { icon: typeof Su
               {task.task_title}
             </Link>
             <span className="text-[10px] text-muted-foreground">{getCategoryLabel(task.task_type)}</span>
+            {task.guidance_message && (
+              <TaskGuidanceBubble message={task.guidance_message} audioUrl={task.guidance_audio_url} className="mt-1.5" />
+            )}
           </div>
         </div>
       ))}

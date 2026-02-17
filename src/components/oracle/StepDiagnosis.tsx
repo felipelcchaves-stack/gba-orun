@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import RitualCombobox from "@/components/RitualCombobox";
 import RitualHelpButton from "@/components/RitualHelpButton";
 import GuidanceBubble from "@/components/GuidanceBubble";
+import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
 
 export interface WizardState {
   intention: "cuidado_semanal" | "orientacao";
@@ -30,6 +31,8 @@ interface TaskDef {
   title: string;
   category: string;
   ritual_id?: string | null;
+  guidance_message?: string;
+  guidance_audio_url?: string | null;
 }
 
 function matchCondition(condition: string, state: WizardState): boolean {
@@ -117,6 +120,8 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
         title: t.task_title,
         category: t.category,
         ritual_id: t.ritual_id,
+        guidance_message: t.guidance_message || "",
+        guidance_audio_url: t.guidance_audio_url,
       }));
   })();
 
@@ -185,6 +190,8 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
             task_type: t.type,
             task_title: t.title,
             ritual_id: ritualId,
+            guidance_message: t.guidance_message || "",
+            guidance_audio_url: t.guidance_audio_url || null,
           };
         });
         await createTasks.mutateAsync(taskRows);
@@ -249,6 +256,9 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
                 <p className="text-[11px] text-muted-foreground">{getCategoryLabel(t.category)}</p>
               </div>
             </div>
+            {t.guidance_message && (
+              <TaskGuidanceBubble message={t.guidance_message} audioUrl={t.guidance_audio_url} className="mt-2" />
+            )}
             <div className="mt-2">
               <RitualCombobox
                 value={taskRitualOverrides[i] ?? null}

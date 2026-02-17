@@ -89,6 +89,8 @@ export const useCreateJourneyTasks = () => {
       task_type: string;
       task_title: string;
       ritual_id?: string;
+      guidance_message?: string;
+      guidance_audio_url?: string | null;
     }>) => {
       if (!user) throw new Error("Not logged in");
       const rows = tasks.map(t => ({
