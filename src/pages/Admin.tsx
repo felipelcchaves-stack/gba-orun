@@ -113,7 +113,7 @@ const AdminPage = () => {
     <div className="flex min-h-screen w-full bg-background">
       <AdminSidebar active={activeSection} onNavigate={setActiveSection} onSignOut={signOut} />
 
-      <main className="flex-1 p-8 overflow-auto">
+      <main className={`flex-1 overflow-auto flex flex-col ${activeSection === "flows" ? "p-2 sm:p-4" : "p-4 sm:p-8"}`}>
         {activeSection === "dashboard" && <AdminDashboard />}
         {activeSection === "users" && <AdminUsers />}
         {activeSection === "plans" && <AdminPlans />}

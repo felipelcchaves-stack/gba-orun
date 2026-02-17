@@ -138,7 +138,7 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 space-y-3 w-80 max-h-[70vh] overflow-y-auto">
+    <div className="bg-card border border-border rounded-xl p-4 space-y-3 w-full sm:w-80 sm:max-h-[calc(100vh-6rem)] overflow-y-auto">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-foreground">Configurar Bloco</h3>
         <button onClick={onClose} className="p-1 hover:bg-muted rounded"><X className="h-4 w-4" /></button>
