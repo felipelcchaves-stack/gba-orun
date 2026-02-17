@@ -1,1 +1,4 @@
 project_id = "otfnpfzrtsopitmlpovk"
+
+[functions.check-expired-subscriptions]
+verify_jwt = false

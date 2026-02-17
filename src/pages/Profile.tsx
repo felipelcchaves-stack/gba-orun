@@ -14,11 +14,16 @@ import AvatarUpload from "@/components/profile/AvatarUpload";
 import ProfileForm from "@/components/profile/ProfileForm";
 import PasswordForm from "@/components/profile/PasswordForm";
 import ThemeToggle from "@/components/profile/ThemeToggle";
+import { usePremium } from "@/hooks/usePremium";
+import { Link as RouterLink } from "react-router-dom";
+import { Crown, AlertTriangle, XCircle, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const ProfilePage = () => {
   const { user, signOut } = useAuth();
   const { data: stats } = useUserStats();
   const { data: unlocked } = useAchievements();
+  const { subscriptionStatus, expiresAt, daysRemaining, isExpiringSoon, isOverdue, isPremium } = usePremium();
   const resetJourney = useResetJourney();
   const [showReset, setShowReset] = useState(false);
   const [resetConfirm, setResetConfirm] = useState("");
@@ -61,6 +66,48 @@ const ProfilePage = () => {
 
         {/* Theme */}
         <ThemeToggle />
+
+        {/* Subscription Status */}
+        <div className="bg-card rounded-2xl p-6 shadow-card">
+          <h2 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
+            <Crown className="h-5 w-5 text-accent" /> Assinatura
+          </h2>
+          <div className="flex items-center gap-3 mb-3">
+            {subscriptionStatus === "active" && isPremium && (
+              <Badge className="bg-primary/15 text-primary border-primary/30">Ativo</Badge>
+            )}
+            {isOverdue && (
+              <Badge variant="destructive">Inadimplente</Badge>
+            )}
+            {subscriptionStatus === "cancelled" && (
+              <Badge className="bg-accent/15 text-accent border-accent/30">Cancelado</Badge>
+            )}
+            {subscriptionStatus === "free" && (
+              <Badge variant="secondary">Gratuito</Badge>
+            )}
+          </div>
+          {expiresAt && (
+            <p className="text-sm text-muted-foreground mb-1">
+              {new Date(expiresAt) > new Date()
+                ? `Expira em ${new Date(expiresAt).toLocaleDateString("pt-BR")}`
+                : `Expirou em ${new Date(expiresAt).toLocaleDateString("pt-BR")}`}
+              {isExpiringSoon && daysRemaining !== null && (
+                <span className="text-accent font-medium ml-1">({daysRemaining} dia{daysRemaining !== 1 ? "s" : ""} restante{daysRemaining !== 1 ? "s" : ""})</span>
+              )}
+            </p>
+          )}
+          {(isOverdue || subscriptionStatus === "cancelled" || subscriptionStatus === "free") ? (
+            <Link to="/oferta">
+              <Button className="w-full mt-3 gradient-gold text-accent-foreground font-bold">
+                {isOverdue ? "Renovar Agora" : subscriptionStatus === "cancelled" ? "Assinar Novamente" : "Assinar Premium"}
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/oferta">
+              <Button variant="outline" className="w-full mt-3">Gerenciar Assinatura</Button>
+            </Link>
+          )}
+        </div>
 
         {/* Achievements */}
         <div className="bg-card rounded-2xl p-6 shadow-card">
