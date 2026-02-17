@@ -1,16 +1,16 @@
 import { useRituals } from "@/hooks/useRituals";
 import { usePremium } from "@/hooks/usePremium";
 import { Link } from "react-router-dom";
-import { ArrowLeft, GraduationCap, Lock, BookOpen, Volume2 } from "lucide-react";
+import { ArrowLeft, Lock, BookOpen, Volume2 } from "lucide-react";
 import { useState } from "react";
 import PremiumLockModal from "@/components/PremiumLockModal";
 
 const MODULES = [
-  { key: "", label: "Todos", icon: "📚" },
-  { key: "oriki", label: "Orikis", icon: "🪘" },
-  { key: "ibori", label: "Ibori", icon: "🕯️" },
-  { key: "ebo", label: "Ebós", icon: "🌿" },
-  { key: "geral", label: "Fundamentos", icon: "📖" },
+  { key: "", label: "Todos" },
+  { key: "oriki", label: "Orikis" },
+  { key: "ibori", label: "Ibori" },
+  { key: "ebo", label: "Ebós" },
+  { key: "geral", label: "Fundamentos" },
 ];
 
 const LearnPage = () => {
@@ -27,73 +27,74 @@ const LearnPage = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 px-5">
-      <div className="max-w-lg mx-auto pt-8">
-        <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="h-4 w-4" /> Início
+    <div className="min-h-screen pb-24 px-6 bg-background">
+      <div className="max-w-lg mx-auto pt-10">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+          <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Início
         </Link>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-secondary/20 rounded-xl p-3">
-            <GraduationCap className="h-7 w-7 text-secondary" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-display font-bold">Aprender</h1>
-            <p className="text-muted-foreground text-sm">Estude a sabedoria ancestral</p>
-          </div>
-        </div>
+        <h1 className="text-3xl font-display font-medium mb-1">Aprender</h1>
+        <p className="text-muted-foreground text-sm mb-8">Estude a sabedoria ancestral</p>
 
         {/* Module chips */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
           {MODULES.map(m => (
             <button
               key={m.key}
               onClick={() => setModule(m.key)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+              className={`shrink-0 rounded-full px-5 py-2 text-sm font-medium transition-all ${
                 module === m.key
-                  ? "bg-secondary text-secondary-foreground"
-                  : "bg-card border border-border"
+                  ? "bg-foreground text-background"
+                  : "bg-transparent border border-border text-muted-foreground hover:text-foreground"
               }`}
             >
-              {m.icon} {m.label}
+              {m.label}
             </button>
           ))}
         </div>
 
         {isLoading ? (
           <div className="space-y-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-28 bg-card rounded-2xl animate-pulse" />)}
+            {[1, 2, 3].map(i => <div key={i} className="h-24 bg-card rounded-2xl shadow-card animate-pulse" />)}
           </div>
         ) : rituals && rituals.length > 0 ? (
-          <div className="grid gap-3">
+          <div className="space-y-4">
             {rituals.map((ritual: any) => (
               <Link
                 key={ritual.id}
                 to={`/rituais/${ritual.id}`}
                 onClick={(e) => handleClick(ritual, e)}
-                className="bg-card rounded-2xl overflow-hidden border border-border hover:shadow-md transition-all active:scale-[0.99] flex"
+                className="flex items-center gap-4 py-4 border-b border-border/50 last:border-b-0 hover:bg-muted/30 -mx-2 px-2 rounded-xl transition-colors"
               >
-                {ritual.image_url && (
-                  <img src={ritual.image_url} alt={ritual.title} className="w-24 h-24 object-cover shrink-0" />
-                )}
-                <div className="p-4 flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-display font-bold text-sm truncate">{ritual.title}</h3>
-                    {ritual.is_premium && !isPremium && <Lock className="h-3.5 w-3.5 text-accent shrink-0" />}
+                {ritual.image_url ? (
+                  <img src={ritual.image_url} alt={ritual.title} className="w-20 h-20 rounded-2xl object-cover shrink-0" />
+                ) : (
+                  <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center shrink-0">
+                    <BookOpen className="h-6 w-6 text-muted-foreground/40" strokeWidth={1.5} />
                   </div>
-                  <span className="text-xs text-muted-foreground capitalize">{ritual.category}</span>
-                  {ritual.audio_url && (
-                    <div className="flex items-center gap-1 mt-1 text-xs text-secondary">
-                      <Volume2 className="h-3 w-3" /> Áudio disponível
-                    </div>
-                  )}
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display font-medium text-base truncate">{ritual.title}</h3>
+                  <span className="text-sm text-muted-foreground capitalize mt-0.5 block">{ritual.category}</span>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    {ritual.is_premium && !isPremium && (
+                      <span className="inline-flex items-center gap-1 text-xs text-accent-foreground bg-accent/15 px-2 py-0.5 rounded-full font-medium">
+                        <Lock className="h-3 w-3" /> Premium
+                      </span>
+                    )}
+                    {ritual.audio_url && (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Volume2 className="h-3 w-3" /> Áudio
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Nenhum conteúdo disponível.</p>
+          <div className="text-center py-20">
+            <BookOpen className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
+            <p className="text-muted-foreground text-sm">Nenhum conteúdo disponível.</p>
           </div>
         )}
       </div>

@@ -47,20 +47,11 @@ const OraclePage = () => {
       const oracleResult = ORACLE_RESULTS[openCount];
       setResult(oracleResult);
 
-      // Gamification + Journey
       if (user) {
-        addXP.mutate({ xp: 10, field: "oracle_throws" }, {
-          onSuccess: () => {
-            // Check achievements after stats update
-            addXP.data; // trigger re-fetch
-          },
-        });
-
-        // Find matching ritual
-        const matchingRitual = rituals?.find(r => 
+        addXP.mutate({ xp: 10, field: "oracle_throws" });
+        const matchingRitual = rituals?.find(r =>
           r.trigger_oracle?.toLowerCase() === oracleResult.trigger.toLowerCase()
         );
-        
         addJourneyEntry.mutate({
           oracle_result: oracleResult.name,
           suggested_ritual_id: matchingRitual?.id,
@@ -75,36 +66,35 @@ const OraclePage = () => {
     setResult(null);
   };
 
-  // Find suggested rituals for current result
   const suggestedRituals = result && rituals
     ? rituals.filter(r => r.trigger_oracle?.toLowerCase() === result.trigger.toLowerCase())
     : [];
 
   return (
-    <div className="min-h-screen pb-24 px-5">
-      <div className="max-w-lg mx-auto pt-8">
-        <h1 className="text-3xl font-display font-bold text-center mb-2">Oráculo dos Búzios</h1>
-        <p className="text-center text-muted-foreground mb-8">Concentre-se na sua pergunta e jogue os búzios</p>
+    <div className="min-h-screen pb-24 px-6 bg-background">
+      <div className="max-w-lg mx-auto pt-10">
+        <h1 className="text-3xl font-display font-medium text-center mb-1">Oráculo dos Búzios</h1>
+        <p className="text-center text-muted-foreground text-sm mb-10">Concentre-se na sua pergunta e jogue os búzios</p>
 
         {/* Shells grid */}
-        <div className="grid grid-cols-2 gap-6 mb-8 max-w-xs mx-auto">
+        <div className="grid grid-cols-2 gap-5 mb-10 max-w-xs mx-auto">
           {shells.map((isOpen, i) => (
             <div
               key={i}
-              className={`relative aspect-square rounded-3xl border-2 flex items-center justify-center transition-all duration-500 ${
+              className={`relative aspect-square rounded-2xl flex items-center justify-center transition-all duration-500 ${
                 isOpen
-                  ? "bg-accent/20 border-accent shadow-gold"
-                  : "bg-card border-border shadow-sm"
+                  ? "bg-accent/10 shadow-soft"
+                  : "bg-card shadow-card"
               } ${animating ? "animate-shell-wobble" : ""}`}
             >
               <img
                 src={cowrieShell}
                 alt="Búzio"
-                className={`w-16 h-16 object-contain transition-transform duration-500 ${
-                  isOpen ? "rotate-0 drop-shadow-lg" : "rotate-180 opacity-60"
+                className={`w-14 h-14 object-contain transition-transform duration-500 ${
+                  isOpen ? "rotate-0 drop-shadow-md" : "rotate-180 opacity-50"
                 }`}
               />
-              <span className={`absolute bottom-2 text-xs font-semibold ${isOpen ? "text-accent-foreground" : "text-muted-foreground"}`}>
+              <span className={`absolute bottom-2.5 text-xs font-medium ${isOpen ? "text-foreground" : "text-muted-foreground"}`}>
                 {isOpen ? "Aberto" : "Fechado"}
               </span>
             </div>
@@ -115,10 +105,10 @@ const OraclePage = () => {
         <button
           onClick={thrown ? reset : throwShells}
           disabled={animating}
-          className={`w-full py-4 rounded-2xl text-lg font-bold font-display transition-all active:scale-[0.98] ${
+          className={`w-full py-4 rounded-full text-base font-medium transition-all active:scale-[0.98] ${
             thrown
-              ? "bg-card border-2 border-border text-foreground"
-              : "bg-secondary text-secondary-foreground shadow-md animate-pulse-gold"
+              ? "bg-card border border-border text-foreground"
+              : "bg-foreground text-background shadow-sm"
           } disabled:opacity-50`}
         >
           {animating ? "Consultando..." : thrown ? "Jogar Novamente" : "Jogar Obi"}
@@ -126,21 +116,20 @@ const OraclePage = () => {
 
         {/* Result */}
         {result && !animating && (
-          <div className="mt-6 space-y-4 animate-fade-up">
-            <div className="bg-card rounded-3xl p-6 border border-border shadow-sm">
+          <div className="mt-8 space-y-4 animate-fade-up">
+            <div className="bg-card rounded-2xl p-6 shadow-card">
               <div className="flex items-center gap-3 mb-3">
-                <span className="bg-secondary/20 text-secondary px-3 py-1 rounded-full text-sm font-bold">
+                <span className="bg-foreground text-background px-3 py-1 rounded-full text-sm font-medium">
                   {result.name}
                 </span>
                 <span className="text-sm text-muted-foreground">{result.meaning}</span>
               </div>
-              <p className="text-foreground leading-relaxed">{result.description}</p>
+              <p className="text-foreground leading-relaxed text-sm">{result.description}</p>
             </div>
 
-            {/* Suggested rituals */}
             {suggestedRituals.length > 0 && (
-              <div className="bg-card rounded-3xl p-5 border border-border shadow-sm">
-                <h3 className="font-display font-bold text-sm mb-3">Rituais Sugeridos</h3>
+              <div className="bg-card rounded-2xl p-5 shadow-card">
+                <h3 className="font-display font-medium text-sm mb-3">Rituais Sugeridos</h3>
                 <div className="space-y-2">
                   {suggestedRituals.map(r => (
                     <Link
@@ -148,8 +137,8 @@ const OraclePage = () => {
                       to={`/rituais/${r.id}`}
                       className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors"
                     >
-                      <BookOpen className="h-4 w-4 text-secondary shrink-0" />
-                      <span className="text-sm font-semibold">{r.title}</span>
+                      <BookOpen className="h-4 w-4 text-primary shrink-0" strokeWidth={1.5} />
+                      <span className="text-sm font-medium">{r.title}</span>
                     </Link>
                   ))}
                 </div>
@@ -158,7 +147,7 @@ const OraclePage = () => {
 
             {!user && (
               <p className="text-center text-xs text-muted-foreground">
-                <Link to="/auth" className="text-secondary underline">Faça login</Link> para salvar suas consultas e ganhar XP.
+                <Link to="/auth" className="text-primary underline">Faça login</Link> para salvar suas consultas e ganhar XP.
               </p>
             )}
           </div>
