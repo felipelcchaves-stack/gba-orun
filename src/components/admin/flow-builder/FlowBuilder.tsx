@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect, useMemo } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import {
   ReactFlow,
   addEdge,
@@ -62,7 +62,6 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  // Load from DB
   useEffect(() => {
     if (dbNodes && dbEdges && !loaded) {
       const rfNodes: Node[] = dbNodes.map((n) => ({
@@ -117,10 +116,9 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
     [reactFlowInstance, setNodes]
   );
 
+  // Allow clicking ALL node types for configuration
   const onNodeClick = useCallback((_: any, node: Node) => {
-    if (node.type !== "start" && node.type !== "diagnosis" && node.type !== "obi" && node.type !== "ire_ibi") {
-      setSelectedNode(node);
-    }
+    setSelectedNode(node);
   }, []);
 
   const updateNodeData = (nodeId: string, updates: { label?: string; config?: Record<string, any> }) => {
@@ -131,6 +129,12 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
           : n
       )
     );
+    setSelectedNode(null);
+  };
+
+  const deleteNode = (nodeId: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
     setSelectedNode(null);
   };
 
@@ -154,7 +158,7 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
 
     try {
       await saveCanvas.mutateAsync({ flowId, nodes: nodesPayload, edges: edgesPayload });
-      setLoaded(false); // reload from db
+      setLoaded(false);
       toast.success("Fluxo salvo com sucesso!");
     } catch (err: any) {
       toast.error(err.message);
@@ -199,6 +203,7 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
           label={(selectedNode.data as any)?.label || ""}
           onUpdate={updateNodeData}
           onClose={() => setSelectedNode(null)}
+          onDelete={deleteNode}
         />
       )}
     </div>

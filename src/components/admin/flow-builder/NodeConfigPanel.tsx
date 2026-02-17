@@ -1,6 +1,21 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import RitualCombobox from "@/components/RitualCombobox";
+import OfferingCombobox from "@/components/OfferingCombobox";
+
+interface DiagnosisTask {
+  task_title: string;
+  task_type: string;
+  category: string;
+  ritual_id?: string | null;
+  offering_id?: string | null;
+  guidance_message?: string;
+  guidance_audio_url?: string | null;
+  condition: string;
+}
 
 interface NodeConfigPanelProps {
   nodeId: string;
@@ -9,11 +24,20 @@ interface NodeConfigPanelProps {
   label: string;
   onUpdate: (nodeId: string, updates: { label?: string; config?: Record<string, any> }) => void;
   onClose: () => void;
+  onDelete?: (nodeId: string) => void;
 }
 
-const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose }: NodeConfigPanelProps) => {
+const SectionHeader = ({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) => (
+  <button onClick={onToggle} className="w-full flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider py-1">
+    {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+    {title}
+  </button>
+);
+
+const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, onDelete }: NodeConfigPanelProps) => {
   const [localLabel, setLocalLabel] = useState(label);
   const [localConfig, setLocalConfig] = useState<Record<string, any>>(config || {});
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({ basic: true, guidance: false, links: false, specific: true, tasks: false });
 
   useEffect(() => {
     setLocalLabel(label);
@@ -28,106 +52,252 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose }:
     setLocalConfig((prev) => ({ ...prev, [key]: value }));
   };
 
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Diagnosis tasks helpers
+  const tasks: DiagnosisTask[] = localConfig.tasks || [];
+  const addTask = () => {
+    updateField("tasks", [...tasks, { task_title: "", task_type: "ebo", category: "ebo", condition: "always" }]);
+  };
+  const updateTask = (i: number, field: string, value: any) => {
+    const updated = [...tasks];
+    updated[i] = { ...updated[i], [field]: value };
+    updateField("tasks", updated);
+  };
+  const removeTask = (i: number) => {
+    updateField("tasks", tasks.filter((_, idx) => idx !== i));
+  };
+
+  // Multiple choice option helpers (now with description + links)
+  const options: Array<{ label: string; description?: string; ritual_id?: string | null; offering_id?: string | null }> = 
+    (localConfig.options || []).map((o: any) => typeof o === "string" ? { label: o } : o);
+
+  const updateOption = (i: number, field: string, value: any) => {
+    const updated = [...options];
+    updated[i] = { ...updated[i], [field]: value };
+    updateField("options", updated);
+  };
+  const addOption = () => {
+    updateField("options", [...options, { label: `Opção ${options.length + 1}` }]);
+  };
+  const removeOption = (i: number) => {
+    updateField("options", options.filter((_, idx) => idx !== i));
+  };
+
   return (
-    <div className="bg-card border border-border rounded-xl p-4 space-y-4 w-72">
+    <div className="bg-card border border-border rounded-xl p-4 space-y-3 w-80 max-h-[70vh] overflow-y-auto">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-foreground">Configurar Bloco</h3>
         <button onClick={onClose} className="p-1 hover:bg-muted rounded"><X className="h-4 w-4" /></button>
       </div>
 
+      {/* Basic Info */}
       <div>
-        <label className="text-xs font-medium text-muted-foreground">Título</label>
-        <Input value={localLabel} onChange={(e) => setLocalLabel(e.target.value)} className="mt-1" />
-      </div>
-
-      {(nodeType === "message") && (
-        <>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Mensagem</label>
-            <textarea
-              value={localConfig.message || ""}
-              onChange={(e) => updateField("message", e.target.value)}
-              className="w-full mt-1 rounded-lg border border-border bg-background p-2 text-sm min-h-[80px]"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">URL do Áudio (opcional)</label>
-            <Input value={localConfig.audio_url || ""} onChange={(e) => updateField("audio_url", e.target.value)} className="mt-1" />
-          </div>
-        </>
-      )}
-
-      {(nodeType === "yes_no") && (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Pergunta</label>
-          <textarea
-            value={localConfig.question || ""}
-            onChange={(e) => updateField("question", e.target.value)}
-            className="w-full mt-1 rounded-lg border border-border bg-background p-2 text-sm min-h-[60px]"
-          />
-        </div>
-      )}
-
-      {(nodeType === "open_question") && (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Pergunta</label>
-          <textarea
-            value={localConfig.question || ""}
-            onChange={(e) => updateField("question", e.target.value)}
-            className="w-full mt-1 rounded-lg border border-border bg-background p-2 text-sm min-h-[60px]"
-          />
-        </div>
-      )}
-
-      {(nodeType === "multiple_choice") && (
-        <>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Pergunta</label>
-            <textarea
-              value={localConfig.question || ""}
-              onChange={(e) => updateField("question", e.target.value)}
-              className="w-full mt-1 rounded-lg border border-border bg-background p-2 text-sm min-h-[60px]"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Opções</label>
-            <div className="space-y-1 mt-1">
-              {(localConfig.options || []).map((opt: string, i: number) => (
-                <div key={i} className="flex gap-1">
-                  <Input
-                    value={opt}
-                    onChange={(e) => {
-                      const updated = [...(localConfig.options || [])];
-                      updated[i] = e.target.value;
-                      updateField("options", updated);
-                    }}
-                    className="flex-1"
-                  />
-                  <button
-                    onClick={() => {
-                      const updated = (localConfig.options || []).filter((_: any, idx: number) => idx !== i);
-                      updateField("options", updated);
-                    }}
-                    className="p-2 hover:bg-destructive/10 rounded text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => updateField("options", [...(localConfig.options || []), `Opção ${(localConfig.options?.length || 0) + 1}`])}
-                className="flex items-center gap-1 text-xs text-primary hover:underline mt-1"
-              >
-                <Plus className="h-3 w-3" /> Adicionar opção
-              </button>
+        <SectionHeader title="Informações Básicas" open={openSections.basic} onToggle={() => toggleSection("basic")} />
+        {openSections.basic && (
+          <div className="space-y-2 mt-1">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Título</label>
+              <Input value={localLabel} onChange={(e) => setLocalLabel(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Descrição</label>
+              <Textarea value={localConfig.description || ""} onChange={(e) => updateField("description", e.target.value)} className="mt-1 min-h-[50px]" placeholder="Texto explicativo..." />
             </div>
           </div>
-        </>
+        )}
+      </div>
+
+      {/* Guidance */}
+      <div>
+        <SectionHeader title="Orientação do Mestre" open={openSections.guidance} onToggle={() => toggleSection("guidance")} />
+        {openSections.guidance && (
+          <div className="space-y-2 mt-1">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Mensagem</label>
+              <Textarea value={localConfig.guidance_message || ""} onChange={(e) => updateField("guidance_message", e.target.value)} className="mt-1 min-h-[60px]" placeholder="Orientação para o aluno..." />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">URL do Áudio</label>
+              <Input value={localConfig.guidance_audio_url || ""} onChange={(e) => updateField("guidance_audio_url", e.target.value)} className="mt-1" placeholder="https://..." />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Links (Ritual + Offering) */}
+      {nodeType !== "diagnosis" && (
+        <div>
+          <SectionHeader title="Vínculos" open={openSections.links} onToggle={() => toggleSection("links")} />
+          {openSections.links && (
+            <div className="space-y-2 mt-1">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Ritual / Oração</label>
+                <div className="mt-1">
+                  <RitualCombobox value={localConfig.ritual_id || null} onChange={(id) => updateField("ritual_id", id)} placeholder="Vincular ritual..." />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Oferenda</label>
+                <div className="mt-1">
+                  <OfferingCombobox value={localConfig.offering_id || null} onChange={(id) => updateField("offering_id", id)} placeholder="Vincular oferenda..." />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      <button onClick={save} className="w-full py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-sm">
-        Salvar
-      </button>
+      {/* Type-specific fields */}
+      <div>
+        <SectionHeader title="Configuração Específica" open={openSections.specific} onToggle={() => toggleSection("specific")} />
+        {openSections.specific && (
+          <div className="space-y-2 mt-1">
+            {nodeType === "message" && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Mensagem</label>
+                  <Textarea value={localConfig.message || ""} onChange={(e) => updateField("message", e.target.value)} className="mt-1 min-h-[80px]" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">URL do Áudio da Mensagem</label>
+                  <Input value={localConfig.audio_url || ""} onChange={(e) => updateField("audio_url", e.target.value)} className="mt-1" />
+                </div>
+              </>
+            )}
+
+            {nodeType === "yes_no" && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Pergunta</label>
+                  <Textarea value={localConfig.question || ""} onChange={(e) => updateField("question", e.target.value)} className="mt-1 min-h-[50px]" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Texto "Sim"</label>
+                    <Input value={localConfig.yes_label || "Sim"} onChange={(e) => updateField("yes_label", e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Texto "Não"</label>
+                    <Input value={localConfig.no_label || "Não"} onChange={(e) => updateField("no_label", e.target.value)} className="mt-1" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Desc. "Sim"</label>
+                    <Input value={localConfig.yes_description || ""} onChange={(e) => updateField("yes_description", e.target.value)} className="mt-1" placeholder="(opcional)" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Desc. "Não"</label>
+                    <Input value={localConfig.no_description || ""} onChange={(e) => updateField("no_description", e.target.value)} className="mt-1" placeholder="(opcional)" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {nodeType === "open_question" && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Pergunta</label>
+                <Textarea value={localConfig.question || ""} onChange={(e) => updateField("question", e.target.value)} className="mt-1 min-h-[50px]" />
+              </div>
+            )}
+
+            {nodeType === "multiple_choice" && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Pergunta</label>
+                  <Textarea value={localConfig.question || ""} onChange={(e) => updateField("question", e.target.value)} className="mt-1 min-h-[50px]" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Opções</label>
+                  <div className="space-y-2 mt-1">
+                    {options.map((opt, i) => (
+                      <div key={i} className="border border-border rounded-lg p-2 space-y-1">
+                        <div className="flex gap-1">
+                          <Input value={opt.label} onChange={(e) => updateOption(i, "label", e.target.value)} placeholder="Texto da opção" className="flex-1" />
+                          <button onClick={() => removeOption(i)} className="p-2 hover:bg-destructive/10 rounded text-destructive">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <Input value={opt.description || ""} onChange={(e) => updateOption(i, "description", e.target.value)} placeholder="Descrição (opcional)" className="text-xs" />
+                      </div>
+                    ))}
+                    <button onClick={addOption} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                      <Plus className="h-3 w-3" /> Adicionar opção
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {nodeType === "obi" && (
+              <p className="text-xs text-muted-foreground">Os resultados do Obi são carregados automaticamente do banco de dados (oracle_configs).</p>
+            )}
+
+            {nodeType === "ire_ibi" && (
+              <p className="text-xs text-muted-foreground">Os tipos de Irê/Ibi são carregados automaticamente do banco de dados (ire_ibi_types).</p>
+            )}
+
+            {nodeType === "start" && (
+              <p className="text-xs text-muted-foreground">Bloco inicial do fluxo. O título aparece como botão "Começar".</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Diagnosis tasks */}
+      {nodeType === "diagnosis" && (
+        <div>
+          <SectionHeader title="Tarefas do Diagnóstico" open={openSections.tasks} onToggle={() => toggleSection("tasks")} />
+          {openSections.tasks && (
+            <div className="space-y-3 mt-1">
+              {tasks.map((task, i) => (
+                <div key={i} className="border border-border rounded-lg p-2 space-y-1.5">
+                  <div className="flex items-center gap-1">
+                    <Input value={task.task_title} onChange={(e) => updateTask(i, "task_title", e.target.value)} placeholder="Título da tarefa" className="flex-1 text-xs" />
+                    <button onClick={() => removeTask(i)} className="p-1 hover:bg-destructive/10 rounded text-destructive">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <Input value={task.task_type} onChange={(e) => updateTask(i, "task_type", e.target.value)} placeholder="Tipo" className="text-xs" />
+                    <Input value={task.category} onChange={(e) => updateTask(i, "category", e.target.value)} placeholder="Categoria" className="text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground">Condição</label>
+                    <Input value={task.condition} onChange={(e) => updateTask(i, "condition", e.target.value)} placeholder="always | answer_equals:NODE_ID:valor" className="text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground">Orientação</label>
+                    <Textarea value={task.guidance_message || ""} onChange={(e) => updateTask(i, "guidance_message", e.target.value)} className="min-h-[30px] text-xs" placeholder="Orientação..." />
+                  </div>
+                  <Input value={task.guidance_audio_url || ""} onChange={(e) => updateTask(i, "guidance_audio_url", e.target.value)} placeholder="URL áudio da tarefa" className="text-xs" />
+                  <div className="space-y-1">
+                    <RitualCombobox value={task.ritual_id || null} onChange={(id) => updateTask(i, "ritual_id", id)} placeholder="Ritual..." />
+                    <OfferingCombobox value={task.offering_id || null} onChange={(id) => updateTask(i, "offering_id", id)} placeholder="Oferenda..." />
+                  </div>
+                </div>
+              ))}
+              <button onClick={addTask} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                <Plus className="h-3 w-3" /> Adicionar tarefa
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-1">
+        <button onClick={save} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-sm">
+          Salvar
+        </button>
+        {onDelete && nodeType !== "start" && (
+          <button onClick={() => onDelete(nodeId)} className="py-2 px-3 rounded-xl bg-destructive/10 text-destructive font-semibold text-sm hover:bg-destructive/20">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
     </div>
   );
 };
