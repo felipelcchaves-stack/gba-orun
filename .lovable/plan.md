@@ -1,53 +1,40 @@
 
+# Usar foto do perfil como avatar do mentor
 
-# Corrigir vinculacao de multiplos rituais que nao persiste
+## O que muda
 
-## Problema encontrado
+No painel admin de Orientações do Mestre, adicionar um botao "Usar minha foto" ao lado do campo de URL do avatar. Ao clicar, o sistema busca a foto do perfil do admin logado e preenche automaticamente o campo, salvando como avatar do orientador.
 
-O bug esta na linha 324 do `NodeConfigPanel.tsx`. Quando o `MultiRitualCombobox` muda, o codigo executa duas chamadas consecutivas a `updateTask`:
+## Como funciona
 
-```tsx
-onChange={(ids) => {
-  updateTask(i, "ritual_ids", ids);   // <-- seta ritual_ids
-  updateTask(i, "ritual_id", null);   // <-- sobrescreve tudo com tasks ANTIGO (sem ritual_ids)
-}}
-```
-
-A funcao `updateTask` le a variavel `tasks` do closure (que e a versao antiga). A segunda chamada recria o array de tasks a partir da versao sem `ritual_ids`, efetivamente apagando a alteracao feita pela primeira chamada.
-
-## Solucao
-
-Combinar ambas as alteracoes em uma unica operacao dentro do `updateTask`, ou alterar a funcao para aceitar multiplos campos de uma vez.
-
-A abordagem mais simples: mudar o `onChange` para fazer uma unica chamada que seta ambos os campos ao mesmo tempo.
-
-## Arquivos modificados
-
-| Arquivo | Alteracao |
-|---|---|
-| `src/components/admin/flow-builder/NodeConfigPanel.tsx` | Corrigir o `onChange` do `MultiRitualCombobox` nas tarefas do diagnostico (linha 324) para combinar `ritual_ids` e `ritual_id: null` em uma unica chamada a `updateTask`. Criar uma variante `updateTaskMulti` que aceita um objeto de campos, ou usar inline spread. |
+1. O admin clica em "Usar minha foto"
+2. O sistema busca o `avatar_url` do perfil do usuario logado (tabela `profiles`)
+3. Preenche o campo de URL com essa foto
+4. O admin clica em "Salvar" normalmente (fluxo ja existente)
 
 ## Detalhe tecnico
 
-**Opcao escolhida: criar funcao `updateTaskFields`**
+### Arquivo modificado
+
+| Arquivo | Alteracao |
+|---|---|
+| `src/components/admin/AdminGuidance.tsx` | Importar `useProfile`. Adicionar botao "Usar minha foto" que copia `profile.avatar_url` para o campo `avatarUrl`. |
+
+### Alteracao no componente
+
+- Importar `useProfile` de `@/hooks/useProfile`
+- Chamar `const { data: profile } = useProfile()` no componente
+- Adicionar um botao ao lado do campo de URL do avatar:
 
 ```tsx
-const updateTaskFields = (i: number, fields: Record<string, any>) => {
-  const updated = [...tasks];
-  updated[i] = { ...updated[i], ...fields };
-  updateField("tasks", updated);
-};
+{profile?.avatar_url && (
+  <button
+    onClick={() => setAvatarUrl(profile.avatar_url!)}
+    className="bg-primary/10 text-primary px-3 py-2 rounded-xl text-sm font-semibold shrink-0"
+  >
+    Usar minha foto
+  </button>
+)}
 ```
 
-**Linha 324 atualizada (diagnostico):**
-
-```tsx
-<MultiRitualCombobox
-  value={task.ritual_ids || (task.ritual_id ? [task.ritual_id] : [])}
-  onChange={(ids) => updateTaskFields(i, { ritual_ids: ids, ritual_id: null })}
-  placeholder="Adicionar ritual..."
-/>
-```
-
-Isso garante que `ritual_ids` e a limpeza de `ritual_id` acontecam na mesma operacao, sem que uma sobrescreva a outra.
-
+Nenhuma alteracao de banco de dados necessaria. O campo `guidance_avatar_url` em `app_settings` ja existe e continua sendo usado normalmente.
