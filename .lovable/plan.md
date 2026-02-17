@@ -1,73 +1,53 @@
 
 
-# Vincular multiplos rituais/rezas por tarefa no fluxo
+# Corrigir vinculacao de multiplos rituais que nao persiste
 
-## Situacao atual
+## Problema encontrado
 
-Cada tarefa no no de Diagnostico suporta apenas **um** ritual vinculado (`ritual_id`). O mesmo acontece na secao "Vinculos" dos demais blocos do fluxo. Isso limita o conteudo que pode ser associado a cada etapa.
+O bug esta na linha 324 do `NodeConfigPanel.tsx`. Quando o `MultiRitualCombobox` muda, o codigo executa duas chamadas consecutivas a `updateTask`:
+
+```tsx
+onChange={(ids) => {
+  updateTask(i, "ritual_ids", ids);   // <-- seta ritual_ids
+  updateTask(i, "ritual_id", null);   // <-- sobrescreve tudo com tasks ANTIGO (sem ritual_ids)
+}}
+```
+
+A funcao `updateTask` le a variavel `tasks` do closure (que e a versao antiga). A segunda chamada recria o array de tasks a partir da versao sem `ritual_ids`, efetivamente apagando a alteracao feita pela primeira chamada.
 
 ## Solucao
 
-Permitir vincular **multiplos rituais** por tarefa (e por bloco), usando um campo `ritual_ids: string[]` no config JSON do no. A interface mostrara uma lista de rituais vinculados com botao para adicionar mais.
+Combinar ambas as alteracoes em uma unica operacao dentro do `updateTask`, ou alterar a funcao para aceitar multiplos campos de uma vez.
 
-## O que muda para o usuario
+A abordagem mais simples: mudar o `onChange` para fazer uma unica chamada que seta ambos os campos ao mesmo tempo.
 
-**No painel admin (Flow Builder):**
-- Cada tarefa do Diagnostico mostrara uma lista de rituais vinculados, com botao "+ Adicionar ritual"
-- Cada bloco (Mensagem, Sim/Nao, etc.) tambem podera ter multiplos rituais na secao "Vinculos"
-- Rituais ja vinculados aparecem como chips com botao X para remover
-
-**Na tela do aluno (Oraculo):**
-- Cada tarefa mostrara multiplos botoes "Ver Ritual: [nome]" se houver mais de um vinculado
-- Cada bloco do fluxo tambem mostrara todos os rituais vinculados
-
-## Detalhes tecnicos
-
-### 1. Componente MultiRitualCombobox (novo)
-
-Componente que gerencia uma lista de `ritual_ids`. Mostra os rituais selecionados como chips e um combobox para adicionar mais.
-
-```text
-+-------------------------------------+
-| [Reza do Ori x] [Iba Orixá x]      |
-| [+ Adicionar ritual...]             |
-+-------------------------------------+
-```
-
-### 2. NodeConfigPanel.tsx
-
-**Secao "Vinculos" (blocos normais):**
-- Substituir `RitualCombobox` (singular) por `MultiRitualCombobox`
-- Campo muda de `config.ritual_id` para `config.ritual_ids`
-- Manter compatibilidade: se existir `ritual_id` antigo, migrar para `ritual_ids: [ritual_id]`
-
-**Secao "Tarefas do Diagnostico":**
-- Substituir `RitualCombobox` por `MultiRitualCombobox` em cada tarefa
-- Campo muda de `task.ritual_id` para `task.ritual_ids`
-
-### 3. FlowStepRenderer.tsx
-
-**StepHeader:**
-- Verificar `config.ritual_ids` (array) alem de `config.ritual_id` (legado)
-- Renderizar um `LinkedRitualButton` para cada ritual da lista
-
-**DiagnosisStep:**
-- Mostrar multiplos `LinkedRitualButton` por tarefa
-- Ao salvar no `journey_tasks`, usar o primeiro `ritual_id` da lista (a tabela so suporta um)
-- Manter override de ritual individual por tarefa
-
-### 4. Compatibilidade
-
-- Se `ritual_id` existir e `ritual_ids` nao, tratar como `ritual_ids: [ritual_id]`
-- Isso garante que fluxos ja configurados continuem funcionando sem necessidade de reconfigurar
-
-### Arquivos modificados
+## Arquivos modificados
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/components/MultiRitualCombobox.tsx` | Novo componente para selecao multipla de rituais |
-| `src/components/admin/flow-builder/NodeConfigPanel.tsx` | Trocar `RitualCombobox` por `MultiRitualCombobox` nos vinculos e tarefas |
-| `src/components/oracle/FlowStepRenderer.tsx` | Renderizar multiplos `LinkedRitualButton` no `StepHeader` e `DiagnosisStep` |
+| `src/components/admin/flow-builder/NodeConfigPanel.tsx` | Corrigir o `onChange` do `MultiRitualCombobox` nas tarefas do diagnostico (linha 324) para combinar `ritual_ids` e `ritual_id: null` em uma unica chamada a `updateTask`. Criar uma variante `updateTaskMulti` que aceita um objeto de campos, ou usar inline spread. |
 
-Nenhuma alteracao de banco de dados e necessaria, pois os dados sao armazenados como JSON no campo `config` dos nos do fluxo.
+## Detalhe tecnico
+
+**Opcao escolhida: criar funcao `updateTaskFields`**
+
+```tsx
+const updateTaskFields = (i: number, fields: Record<string, any>) => {
+  const updated = [...tasks];
+  updated[i] = { ...updated[i], ...fields };
+  updateField("tasks", updated);
+};
+```
+
+**Linha 324 atualizada (diagnostico):**
+
+```tsx
+<MultiRitualCombobox
+  value={task.ritual_ids || (task.ritual_id ? [task.ritual_id] : [])}
+  onChange={(ids) => updateTaskFields(i, { ritual_ids: ids, ritual_id: null })}
+  placeholder="Adicionar ritual..."
+/>
+```
+
+Isso garante que `ritual_ids` e a limpeza de `ritual_id` acontecam na mesma operacao, sem que uma sobrescreva a outra.
 
