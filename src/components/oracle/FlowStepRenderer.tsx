@@ -314,6 +314,21 @@ const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowSte
     return <DiagnosisStep node={node} answers={answers} allNodes={allNodes} />;
   }
 
+  // ── MEDIA ──
+  if (node.node_type === "media") {
+    return <MediaStep node={node} config={config} onNext={onNext} answers={answers} />;
+  }
+
+  // ── TIMER ──
+  if (node.node_type === "timer") {
+    return <TimerStep node={node} config={config} onNext={onNext} answers={answers} />;
+  }
+
+  // ── CONDITIONAL ──
+  if (node.node_type === "conditional") {
+    return <ConditionalStep config={config} onNext={onNext} answers={answers} />;
+  }
+
   return <p className="text-muted-foreground">Tipo de bloco desconhecido: {node.node_type}</p>;
 };
 
@@ -695,6 +710,117 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+// ── MEDIA STEP ──
+const MediaStep = ({ node, config, onNext, answers }: { node: OracleFlowNode; config: Record<string, any>; onNext: (h: string) => void; answers?: Record<string, string> }) => {
+  const mediaType = config.media_type || "image";
+  const mediaUrl = config.media_url || "";
+  const caption = config.caption || "";
+
+  const getYouTubeId = (url: string) => {
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?\s]+)/);
+    return match?.[1] || "";
+  };
+
+  return (
+    <div className="space-y-4 animate-fade-up">
+      <StepHeader node={node} answers={answers} />
+      {mediaType === "youtube" && mediaUrl ? (
+        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-muted">
+          <iframe
+            src={`https://www.youtube.com/embed/${getYouTubeId(mediaUrl)}`}
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      ) : mediaUrl ? (
+        <img src={mediaUrl} alt={caption || "Mídia"} className="w-full rounded-2xl object-cover max-h-80" />
+      ) : null}
+      {caption && <p className="text-sm text-muted-foreground text-center">{interpolateVars(caption, answers || {})}</p>}
+      <button onClick={() => onNext("default")} className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-lg">
+        Continuar
+      </button>
+    </div>
+  );
+};
+
+// ── TIMER STEP ──
+const TimerStep = ({ node, config, onNext, answers }: { node: OracleFlowNode; config: Record<string, any>; onNext: (h: string) => void; answers?: Record<string, string> }) => {
+  const duration = (config.duration_seconds as number) || 10;
+  const message = config.message || "Aguarde...";
+  const [remaining, setRemaining] = useState(duration);
+  const [finished, setFinished] = useState(false);
+
+  useEffect(() => {
+    setRemaining(duration);
+    setFinished(false);
+    const interval = setInterval(() => {
+      setRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setFinished(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [duration]);
+
+  const progress = ((duration - remaining) / duration) * 100;
+  const circumference = 2 * Math.PI * 45;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  return (
+    <div className="space-y-6 animate-fade-up text-center">
+      <StepHeader node={node} answers={answers} />
+      <p className="text-muted-foreground">{interpolateVars(message, answers || {})}</p>
+      <div className="flex justify-center">
+        <svg width="120" height="120" className="transform -rotate-90">
+          <circle cx="60" cy="60" r="45" fill="none" strokeWidth="8" className="stroke-muted" />
+          <circle
+            cx="60" cy="60" r="45" fill="none" strokeWidth="8"
+            className="stroke-primary transition-all duration-1000"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <span className="absolute mt-10 text-3xl font-bold text-foreground">{remaining}s</span>
+      </div>
+      {finished ? (
+        <button onClick={() => onNext("default")} className="w-full py-3 rounded-2xl bg-primary text-primary-foreground font-bold text-lg animate-fade-up">
+          Continuar
+        </button>
+      ) : (
+        <p className="text-xs text-muted-foreground">Aguarde o tempo expirar...</p>
+      )}
+    </div>
+  );
+};
+
+// ── CONDITIONAL STEP (invisible — auto-advance) ──
+const ConditionalStep = ({ config, onNext, answers }: { config: Record<string, any>; onNext: (h: string) => void; answers?: Record<string, string> }) => {
+  const variableName = config.variable_name_to_evaluate || "";
+  const conditions: Array<{ value: string; handle_id: string }> = config.conditions || [];
+  const currentValue = answers?.[variableName] || "";
+
+  useEffect(() => {
+    const matched = conditions.find((c) => c.value.toLowerCase() === currentValue.toLowerCase());
+    if (matched) {
+      onNext(matched.handle_id);
+    } else {
+      onNext("else");
+    }
+  }, []);
+
+  return (
+    <div className="flex items-center justify-center py-8">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
     </div>
   );
 };

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useOracleFlows, useCreateFlow, useDeleteFlow, useUpdateFlow, useSetDefaultFlow, useSaveFlowCanvas } from "@/hooks/useOracleFlows";
-import { Plus, Trash2, Pencil, Star, ArrowLeft, Wand2 } from "lucide-react";
+import { useOracleFlows, useCreateFlow, useDeleteFlow, useUpdateFlow, useSetDefaultFlow, useSaveFlowCanvas, useFlowNodes, useFlowEdges } from "@/hooks/useOracleFlows";
+import { Plus, Trash2, Pencil, Star, ArrowLeft, Wand2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import FlowBuilder from "./flow-builder/FlowBuilder";
 
 const AdminFlows = () => {
@@ -19,6 +20,55 @@ const AdminFlows = () => {
   const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
   const [creatingDefault, setCreatingDefault] = useState(false);
   const [creatingOrientation, setCreatingOrientation] = useState(false);
+  const [cloningId, setCloningId] = useState<string | null>(null);
+
+  const handleCloneFlow = async (flowId: string) => {
+    const flow = flows?.find((f) => f.id === flowId);
+    if (!flow) return;
+    setCloningId(flowId);
+    try {
+      // Fetch nodes and edges
+      const { data: srcNodes, error: nErr } = await supabase.from("oracle_flow_nodes").select("*").eq("flow_id", flowId);
+      if (nErr) throw nErr;
+      const { data: srcEdges, error: eErr } = await supabase.from("oracle_flow_edges").select("*").eq("flow_id", flowId);
+      if (eErr) throw eErr;
+
+      // Create new flow
+      const newFlow = await createFlow.mutateAsync({ name: `${flow.name} (cópia)`, description: flow.description });
+
+      // Map old node IDs to temp IDs
+      const tempIdMap: Record<string, string> = {};
+      const nodesPayload = (srcNodes || []).map((n, i) => {
+        const tempId = `clone_${i}_${Date.now()}`;
+        tempIdMap[n.id] = tempId;
+        return {
+          flow_id: newFlow.id,
+          node_type: n.node_type,
+          label: n.label,
+          config: { ...(n.config as Record<string, any>), _tempId: tempId },
+          position_x: n.position_x,
+          position_y: n.position_y,
+        };
+      });
+
+      const edgesPayload = (srcEdges || []).map((e) => ({
+        flow_id: newFlow.id,
+        source_node_id: tempIdMap[e.source_node_id] || e.source_node_id,
+        target_node_id: tempIdMap[e.target_node_id] || e.target_node_id,
+        source_handle: e.source_handle,
+        label: e.label,
+      }));
+
+      await saveCanvas.mutateAsync({ flowId: newFlow.id, nodes: nodesPayload, edges: edgesPayload });
+
+      toast.success("Fluxo duplicado com sucesso!");
+      setEditingFlowId(newFlow.id);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setCloningId(null);
+    }
+  };
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -308,6 +358,9 @@ const AdminFlows = () => {
                 )}
                 <button onClick={() => handleToggleActive(flow.id, flow.is_active)} className="p-2 rounded-lg hover:bg-muted text-xs font-medium">
                   {flow.is_active ? "Desativar" : "Ativar"}
+                </button>
+                <button onClick={() => handleCloneFlow(flow.id)} disabled={cloningId === flow.id} className="p-2 rounded-lg hover:bg-muted" title="Duplicar fluxo">
+                  <Copy className={`h-4 w-4 ${cloningId === flow.id ? "animate-spin" : ""}`} />
                 </button>
                 <button onClick={() => setEditingFlowId(flow.id)} className="p-2 rounded-lg hover:bg-muted">
                   <Pencil className="h-4 w-4" />

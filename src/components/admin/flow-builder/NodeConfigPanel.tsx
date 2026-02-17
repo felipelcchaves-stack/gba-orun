@@ -33,6 +33,9 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   open_question: "Pergunta",
   message: "Mensagem",
   diagnosis: "Diagnóstico",
+  media: "Mídia",
+  timer: "Timer",
+  conditional: "Condicional",
 };
 
 const VariableInsertButton = ({ variables, onInsert }: { variables: AvailableVariable[]; onInsert: (varName: string) => void }) => {
@@ -346,6 +349,89 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
 
             {nodeType === "start" && (
               <p className="text-xs text-muted-foreground">Bloco inicial do fluxo. O título aparece como botão "Começar".</p>
+            )}
+
+            {nodeType === "media" && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">URL da Mídia</label>
+                  <Input value={localConfig.media_url || ""} onChange={(e) => updateField("media_url", e.target.value)} className="mt-1" placeholder="https://..." />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+                  <select value={localConfig.media_type || "image"} onChange={(e) => updateField("media_type", e.target.value)} className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    <option value="image">Imagem</option>
+                    <option value="youtube">YouTube</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Legenda</label>
+                  <Input value={localConfig.caption || ""} onChange={(e) => updateField("caption", e.target.value)} className="mt-1" placeholder="Legenda opcional..." />
+                </div>
+              </>
+            )}
+
+            {nodeType === "timer" && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Duração (segundos)</label>
+                  <Input type="number" min={1} value={localConfig.duration_seconds || 10} onChange={(e) => updateField("duration_seconds", parseInt(e.target.value) || 10)} className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Mensagem durante espera</label>
+                  <Textarea value={localConfig.message || ""} onChange={(e) => updateField("message", e.target.value)} className="mt-1 min-h-[50px]" placeholder="Respire fundo..." />
+                  <VariableInsertButton variables={availableVariables} onInsert={(v) => updateField("message", (localConfig.message || "") + `{{${v}}}`)} />
+                </div>
+              </>
+            )}
+
+            {nodeType === "conditional" && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Variável a avaliar</label>
+                  {availableVariables.length > 0 ? (
+                    <select value={localConfig.variable_name_to_evaluate || ""} onChange={(e) => updateField("variable_name_to_evaluate", e.target.value)} className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <option value="">Selecione...</option>
+                      {availableVariables.map((v) => (
+                        <option key={v.name} value={v.name}>{v.name} ({NODE_TYPE_LABELS[v.nodeType] || v.nodeType})</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">Nenhuma variável disponível. Adicione blocos com apelido antes.</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Condições</label>
+                  <div className="space-y-2 mt-1">
+                    {(localConfig.conditions || []).map((c: any, i: number) => (
+                      <div key={i} className="flex gap-1 items-center">
+                        <Input value={c.value} onChange={(e) => {
+                          const updated = [...(localConfig.conditions || [])];
+                          updated[i] = { ...updated[i], value: e.target.value };
+                          updateField("conditions", updated);
+                        }} placeholder="Valor (ex: alafia)" className="flex-1 text-xs" />
+                        <Input value={c.handle_id} onChange={(e) => {
+                          const updated = [...(localConfig.conditions || [])];
+                          updated[i] = { ...updated[i], handle_id: e.target.value };
+                          updateField("conditions", updated);
+                        }} placeholder="Handle ID" className="flex-1 text-xs" />
+                        <button onClick={() => {
+                          const updated = (localConfig.conditions || []).filter((_: any, idx: number) => idx !== i);
+                          updateField("conditions", updated);
+                        }} className="p-1 hover:bg-destructive/10 rounded text-destructive">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <button onClick={() => {
+                      const conditions = [...(localConfig.conditions || []), { value: "", handle_id: `cond_${(localConfig.conditions || []).length}` }];
+                      updateField("conditions", conditions);
+                    }} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                      <Plus className="h-3 w-3" /> Adicionar condição
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}
