@@ -117,6 +117,36 @@ export type Database = {
           },
         ]
       }
+      guidance_bubbles: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          message: string
+          point_key: string
+          updated_at: string
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          point_key: string
+          updated_at?: string
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          point_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       journey_tasks: {
         Row: {
           completed: boolean

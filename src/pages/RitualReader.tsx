@@ -7,6 +7,7 @@ import { ArrowLeft, Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import PremiumLockModal from "@/components/PremiumLockModal";
 import AudioPlayer from "@/components/AudioPlayer";
+import GuidanceBubble from "@/components/GuidanceBubble";
 import { useState, useEffect, useRef } from "react";
 
 import ritualPlaceholder1 from "@/assets/ritual-placeholder-1.jpg";
@@ -98,6 +99,7 @@ const RitualReader = () => {
             </div>
           ) : (
             <>
+              <GuidanceBubble pointKey="ritual_reader" className="mb-6" />
               {(ritual as any).audio_url && (
                 <div className="mb-8">
                   <AudioPlayer url={(ritual as any).audio_url} title="Ouvir este ritual" />

@@ -2,6 +2,7 @@ import { Check, X, Heart, Sun } from "lucide-react";
 import { useState } from "react";
 import { useStepText } from "@/hooks/useOracleConfig";
 import RitualHelpButton from "@/components/RitualHelpButton";
+import GuidanceBubble from "@/components/GuidanceBubble";
 
 const ORI_ACTIONS = [
   { key: "ibori", label: "Ibori", desc: "Ritual para fortalecer o Ori", icon: Heart },
@@ -62,9 +63,11 @@ const StepOri = ({ ireOrIbi, onAnswer }: Props) => {
         <h2 className="text-2xl font-display font-bold text-center flex-1">{stepText.title}</h2>
         <RitualHelpButton point="oracle_step_ori" />
       </div>
-      <p className="text-center text-muted-foreground text-sm mb-8">
+      <p className="text-center text-muted-foreground text-sm mb-4">
         {stepText.description || defaultDesc}
       </p>
+
+      <GuidanceBubble pointKey="oracle_step_ori" className="mb-6" />
 
       <div className="grid grid-cols-2 gap-4">
         <button

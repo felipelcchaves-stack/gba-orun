@@ -2,6 +2,7 @@ import { Sun, AlertTriangle } from "lucide-react";
 import { useOracleConfigs, useStepText } from "@/hooks/useOracleConfig";
 import { OBI_RESULTS_FALLBACK } from "./StepObiResult";
 import RitualHelpButton from "@/components/RitualHelpButton";
+import GuidanceBubble from "@/components/GuidanceBubble";
 
 interface Props {
   obiResult: string;
@@ -25,9 +26,11 @@ const StepIreIbi = ({ obiResult, onSelect }: Props) => {
       <p className="text-center text-muted-foreground text-sm mb-2">
         O resultado <strong>{resultName}</strong> veio em caminho positivo ou negativo?
       </p>
-      <p className="text-center text-xs text-muted-foreground mb-8">
+      <p className="text-center text-xs text-muted-foreground mb-4">
         {stepText.description || "Irê = bom caminho · Ibi = caminho que precisa de cuidado"}
       </p>
+
+      <GuidanceBubble pointKey="oracle_step_ire_ibi" className="mb-6" />
 
       <div className="grid grid-cols-2 gap-4">
         <button
