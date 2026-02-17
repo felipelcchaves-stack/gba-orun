@@ -5,6 +5,7 @@ import { useAddXP } from "@/hooks/useUserStats";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import PremiumLockModal from "@/components/PremiumLockModal";
 import AudioPlayer from "@/components/AudioPlayer";
 import GuidanceBubble from "@/components/GuidanceBubble";
@@ -106,7 +107,7 @@ const RitualReader = () => {
                 </div>
               )}
               <div className="prose-ritual">
-                <ReactMarkdown>{ritual.content_full}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkBreaks]}>{ritual.content_full}</ReactMarkdown>
               </div>
             </>
           )}

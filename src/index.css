@@ -197,7 +197,7 @@
 .prose-ritual h2 { @apply text-2xl font-display font-bold mb-3; color: hsl(var(--foreground)); }
 .prose-ritual h3 { @apply text-xl font-display font-bold mb-2; }
 .prose-ritual p { @apply mb-4 text-lg leading-8; color: hsl(var(--muted-foreground)); }
-.prose-ritual p { @apply mb-4 text-base leading-7; color: hsl(var(--muted-foreground)); }
+.prose-ritual p { @apply mb-4 text-base leading-7; color: hsl(var(--muted-foreground)); white-space: pre-line; }
 .prose-ritual ul { @apply list-disc pl-6 mb-4 space-y-1; }
 .prose-ritual ol { @apply list-decimal pl-6 mb-4 space-y-1; }
 .prose-ritual blockquote {

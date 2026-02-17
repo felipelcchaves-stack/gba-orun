@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useRitualLinkForPoint } from "@/hooks/useRitualLinks";
 import { useRitual } from "@/hooks/useRituals";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import AudioPlayer from "@/components/AudioPlayer";
 import { Link } from "react-router-dom";
 
@@ -31,7 +32,7 @@ const RitualHelpButton = ({ point, className = "" }: Props) => {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="font-display">{ritual.title}</DialogTitle>
           </DialogHeader>
@@ -42,8 +43,8 @@ const RitualHelpButton = ({ point, className = "" }: Props) => {
             </div>
           )}
 
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{ritual.content_full}</ReactMarkdown>
+          <div className="prose-ritual">
+            <ReactMarkdown remarkPlugins={[remarkBreaks]}>{ritual.content_full}</ReactMarkdown>
           </div>
 
           <Link

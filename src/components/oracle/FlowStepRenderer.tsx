@@ -18,6 +18,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 
 interface FlowStepRendererProps {
   node: OracleFlowNode;
@@ -87,7 +88,7 @@ const LinkedRitualButton = ({ ritualId }: { ritualId: string }) => {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="font-display">{ritual.title}</DialogTitle>
           </DialogHeader>
@@ -98,8 +99,8 @@ const LinkedRitualButton = ({ ritualId }: { ritualId: string }) => {
             </div>
           )}
 
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{ritual.content_full}</ReactMarkdown>
+          <div className="prose-ritual">
+            <ReactMarkdown remarkPlugins={[remarkBreaks]}>{ritual.content_full}</ReactMarkdown>
           </div>
 
           <Link
