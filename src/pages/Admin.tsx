@@ -7,9 +7,6 @@ import { toast } from "sonner";
 import JsonImporter from "@/components/JsonImporter";
 import AdminRitualForm from "@/components/admin/AdminRitualForm";
 import AdminOfferSettings from "@/components/admin/AdminOfferSettings";
-import AdminOracleConfigs from "@/components/admin/AdminOracleConfigs";
-import AdminOracleTaskTemplates from "@/components/admin/AdminOracleTaskTemplates";
-import AdminOracleStepTexts from "@/components/admin/AdminOracleStepTexts";
 import AdminSidebar, { AdminSection } from "@/components/admin/AdminSidebar";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminUsers from "@/components/admin/AdminUsers";
@@ -18,7 +15,6 @@ import AdminCommunity from "@/components/admin/AdminCommunity";
 import AdminPlans from "@/components/admin/AdminPlans";
 import AdminPromotions from "@/components/admin/AdminPromotions";
 import AdminGuidance from "@/components/admin/AdminGuidance";
-import AdminIreIbiTypes from "@/components/admin/AdminIreIbiTypes";
 import AdminOfferings from "@/components/admin/AdminOfferings";
 import AdminReviews from "@/components/admin/AdminReviews";
 import AdminFlows from "@/components/admin/AdminFlows";
@@ -40,7 +36,6 @@ const AdminPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [defaultFormCategory, setDefaultFormCategory] = useState<string | undefined>(undefined);
-  const [oracleSubTab, setOracleSubTab] = useState<"configs" | "tasks" | "texts" | "ire_ibi">("configs");
   const [filterCat, setFilterCat] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -120,9 +115,7 @@ const AdminPage = () => {
 
       <main className="flex-1 p-8 overflow-auto">
         {activeSection === "dashboard" && <AdminDashboard />}
-
         {activeSection === "users" && <AdminUsers />}
-
         {activeSection === "plans" && <AdminPlans />}
 
         {activeSection === "rituals" && (
@@ -208,50 +201,11 @@ const AdminPage = () => {
         )}
 
         {activeSection === "offerings" && <AdminOfferings />}
-
-        {activeSection === "oracle" && (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-display font-bold text-foreground">Oráculo</h1>
-              <p className="text-sm text-muted-foreground mt-1">Configure o motor de decisão</p>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {([
-                { key: "configs" as const, label: "Resultados do Obi" },
-                { key: "tasks" as const, label: "Tarefas Sugeridas" },
-                { key: "texts" as const, label: "Textos das Etapas" },
-                { key: "ire_ibi" as const, label: "Tipos de Irê/Ibi" },
-              ]).map(sub => (
-                <button
-                  key={sub.key}
-                  onClick={() => setOracleSubTab(sub.key)}
-                  className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    oracleSubTab === sub.key
-                      ? "bg-foreground text-background"
-                      : "border border-border hover:bg-muted"
-                  }`}
-                >
-                  {sub.label}
-                </button>
-              ))}
-            </div>
-            {oracleSubTab === "configs" && <AdminOracleConfigs />}
-            {oracleSubTab === "tasks" && <AdminOracleTaskTemplates />}
-            {oracleSubTab === "texts" && <AdminOracleStepTexts />}
-            {oracleSubTab === "ire_ibi" && <AdminIreIbiTypes />}
-          </div>
-        )}
-
         {activeSection === "flows" && <AdminFlows />}
-
         {activeSection === "links" && <AdminRitualLinks />}
-
         {activeSection === "community" && <AdminCommunity />}
-
         {activeSection === "promotions" && <AdminPromotions />}
-
         {activeSection === "guidance" && <AdminGuidance />}
-
         {activeSection === "reviews" && <AdminReviews />}
 
         {activeSection === "settings" && (

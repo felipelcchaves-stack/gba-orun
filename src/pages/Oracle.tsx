@@ -1,45 +1,34 @@
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Loader2, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-
-import OracleProgressBar from "@/components/oracle/OracleProgressBar";
-import StepIntention from "@/components/oracle/StepIntention";
-import StepObiResult, { OBI_RESULTS_FALLBACK } from "@/components/oracle/StepObiResult";
-import StepIreIbi from "@/components/oracle/StepIreIbi";
-import StepEbo from "@/components/oracle/StepEbo";
-import StepOri from "@/components/oracle/StepOri";
-import StepIyamiEgbe from "@/components/oracle/StepIyamiEgbe";
-import StepDiagnosis, { type WizardState } from "@/components/oracle/StepDiagnosis";
-import { useOracleConfigs } from "@/hooks/useOracleConfig";
-import { useDefaultOracleFlow } from "@/hooks/useOracleFlows";
+import { useOracleFlows } from "@/hooks/useOracleFlows";
 import DynamicFlowRunner from "@/components/oracle/DynamicFlowRunner";
-
-const TOTAL_STEPS = 7;
+import { Link } from "react-router-dom";
 
 const OraclePage = () => {
   const { user } = useAuth();
-  const { data: dbConfigs } = useOracleConfigs();
-  const { data: defaultFlow } = useDefaultOracleFlow();
-  const [step, setStep] = useState(1);
-  const [state, setState] = useState<Partial<WizardState>>({});
+  const { data: allFlows, isLoading } = useOracleFlows();
+  const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
 
-  const reset = () => {
-    setStep(1);
-    setState({});
-  };
+  const activeFlows = allFlows?.filter(f => f.is_active) || [];
 
-  const goBack = () => {
-    if (step <= 1) return;
-    setStep(s => s - 1);
-  };
-
-  // If a dynamic flow is active, use it instead of the hardcoded wizard
-  if (defaultFlow) {
+  // If a flow is selected, run it
+  if (selectedFlowId) {
     return (
       <div className="min-h-screen pb-24 bg-background">
         <div className="max-w-lg mx-auto pt-10 px-6">
-          <DynamicFlowRunner flowId={defaultFlow.id} />
+          <DynamicFlowRunner flowId={selectedFlowId} />
+        </div>
+      </div>
+    );
+  }
+
+  // Auto-start if only 1 active flow
+  if (!isLoading && activeFlows.length === 1) {
+    return (
+      <div className="min-h-screen pb-24 bg-background">
+        <div className="max-w-lg mx-auto pt-10 px-6">
+          <DynamicFlowRunner flowId={activeFlows[0].id} />
         </div>
       </div>
     );
@@ -48,89 +37,46 @@ const OraclePage = () => {
   return (
     <div className="min-h-screen pb-24 bg-background">
       <div className="max-w-lg mx-auto pt-10 px-6">
-        {step > 1 && step < TOTAL_STEPS && (
-          <button onClick={goBack} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
-            <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Voltar
-          </button>
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : activeFlows.length === 0 ? (
+          <div className="text-center py-20 space-y-4">
+            <Sparkles className="h-12 w-12 mx-auto text-muted-foreground/40" />
+            <h2 className="text-xl font-display font-bold text-foreground">Nenhum fluxo configurado</h2>
+            <p className="text-muted-foreground text-sm">Acesse o painel admin para criar um fluxo de consulta.</p>
+          </div>
+        ) : (
+          <>
+            <h1 className="text-3xl font-display font-bold text-center mb-2">Como posso te ajudar hoje?</h1>
+            <p className="text-center text-muted-foreground text-sm mb-8">Escolha o tipo de consulta</p>
+
+            <div className="space-y-4">
+              {activeFlows.map(flow => (
+                <button
+                  key={flow.id}
+                  onClick={() => setSelectedFlowId(flow.id)}
+                  className="w-full flex items-center gap-4 p-5 bg-card rounded-2xl shadow-card hover:shadow-soft transition-all active:scale-[0.98] text-left"
+                >
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display font-bold text-lg">{flow.name}</h3>
+                    {flow.description && <p className="text-sm text-muted-foreground mt-0.5">{flow.description}</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {!user && (
+              <p className="text-center text-xs text-muted-foreground mt-8">
+                <Link to="/auth" className="text-primary underline">Faça login</Link> para salvar consultas e ganhar XP.
+              </p>
+            )}
+          </>
         )}
-
-        {step === TOTAL_STEPS && (
-          <button onClick={reset} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
-            <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Nova consulta
-          </button>
-        )}
-
-        {step > 1 && <OracleProgressBar currentStep={step - 1} totalSteps={TOTAL_STEPS - 1} />}
-
-        <div className="animate-fade-up">
-          {step === 1 && (
-            <StepIntention onSelect={(intention) => {
-              setState(s => ({ ...s, intention }));
-              setStep(2);
-            }} />
-          )}
-
-          {step === 2 && (
-            <>
-              <StepObiResult onSelect={(key) => {
-                const config = dbConfigs?.find(c => c.result_key === key);
-                const fallback = OBI_RESULTS_FALLBACK.find(r => r.key === key);
-                const defaultIreIbi = config?.default_ire_ibi || fallback?.default_ire_ibi || "ibi";
-                setState(s => ({ ...s, result: key, defaultIreIbi }));
-                setStep(3);
-              }} />
-              {!user && (
-                <p className="text-center text-xs text-muted-foreground mt-6">
-                  <Link to="/auth" className="text-primary underline">Faça login</Link> para salvar consultas e ganhar XP.
-                </p>
-              )}
-            </>
-          )}
-
-          {step === 3 && (
-            <StepIreIbi
-              obiResult={state.result!}
-              defaultCategory={state.defaultIreIbi as "ire" | "ibi" | undefined}
-              onSelect={(category, typeId, typeName) => {
-                setState(s => ({ ...s, ireOrIbi: category, ireIbiTypeId: typeId, ireIbiTypeName: typeName }));
-                setStep(4);
-              }}
-            />
-          )}
-
-          {step === 4 && (
-            <StepEbo
-              ireOrIbi={state.ireOrIbi!}
-              onAnswer={(apurado, tipo) => {
-                setState(s => ({ ...s, eboApurado: apurado, eboTipo: tipo }));
-                setStep(5);
-              }}
-            />
-          )}
-
-          {step === 5 && (
-            <StepOri
-              ireOrIbi={state.ireOrIbi!}
-              onAnswer={(precisa, acao) => {
-                setState(s => ({ ...s, oriPrecisa: precisa, oriAcao: acao }));
-                setStep(6);
-              }}
-            />
-          )}
-
-          {step === 6 && (
-            <StepIyamiEgbe
-              onAnswer={(iyamiQuer, egbeOrunQuer) => {
-                setState(s => ({ ...s, iyamiQuer, egbeOrunQuer }));
-                setStep(7);
-              }}
-            />
-          )}
-
-          {step === 7 && (
-            <StepDiagnosis state={state as WizardState} />
-          )}
-        </div>
       </div>
     </div>
   );

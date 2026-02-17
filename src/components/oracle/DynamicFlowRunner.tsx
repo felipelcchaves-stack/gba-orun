@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
-import { useFlowNodes, useFlowEdges, type OracleFlowNode, type OracleFlowEdge } from "@/hooks/useOracleFlows";
+import { useFlowNodes, useFlowEdges, type OracleFlowNode } from "@/hooks/useOracleFlows";
 import FlowStepRenderer from "./FlowStepRenderer";
 import OracleProgressBar from "./OracleProgressBar";
 
@@ -15,7 +15,6 @@ const DynamicFlowRunner = ({ flowId }: DynamicFlowRunnerProps) => {
   const [history, setHistory] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
-  // Find start node
   useEffect(() => {
     if (nodes && nodes.length > 0 && !currentNodeId) {
       const startNode = nodes.find((n) => n.node_type === "start");
@@ -37,12 +36,10 @@ const DynamicFlowRunner = ({ flowId }: DynamicFlowRunnerProps) => {
   const handleNext = (handleId: string, answer?: string) => {
     if (!edges || !currentNodeId) return;
 
-    // Save answer
     if (answer && currentNode) {
       setAnswers((prev) => ({ ...prev, [currentNodeId]: answer }));
     }
 
-    // Find matching edge
     const edge = edges.find(
       (e) => e.source_node_id === currentNodeId && e.source_handle === handleId
     );
@@ -51,7 +48,6 @@ const DynamicFlowRunner = ({ flowId }: DynamicFlowRunnerProps) => {
       setHistory((prev) => [...prev, currentNodeId]);
       setCurrentNodeId(edge.target_node_id);
     } else {
-      // Try default handle
       const defaultEdge = edges.find(
         (e) => e.source_node_id === currentNodeId && (e.source_handle === "default" || e.source_handle === "")
       );
@@ -97,7 +93,12 @@ const DynamicFlowRunner = ({ flowId }: DynamicFlowRunnerProps) => {
       )}
 
       <div className="animate-fade-up">
-        <FlowStepRenderer node={currentNode} onNext={handleNext} />
+        <FlowStepRenderer
+          node={currentNode}
+          onNext={handleNext}
+          answers={answers}
+          allNodes={nodes}
+        />
       </div>
     </div>
   );
