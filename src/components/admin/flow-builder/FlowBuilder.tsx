@@ -157,8 +157,25 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
     }));
 
     try {
-      await saveCanvas.mutateAsync({ flowId, nodes: nodesPayload, edges: edgesPayload });
-      setLoaded(false);
+      const { nodeIdMap } = await saveCanvas.mutateAsync({ flowId, nodes: nodesPayload, edges: edgesPayload });
+
+      // Update local node IDs to match new DB IDs
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          id: nodeIdMap[n.id] || n.id,
+        }))
+      );
+
+      // Update local edge source/target to match new DB IDs
+      setEdges((eds) =>
+        eds.map((e) => ({
+          ...e,
+          source: nodeIdMap[e.source] || e.source,
+          target: nodeIdMap[e.target] || e.target,
+        }))
+      );
+
       toast.success("Fluxo salvo com sucesso!");
     } catch (err: any) {
       toast.error(err.message);
