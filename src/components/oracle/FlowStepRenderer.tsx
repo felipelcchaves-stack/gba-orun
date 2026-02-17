@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle, ChevronRight, Loader2, Play, Pause } from "lucide-react";
+import { CheckCircle, ChevronRight, Loader2, Play, Pause, BookOpen, ExternalLink } from "lucide-react";
 import { type OracleFlowNode } from "@/hooks/useOracleFlows";
 import { useOracleConfigs } from "@/hooks/useOracleConfig";
 import { useIreIbiTypes } from "@/hooks/useIreIbiTypes";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddXP } from "@/hooks/useUserStats";
 import { useAddJourneyEntry, useCreateJourneyTasks } from "@/hooks/useJourney";
-import { useRituals } from "@/hooks/useRituals";
+import { useRituals, useRitual } from "@/hooks/useRituals";
 import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
 import { Progress } from "@/components/ui/progress";
 import AudioPlayer from "@/components/AudioPlayer";
@@ -16,6 +16,8 @@ import OfferingCombobox from "@/components/OfferingCombobox";
 import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useRef } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ReactMarkdown from "react-markdown";
 
 interface FlowStepRendererProps {
   node: OracleFlowNode;
@@ -67,6 +69,53 @@ const InlineGuidance = ({ message, audioUrl }: { message: string; audioUrl?: str
   );
 };
 
+// Linked ritual button (extracted so hooks are always called)
+const LinkedRitualButton = ({ ritualId }: { ritualId: string }) => {
+  const { data: ritual } = useRitual(ritualId);
+  const [open, setOpen] = useState(false);
+
+  if (!ritual) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+      >
+        <BookOpen className="h-3.5 w-3.5" />
+        <span>Ver Ritual: {ritual.title}</span>
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display">{ritual.title}</DialogTitle>
+          </DialogHeader>
+
+          {ritual.audio_url && (
+            <div className="mb-4">
+              <AudioPlayer url={ritual.audio_url} />
+            </div>
+          )}
+
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown>{ritual.content_full}</ReactMarkdown>
+          </div>
+
+          <Link
+            to={`/rituais/${ritual.id}`}
+            className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline"
+            onClick={() => setOpen(false)}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Ver ritual completo
+          </Link>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 // Common header for all steps
 const StepHeader = ({ node }: { node: OracleFlowNode }) => {
   const config = node.config || {};
@@ -76,6 +125,11 @@ const StepHeader = ({ node }: { node: OracleFlowNode }) => {
       {config.description && <p className="text-muted-foreground text-sm">{config.description}</p>}
       {config.guidance_message && (
         <InlineGuidance message={config.guidance_message} audioUrl={config.guidance_audio_url} />
+      )}
+      {config.ritual_id && (
+        <div className="mt-2">
+          <LinkedRitualButton ritualId={config.ritual_id} />
+        </div>
       )}
     </>
   );
