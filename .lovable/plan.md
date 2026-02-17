@@ -1,56 +1,40 @@
 
 
-# Plano: Vincular Ire/Ibi ao Cadastro do Obi (Eliminar Passo Manual)
+# Plano: Sistema Completo de Orientacao do Mestre em Cada Resultado do Obi
 
-## Problema
+## O que muda
 
-Hoje, apos o usuario selecionar o resultado do Obi (Apotaku, Okaran, Ejife, etc.), o wizard pergunta manualmente "Veio em Ire ou Ibi?". Porem, na pratica liturgica, cada caida ja tem sua natureza definida -- o proprio resultado ja diz se e Ire ou Ibi. Essa pergunta e redundante e confunde o usuario.
+Hoje, o sistema de orientacao do mestre (GuidanceBubble) funciona com pontos fixos no codigo -- um balao por etapa do oraculo. Porem, cada resultado do Obi (Apotaku, Okaran, Ejikorere, Etaiwa, Alafia) tem uma natureza diferente e merece uma orientacao propria. O admin quer poder escrever uma mensagem e gravar um audio especifico para cada caida.
 
 ---
 
-## Solucao
+## Solucao: Orientacao vinculada ao Resultado do Obi
 
-### 1. Novo campo `default_ire_ibi` na tabela `oracle_configs`
+### 1. Novos campos na tabela `oracle_configs`
 
-Adicionar uma coluna para o admin definir se cada resultado do Obi e Ire ou Ibi por padrao.
+Adicionar dois campos para cada resultado do Obi armazenar sua propria orientacao do mestre:
 
 ```text
 ALTER TABLE public.oracle_configs
-  ADD COLUMN default_ire_ibi TEXT NOT NULL DEFAULT 'ibi';
+  ADD COLUMN guidance_message TEXT NOT NULL DEFAULT '',
+  ADD COLUMN guidance_audio_url TEXT;
 ```
 
-Valores possiveis: `'ire'` ou `'ibi'`.
-
-Isso permite que o admin configure, por exemplo:
-- Apotaku (Oyekun) -> Ibi
-- Okaran -> Ibi
-- Ejife -> Ire
-- Etagun -> Ire
-- Alafia -> Ire
+Isso significa que ao editar "Apotaku" no admin, voce tambem configura a mensagem e o audio que o mestre fala quando esse resultado aparece.
 
 ---
 
-### 2. Eliminar o Step 3 (StepIreIbi) do Wizard
+### 2. Exibir orientacao no StepObiResult (apos selecao)
 
-**Arquivo:** `src/pages/Oracle.tsx`
+**Arquivo:** `src/components/oracle/StepObiResult.tsx`
 
-O wizard hoje tem 7 passos. Ao eliminar o passo "Ire ou Ibi?", ficara com 6:
+Hoje, quando o usuario clica em um resultado, ele avanca direto. A mudanca e: ao clicar, em vez de avancar imediatamente, o sistema mostra a orientacao do mestre para aquele resultado especifico (texto + audio), com um botao "Continuar" para prosseguir.
 
-1. Intencao
-2. Resultado do Obi
-3. ~~Ire ou Ibi~~ (REMOVIDO)
-4. Ebo -> vira Step 3
-5. Ori -> vira Step 4
-6. Iyami/Egbe -> vira Step 5
-7. Diagnostico -> vira Step 6
-
-No Step 2 (StepObiResult), ao selecionar o resultado, o sistema ja busca o `default_ire_ibi` do `oracle_configs` e preenche automaticamente no state, avancando direto para o proximo passo.
-
-Mudancas:
-- `TOTAL_STEPS` de 7 para 6
-- No `step === 2`, apos o usuario selecionar o resultado, buscar o `default_ire_ibi` correspondente e definir `ireOrIbi` no state automaticamente
-- Renumerar os steps 4-7 para 3-6
-- Remover a importacao e uso de `StepIreIbi`
+Fluxo visual:
+1. Usuario ve a lista de resultados
+2. Clica em "Ejikorere"
+3. Aparece o balao do mestre com a orientacao especifica do Ejikorere
+4. Usuario clica "Continuar" para ir ao Ebo
 
 ---
 
@@ -58,40 +42,27 @@ Mudancas:
 
 **Arquivo:** `src/components/admin/AdminOracleConfigs.tsx`
 
-Adicionar um campo select "Natureza do resultado" no formulario de edicao com as opcoes:
-- Ire (Caminho positivo)
-- Ibi (Precisa de cuidado)
+Adicionar dois campos no formulario de edicao de cada resultado:
+- **Mensagem do Mestre**: textarea para o texto de orientacao
+- **Audio do Mestre (URL)**: campo de texto para URL do audio
 
-Isso aparece ao lado dos campos ja existentes (Nome, Significado, Descricao Ire/Ibi, Estilo Visual).
+Esses campos ficam abaixo dos existentes (Descricao Ire, Descricao Ibi, etc.)
 
 ---
 
-### 4. Atualizar tipos e hook
+### 4. Remover ponto de orientacao obsoleto
+
+**Arquivo:** `src/components/admin/AdminGuidance.tsx`
+
+Remover a entrada `oracle_step_ire_ibi` da lista `GUIDANCE_POINTS`, ja que esse passo do wizard foi eliminado.
+
+---
+
+### 5. Atualizar tipos e hooks
 
 **Arquivo:** `src/hooks/useOracleConfig.ts`
 
-- Adicionar `default_ire_ibi: string` na interface `OracleConfig`
-
-**Arquivo:** `src/components/oracle/StepObiResult.tsx`
-
-- O fallback `OBI_RESULTS_FALLBACK` ganha o campo `default_ire_ibi` para cada resultado
-
----
-
-### 5. Propagar para o callback do Oracle.tsx
-
-**Arquivo:** `src/pages/Oracle.tsx`
-
-No step 2, o callback `onSelect` passara tanto o `result_key` quanto o `default_ire_ibi`:
-
-```text
-onSelect={(key) => {
-  const config = dbConfigs?.find(c => c.result_key === key);
-  const ireOrIbi = config?.default_ire_ibi === 'ire' ? 'ire' : 'ibi';
-  setState(s => ({ ...s, result: key, ireOrIbi }));
-  setStep(3); // agora vai direto pro Ebo
-}}
-```
+Adicionar `guidance_message` e `guidance_audio_url` na interface `OracleConfig`.
 
 ---
 
@@ -99,22 +70,24 @@ onSelect={(key) => {
 
 | Arquivo | Acao |
 |---|---|
-| Migration SQL | ADD COLUMN `default_ire_ibi` em `oracle_configs` + UPDATE valores iniciais |
-| `src/hooks/useOracleConfig.ts` | Adicionar `default_ire_ibi` na interface |
-| `src/components/oracle/StepObiResult.tsx` | Adicionar `default_ire_ibi` ao fallback; exportar configs para uso externo |
-| `src/pages/Oracle.tsx` | Reduzir de 7 para 6 steps; preencher `ireOrIbi` automaticamente no step 2; remover `StepIreIbi` |
-| `src/components/admin/AdminOracleConfigs.tsx` | Adicionar select "Ire/Ibi" no formulario de edicao |
+| Migration SQL | ADD COLUMN `guidance_message` e `guidance_audio_url` em `oracle_configs` |
+| `src/hooks/useOracleConfig.ts` | Adicionar campos na interface `OracleConfig` |
+| `src/components/oracle/StepObiResult.tsx` | Mostrar orientacao do mestre ao selecionar resultado, com botao "Continuar" |
+| `src/components/admin/AdminOracleConfigs.tsx` | Adicionar campos de mensagem e audio do mestre no editor |
+| `src/components/admin/AdminGuidance.tsx` | Remover `oracle_step_ire_ibi` da lista de pontos |
+| `src/pages/Oracle.tsx` | Ajustar callback do StepObiResult para receber confirmacao apos orientacao |
 
 ---
 
-## Fluxo Antes vs. Depois
+## Fluxo do Usuario (Depois)
 
 ```text
-ANTES (7 passos):
-  Intencao -> Obi -> "Ire ou Ibi?" -> Ebo -> Ori -> Iyami/Egbe -> Diagnostico
-
-DEPOIS (6 passos):
-  Intencao -> Obi (ja define Ire/Ibi automatico) -> Ebo -> Ori -> Iyami/Egbe -> Diagnostico
+1. Escolhe intencao
+2. Seleciona "Ejikorere"
+3. Ve o balao: "Parabens! Ejikorere veio em Ire. Isso significa que o Orixa sorriu..."
+4. Clica "Continuar"
+5. Segue para Ebo, Ori, Iyami/Egbe, Diagnostico
 ```
 
-O admin configura uma vez no cadastro do Obi, e o usuario nunca mais precisa responder essa pergunta.
+O admin configura tudo no cadastro de cada resultado do Obi -- sem precisar mexer em codigo.
+
