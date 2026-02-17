@@ -16,12 +16,23 @@ const DynamicFlowRunner = ({ flowId }: DynamicFlowRunnerProps) => {
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (nodes && nodes.length > 0 && !currentNodeId) {
+    if (nodes && edges && nodes.length > 0 && !currentNodeId) {
       const startNode = nodes.find((n) => n.node_type === "start");
-      if (startNode) setCurrentNodeId(startNode.id);
-      else setCurrentNodeId(nodes[0].id);
+      if (startNode) {
+        // Auto-skip: follow the default edge out of Start
+        const outEdge = edges.find(
+          (e) => e.source_node_id === startNode.id && (e.source_handle === "default" || e.source_handle === "")
+        );
+        if (outEdge) {
+          setCurrentNodeId(outEdge.target_node_id);
+        } else {
+          setCurrentNodeId(startNode.id); // fallback
+        }
+      } else {
+        setCurrentNodeId(nodes[0].id);
+      }
     }
-  }, [nodes, currentNodeId]);
+  }, [nodes, edges, currentNodeId]);
 
   const currentNode = useMemo(
     () => nodes?.find((n) => n.id === currentNodeId) || null,
