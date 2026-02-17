@@ -16,6 +16,7 @@ import Oferta from "./pages/Oferta";
 import Community from "./pages/Community";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { initPixel } from "@/lib/pixel";
@@ -41,6 +42,7 @@ const AppContent = () => {
         <Route path="/oferta" element={<Oferta />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/instalar" element={<Install />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <BottomNav />

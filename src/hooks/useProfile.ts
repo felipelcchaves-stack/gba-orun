@@ -10,6 +10,7 @@ export interface Profile {
   religion: string | null;
   care_day: number | null;
   is_premium: boolean;
+  avatar_url: string | null;
 }
 
 export const useProfile = () => {

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import XPBar from "@/components/XPBar";
+import AvatarUpload from "@/components/profile/AvatarUpload";
 import ProfileForm from "@/components/profile/ProfileForm";
 import PasswordForm from "@/components/profile/PasswordForm";
 import ThemeToggle from "@/components/profile/ThemeToggle";
@@ -33,6 +34,9 @@ const ProfilePage = () => {
         </Link>
 
         <h1 className="text-3xl font-display font-bold">Meu Perfil</h1>
+
+        {/* Avatar */}
+        <AvatarUpload />
 
         {/* XP */}
         {stats && (
