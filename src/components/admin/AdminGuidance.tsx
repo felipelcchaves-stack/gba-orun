@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllGuidanceBubbles } from "@/hooks/useGuidance";
 import { useAppSettings, useUpdateAppSetting } from "@/hooks/useAppSettings";
 import { useProfile } from "@/hooks/useProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Save, Eye, EyeOff } from "lucide-react";
+import { Save, Eye, EyeOff, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -43,6 +43,8 @@ const AdminGuidance = () => {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [previewKey, setPreviewKey] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (settings?.guidance_avatar_url) setAvatarUrl(settings.guidance_avatar_url);
@@ -60,17 +62,42 @@ const AdminGuidance = () => {
     setRows(map);
   }, [bubbles]);
 
-  const saveAvatar = async () => {
+  const saveAvatar = async (url?: string) => {
+    const urlToSave = url || avatarUrl;
     try {
-      // upsert into app_settings
       const { error } = await supabase
         .from("app_settings")
-        .upsert({ key: "guidance_avatar_url", value: avatarUrl, updated_at: new Date().toISOString() }, { onConflict: "key" });
+        .upsert({ key: "guidance_avatar_url", value: urlToSave, updated_at: new Date().toISOString() }, { onConflict: "key" });
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["app_settings"] });
       toast.success("Avatar salvo!");
     } catch (e: any) {
       toast.error(e.message);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem válida.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const filePath = `guidance-avatar/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      const publicUrl = urlData.publicUrl;
+      setAvatarUrl(publicUrl);
+      await saveAvatar(publicUrl);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao enviar imagem.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -135,8 +162,16 @@ const AdminGuidance = () => {
           >
             Usar minha foto
           </button>
-          <button onClick={saveAvatar} className="bg-secondary text-secondary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shrink-0">
+          <button onClick={() => saveAvatar()} className="bg-secondary text-secondary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shrink-0">
             <Save className="h-4 w-4" /> Salvar
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="bg-accent text-accent-foreground px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 shrink-0"
+          >
+            <Upload className="h-4 w-4" /> {uploading ? "Enviando..." : "Enviar imagem"}
           </button>
         </div>
         {avatarUrl && (
