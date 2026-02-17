@@ -301,9 +301,23 @@ const AdminDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {p.onboarding_completed ? knowledgeBadges.map(kb => (
-                            <Badge key={kb.key} variant="outline" className={`text-[10px] px-1.5 py-0 ${kb.val ? "border-green-500 text-green-600" : "border-destructive text-destructive"}`}>{kb.key}</Badge>
-                          )) : <span className="text-xs text-muted-foreground">—</span>}
+                          {p.onboarding_completed ? (
+                            <>
+                              {knowledgeBadges.map(kb => (
+                                <Badge key={kb.key} variant="outline" className={`text-[10px] px-1.5 py-0 ${kb.val ? "border-green-500 text-green-600" : "border-destructive text-destructive"}`}>{kb.key}</Badge>
+                              ))}
+                              {(() => {
+                                const ifaCfg: Record<string, { label: string; cls: string }> = {
+                                  babalawo: { label: "Babalawo", cls: "bg-blue-100 text-blue-800 border-blue-300" },
+                                  iyanifa: { label: "Iyanifa", cls: "bg-purple-100 text-purple-800 border-purple-300" },
+                                  omo_ifa: { label: "Omo Ifá", cls: "bg-green-100 text-green-800 border-green-300" },
+                                  nao: { label: "Sem Ifá", cls: "bg-muted text-muted-foreground border-border" },
+                                };
+                                const c = ifaCfg[p.ifa_status || ""] || ifaCfg.nao;
+                                return <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${c.cls}`}>{c.label}</Badge>;
+                              })()}
+                            </>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
