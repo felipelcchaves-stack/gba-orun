@@ -1,63 +1,34 @@
 
-# Alerta de Confirmacao no Bloco Sim/Nao
+
+# Auto-pular o bloco "Início" no fluxo do usuário
 
 ## Problema
 
-Quando o aluno responde "Nao" para perguntas importantes (Ebo, Iyami, Egbe Orun, Ori), ele segue direto em frente sem nenhum alerta. O mestre/orientador precisa poder configurar um aviso que aparece antes de confirmar o "Nao", guiando o aluno a reconsiderar.
+O bloco "Início" e um elemento estrutural do construtor de fluxos -- serve apenas para marcar o ponto de partida no grafo visual. Ele nao deveria aparecer como uma etapa visivel para o aluno. Quando o aluno entra no Oraculo, ele ve "Inicio, Bem-vindo a consulta espiritual" com um botao "Comecar", em vez de ir direto para a primeira etapa real do fluxo (que e a proxima apos o Inicio).
 
-## Solucao -- Sem criar novo tipo de bloco
+## Solucao
 
-Adicionar campos opcionais ao bloco **Sim/Nao** que ativam um alerta de confirmacao quando o aluno clica em "Nao":
+Modificar o `DynamicFlowRunner` para que, ao encontrar o no de tipo `start`, ele automaticamente avance para o proximo no conectado, sem renderizar nada na tela. Assim, o aluno nunca ve a tela "Inicio" -- ele entra direto no conteudo configurado pelo mestre.
 
-| Campo novo no NodeConfigPanel | Descricao |
+## O que muda
+
+- O bloco Start continua existindo no construtor de fluxos (o admin precisa dele para definir o ponto de partida)
+- Mas no lado do aluno, ele e invisivel -- o fluxo comeca automaticamente no primeiro no real conectado ao Start
+- A orientacao do mestre configurada no Start (guidance_message) pode ser movida para o primeiro bloco real do fluxo
+
+## Arquivo modificado
+
+| Arquivo | Alteracao |
 |---|---|
-| **Alerta ao negar** (config.no_alert_enabled) | Toggle liga/desliga |
-| **Titulo do alerta** (config.no_alert_title) | Ex: "Tem certeza?" |
-| **Mensagem do alerta** (config.no_alert_message) | Ex: "Sem apurar o Ebo, o problema pode persistir..." |
-| **Audio do alerta** (config.no_alert_audio_url) | Audio opcional do mestre no alerta |
-| **Texto do botao confirmar** (config.no_alert_confirm_label) | Ex: "Tenho certeza, nao quero" |
-| **Texto do botao voltar** (config.no_alert_cancel_label) | Ex: "Vou reconsiderar" |
+| `src/components/oracle/DynamicFlowRunner.tsx` | No useEffect que define o no inicial, ao encontrar o no `start`, seguir automaticamente a edge `default` para o proximo no e usar esse como ponto de partida |
 
-## Comportamento na tela do aluno
+## Detalhe tecnico
 
-1. O aluno clica em "Nao"
-2. Se `no_alert_enabled` estiver ativo, em vez de avancar imediatamente, aparece uma tela intermediaria com:
-   - O titulo do alerta (ex: "Tem certeza?")
-   - A mensagem do mestre com o balao de orientacao (GuidanceBubble)
-   - Audio do mestre (se configurado)
-   - Dois botoes: "Vou reconsiderar" (volta para a pergunta) e "Tenho certeza" (avanca para o proximo no)
-3. Se `no_alert_enabled` nao estiver ativo, funciona como hoje -- avanca direto
+No `useEffect` que inicializa o `currentNodeId`:
 
-## O que o admin controla
+1. Encontrar o no de tipo `start`
+2. Buscar a edge que sai dele (source_handle = "default")
+3. Definir `currentNodeId` como o `target_node_id` dessa edge (o proximo no real)
+4. Se nao houver edge conectada ao start, usar o start como fallback (comportamento atual)
 
-- Decidir em QUAIS perguntas Sim/Nao o alerta aparece (pode ser em todas, em nenhuma, ou so em algumas)
-- Escrever a mensagem de alerta personalizada para cada pergunta
-- Gravar audio de orientacao especifico para o alerta
-- Personalizar os textos dos botoes
-
-## Arquivos modificados
-
-| Arquivo | O que muda |
-|---|---|
-| `src/components/admin/flow-builder/NodeConfigPanel.tsx` | Adicionar campos de alerta na secao do bloco yes_no |
-| `src/components/oracle/FlowStepRenderer.tsx` | No bloco yes_no, ao clicar "Nao", verificar se ha alerta configurado e mostrar tela intermediaria antes de avancar |
-
-## Detalhes tecnicos
-
-### NodeConfigPanel -- Novos campos no bloco yes_no
-
-Dentro da secao "Configuracao Especifica" do bloco yes_no, adicionar:
-- Checkbox "Ativar alerta ao negar"
-- Quando ativo, exibir campos: titulo do alerta, mensagem, URL do audio, textos dos botoes
-
-### FlowStepRenderer -- Logica do alerta
-
-O bloco yes_no ganha um estado local `showNoAlert`. Ao clicar "Nao":
-- Se `config.no_alert_enabled` for true: seta `showNoAlert = true` e renderiza a tela de alerta
-- Se false: chama `onNext("nao", "nao")` normalmente
-
-Na tela de alerta:
-- Botao "Vou reconsiderar": seta `showNoAlert = false` (volta para a pergunta -- o fluxo NAO avanca)
-- Botao "Tenho certeza": chama `onNext("nao", "nao")` (avanca normalmente pelo fluxo)
-
-Isso cria o efeito de "looping" que voce quer -- o aluno so sai daquela pergunta se confirmar que realmente quer dizer "Nao", ou se mudar para "Sim".
+Isso elimina a tela intermediaria sem perder nenhuma funcionalidade.
