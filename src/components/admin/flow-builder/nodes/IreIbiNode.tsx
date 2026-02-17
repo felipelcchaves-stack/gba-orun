@@ -1,13 +1,15 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ArrowUpDown } from "lucide-react";
+import VariableBadge from "./VariableBadge";
 
-const IreIbiNode = ({ selected }: NodeProps) => (
+const IreIbiNode = ({ data, selected }: NodeProps) => (
   <div className={`min-w-[180px] rounded-2xl bg-card border-2 shadow-md ${selected ? "border-primary" : "border-border"}`}>
     <Handle type="target" position={Position.Top} className="!bg-primary !w-3 !h-3" />
     <div className="px-4 py-2 border-b border-border flex items-center gap-2">
       <ArrowUpDown className="h-4 w-4 text-purple-500" />
       <span className="font-bold text-xs text-foreground">Seleção Irê / Ibi</span>
     </div>
+    <VariableBadge variableName={(data as any)?.config?.variable_name} />
     <div className="flex justify-between px-4 py-2">
       <div className="relative">
         <span className="text-[10px] text-green-600 font-semibold">Irê</span>

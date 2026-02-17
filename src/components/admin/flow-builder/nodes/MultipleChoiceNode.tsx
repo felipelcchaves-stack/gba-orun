@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { List } from "lucide-react";
+import VariableBadge from "./VariableBadge";
 
 const MultipleChoiceNode = ({ data, selected }: NodeProps) => {
   const rawOptions: any[] = (data as any)?.config?.options || [];
@@ -11,6 +12,7 @@ const MultipleChoiceNode = ({ data, selected }: NodeProps) => {
         <List className="h-4 w-4 text-blue-500" />
         <span className="font-bold text-xs text-foreground">Escolha Múltipla</span>
       </div>
+      <VariableBadge variableName={(data as any)?.config?.variable_name} />
       <div className="px-4 py-2">
         <p className="text-xs text-muted-foreground truncate max-w-[200px]">
           {(data as any)?.config?.question || "Configure as opções..."}

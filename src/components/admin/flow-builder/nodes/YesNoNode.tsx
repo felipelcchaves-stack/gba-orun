@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { HelpCircle } from "lucide-react";
+import VariableBadge from "./VariableBadge";
 
 const YesNoNode = ({ data, selected }: NodeProps) => (
   <div className={`min-w-[180px] rounded-2xl bg-card border-2 shadow-md ${selected ? "border-primary" : "border-border"}`}>
@@ -8,6 +9,7 @@ const YesNoNode = ({ data, selected }: NodeProps) => (
       <HelpCircle className="h-4 w-4 text-amber-500" />
       <span className="font-bold text-xs text-foreground">Sim / Não</span>
     </div>
+    <VariableBadge variableName={(data as any)?.config?.variable_name} />
     <div className="px-4 py-2">
       <p className="text-xs text-muted-foreground truncate max-w-[200px]">
         {(data as any)?.config?.question || "Configure a pergunta..."}

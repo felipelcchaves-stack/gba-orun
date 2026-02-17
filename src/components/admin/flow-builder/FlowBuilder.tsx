@@ -50,6 +50,41 @@ interface FlowBuilderProps {
   flowId: string;
 }
 
+const VARIABLE_PREFIXES: Record<string, string> = {
+  obi: "resultado_obi",
+  ire_ibi: "tipo_ire_ibi",
+  yes_no: "pergunta",
+  multiple_choice: "escolha",
+  open_question: "resposta",
+  diagnosis: "diagnostico",
+};
+
+function generateVariableName(type: string, existingNodes: Node[]): string {
+  const prefix = VARIABLE_PREFIXES[type];
+  if (!prefix) return "";
+  // Unique names like resultado_obi, resultado_obi_2, etc.
+  const existingNames = existingNodes
+    .map((n) => (n.data as any)?.config?.variable_name)
+    .filter(Boolean);
+  if (type === "obi" || type === "ire_ibi") {
+    // These are typically unique, but handle duplicates
+    if (!existingNames.includes(prefix)) return prefix;
+  }
+  let counter = 1;
+  let candidate = type === "obi" || type === "ire_ibi" ? `${prefix}_${counter + 1}` : `${prefix}_${counter}`;
+  if (type === "obi" || type === "ire_ibi") {
+    // first one is just the prefix
+    if (!existingNames.includes(prefix)) return prefix;
+  } else {
+    candidate = `${prefix}_${counter}`;
+  }
+  while (existingNames.includes(candidate)) {
+    counter++;
+    candidate = `${prefix}_${counter}`;
+  }
+  return candidate;
+}
+
 const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
   const { data: dbNodes } = useFlowNodes(flowId);
   const { data: dbEdges } = useFlowEdges(flowId);
@@ -105,11 +140,12 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
         y: event.clientY,
       });
 
+      const variableName = generateVariableName(type, nodes);
       const newNode: Node = {
         id: `temp_${Date.now()}`,
         type,
         position,
-        data: { label: type === "start" ? "Início" : type === "diagnosis" ? "Diagnóstico" : "", config: {} },
+        data: { label: type === "start" ? "Início" : type === "diagnosis" ? "Diagnóstico" : "", config: variableName ? { variable_name: variableName } : {} },
       };
       setNodes((nds) => [...nds, newNode]);
     },
@@ -221,6 +257,12 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
           onUpdate={updateNodeData}
           onClose={() => setSelectedNode(null)}
           onDelete={deleteNode}
+          availableVariables={nodes
+            .filter((n) => n.id !== selectedNode.id && (n.data as any)?.config?.variable_name)
+            .map((n) => ({
+              name: (n.data as any).config.variable_name as string,
+              nodeType: n.type || "message",
+            }))}
         />
       )}
     </div>

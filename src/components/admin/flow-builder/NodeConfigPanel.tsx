@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
-import { X, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Plus, Trash2, ChevronDown, ChevronRight, Variable } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import MultiRitualCombobox from "@/components/MultiRitualCombobox";
 import OfferingCombobox from "@/components/OfferingCombobox";
 
@@ -18,6 +20,48 @@ interface DiagnosisTask {
   condition: string;
 }
 
+interface AvailableVariable {
+  name: string;
+  nodeType: string;
+}
+
+const NODE_TYPE_LABELS: Record<string, string> = {
+  obi: "Obi",
+  ire_ibi: "Irê/Ibi",
+  yes_no: "Sim/Não",
+  multiple_choice: "Escolha",
+  open_question: "Pergunta",
+  message: "Mensagem",
+  diagnosis: "Diagnóstico",
+};
+
+const VariableInsertButton = ({ variables, onInsert }: { variables: AvailableVariable[]; onInsert: (varName: string) => void }) => {
+  if (variables.length === 0) return null;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline mt-0.5">
+          <Variable className="h-3 w-3" /> Inserir variável
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-1" align="start">
+        <div className="text-[10px] text-muted-foreground px-2 py-1 font-semibold">Clique para inserir</div>
+        {variables.map((v) => (
+          <button
+            key={v.name}
+            type="button"
+            onClick={() => onInsert(v.name)}
+            className="w-full text-left px-2 py-1.5 text-xs hover:bg-muted rounded flex items-center justify-between"
+          >
+            <span className="font-mono text-primary">{`{{${v.name}}}`}</span>
+            <span className="text-[10px] text-muted-foreground">{NODE_TYPE_LABELS[v.nodeType] || v.nodeType}</span>
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 interface NodeConfigPanelProps {
   nodeId: string;
   nodeType: string;
@@ -26,6 +70,7 @@ interface NodeConfigPanelProps {
   onUpdate: (nodeId: string, updates: { label?: string; config?: Record<string, any> }) => void;
   onClose: () => void;
   onDelete?: (nodeId: string) => void;
+  availableVariables?: AvailableVariable[];
 }
 
 const SectionHeader = ({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) => (
@@ -35,7 +80,7 @@ const SectionHeader = ({ title, open, onToggle }: { title: string; open: boolean
   </button>
 );
 
-const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, onDelete }: NodeConfigPanelProps) => {
+const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, onDelete, availableVariables = [] }: NodeConfigPanelProps) => {
   const [localLabel, setLocalLabel] = useState(label);
   const [localConfig, setLocalConfig] = useState<Record<string, any>>(config || {});
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ basic: true, guidance: false, links: false, specific: true, tasks: false });
@@ -111,12 +156,13 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
             <div>
               <label className="text-xs font-medium text-muted-foreground">Descrição</label>
               <Textarea value={localConfig.description || ""} onChange={(e) => updateField("description", e.target.value)} className="mt-1 min-h-[50px]" placeholder="Texto explicativo..." />
+              <VariableInsertButton variables={availableVariables} onInsert={(v) => updateField("description", (localConfig.description || "") + `{{${v}}}`)} />
             </div>
             {nodeType !== "start" && (
               <div>
-                <label className="text-xs font-medium text-muted-foreground">Nome da variável (opcional)</label>
+                <label className="text-xs font-medium text-muted-foreground">🏷️ Apelido desta resposta</label>
                 <Input value={localConfig.variable_name || ""} onChange={(e) => updateField("variable_name", e.target.value)} className="mt-1" placeholder="Ex: resultado_obi" />
-                <p className="text-[10px] text-muted-foreground mt-0.5">Use para referenciar esta resposta em outros passos com {"{{nome}}"}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Esse apelido permite usar a resposta em outros blocos. Ex: {"{{resultado_obi}}"}</p>
               </div>
             )}
           </div>
@@ -131,6 +177,7 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
             <div>
               <label className="text-xs font-medium text-muted-foreground">Mensagem</label>
               <Textarea value={localConfig.guidance_message || ""} onChange={(e) => updateField("guidance_message", e.target.value)} className="mt-1 min-h-[60px]" placeholder="Orientação para o aluno..." />
+              <VariableInsertButton variables={availableVariables} onInsert={(v) => updateField("guidance_message", (localConfig.guidance_message || "") + `{{${v}}}`)} />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">URL do Áudio</label>
@@ -176,7 +223,8 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
               <>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Mensagem</label>
-                  <Textarea value={localConfig.message || ""} onChange={(e) => updateField("message", e.target.value)} className="mt-1 min-h-[80px]" />
+                   <Textarea value={localConfig.message || ""} onChange={(e) => updateField("message", e.target.value)} className="mt-1 min-h-[80px]" />
+                   <VariableInsertButton variables={availableVariables} onInsert={(v) => updateField("message", (localConfig.message || "") + `{{${v}}}`)} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">URL do Áudio da Mensagem</label>
