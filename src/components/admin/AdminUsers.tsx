@@ -15,7 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { Lock, Unlock, UserPlus, Upload, MoreHorizontal, Pencil, Shield, ShieldOff, Trash2, ChevronDown } from "lucide-react";
+import { Lock, Unlock, UserPlus, Upload, MoreHorizontal, Pencil, Shield, ShieldOff, Trash2, ChevronDown, Smartphone } from "lucide-react";
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -200,6 +200,19 @@ const AdminUsers = () => {
       toast.error(e.message);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // ─── RESET DEVICE ───
+  const handleResetDevice = async (userId: string, email: string) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ device_id: null, device_changed_at: null } as any)
+      .eq("user_id", userId);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`Dispositivo de ${email} resetado!`);
+      qc.invalidateQueries({ queryKey: ["admin-profiles"] });
     }
   };
 
@@ -402,6 +415,9 @@ const AdminUsers = () => {
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleToggleAdmin(p.user_id, p.email)}>
                             <Shield className="h-4 w-4 mr-2" /> Toggle Admin
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleResetDevice(p.user_id, p.email)}>
+                            <Smartphone className="h-4 w-4 mr-2" /> Resetar Dispositivo
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"

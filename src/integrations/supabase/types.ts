@@ -469,6 +469,8 @@ export type Database = {
           birth_date: string | null
           care_day: number | null
           created_at: string
+          device_changed_at: string | null
+          device_id: string | null
           display_name: string | null
           gender: string | null
           guru_id: string | null
@@ -488,6 +490,8 @@ export type Database = {
           birth_date?: string | null
           care_day?: number | null
           created_at?: string
+          device_changed_at?: string | null
+          device_id?: string | null
           display_name?: string | null
           gender?: string | null
           guru_id?: string | null
@@ -507,6 +511,8 @@ export type Database = {
           birth_date?: string | null
           care_day?: number | null
           created_at?: string
+          device_changed_at?: string | null
+          device_id?: string | null
           display_name?: string | null
           gender?: string | null
           guru_id?: string | null
@@ -901,6 +907,8 @@ export type Database = {
           birth_date: string
           care_day: number
           created_at: string
+          device_changed_at: string
+          device_id: string
           display_name: string
           email: string
           gender: string

@@ -24,6 +24,8 @@ export interface AdminProfile {
   knows_ori: boolean | null;
   knows_iyami: boolean | null;
   knows_egbe_orun: boolean | null;
+  device_id: string | null;
+  device_changed_at: string | null;
 }
 
 export interface KnowledgeStats {
