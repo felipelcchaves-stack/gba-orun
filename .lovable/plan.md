@@ -1,129 +1,137 @@
 
-
-# Plano: Controle de Inadimplencia e Protecao de Conteudo Premium
+# Painel Completo de Gestao de Usuarios no Admin
 
 ## Problema Atual
 
-Hoje o sistema depende exclusivamente do webhook da Guru para atualizar o status da assinatura. Se o webhook falhar ou atrasar, um aluno inadimplente pode continuar usando o conteudo premium indefinidamente. Alem disso, nao existe nenhum aviso visual para o aluno que esta com pagamento pendente.
+Hoje a tela de Usuarios no admin so mostra a listagem com filtros e um botao de travar/liberar acesso. Para adicionar um usuario manualmente, foi preciso criar uma edge function temporaria, executar e deletar -- um processo tecnico e inseguro. Nao existe importacao em massa de usuarios nem edicao de dados do perfil pelo admin.
 
 ## O que sera implementado
 
-### 1. Verificacao Automatica de Expiracao (Cron Job)
+### 1. Adicionar Usuario Manualmente (Formulario)
 
-Uma funcao que roda automaticamente a cada hora no servidor, verificando todos os usuarios com assinatura ativa cuja data de expiracao ja passou. Esses usuarios serao marcados como "inadimplentes" e terao o acesso premium bloqueado automaticamente.
+Um formulario no topo da pagina de Usuarios com campos:
+- Email (obrigatorio)
+- Senha (obrigatorio, minimo 6 caracteres)
+- Nome de exibicao (opcional)
+- Marcar como Premium (checkbox)
+- Marcar como Admin (checkbox)
 
-Isso garante que mesmo se o webhook da Guru falhar, ninguem fica consumindo conteudo sem pagar.
+Ao salvar, uma edge function segura cria o usuario no sistema de autenticacao, o perfil e opcionalmente a role de admin -- tudo numa unica chamada.
 
-### 2. Banner de Inadimplencia no App
+### 2. Importacao de Usuarios em Massa (JSON)
 
-Quando o aluno estiver com status "inadimplente" (overdue) ou "cancelado", aparecera um banner fixo no topo da tela inicial com uma mensagem amigavel pedindo que regularize o pagamento, com botao direto para a pagina de planos.
+Similar ao importador de rituais que ja existe, mas para usuarios. O admin cola um JSON com uma lista de usuarios:
 
-### 3. Banner de Assinatura Prestes a Expirar
+```text
+[
+  { "email": "aluno1@email.com", "password": "Senha123", "display_name": "Maria", "is_premium": true },
+  { "email": "aluno2@email.com", "password": "Senha456", "display_name": "Joao" }
+]
+```
 
-Quando faltarem 3 dias ou menos para a assinatura expirar, aparecera um banner amarelo de aviso: "Sua assinatura expira em X dias. Renove para nao perder acesso."
+A edge function processa cada usuario, criando conta + perfil, e retorna um relatorio de sucesso/falha por email.
 
-### 4. Bloqueio Reforçado no Frontend
+### 3. Acoes Expandidas por Usuario
 
-O hook `usePremium` ja faz uma verificacao de expiracao no cliente, mas vamos reforcar:
-- Toda vez que `subscription_expires_at` estiver no passado, tratar como nao-premium independente do campo `is_premium`
-- Mostrar o modal de bloqueio premium automaticamente em conteudos restritos
+Alem do botao de travar/liberar, cada usuario tera:
+- Botao de editar (abre modal com nome, genero, religiao, dia de cuidado, status da assinatura, data de expiracao)
+- Botao de excluir (com confirmacao dupla)
+- Botao de tornar/remover admin
 
-### 5. Tela de Status da Assinatura no Perfil
+### 4. Edge Function: admin-manage-users
 
-Na pagina de perfil do usuario, adicionar uma secao mostrando:
-- Status atual (Ativo, Inadimplente, Cancelado, Gratuito)
-- Data de expiracao
-- Botao para renovar/assinar
+Uma unica edge function que recebe acoes diferentes:
+- `create_single`: cria um usuario
+- `create_bulk`: cria varios usuarios de uma vez
+- `delete_user`: remove usuario do sistema de autenticacao
+- `toggle_admin`: adiciona ou remove role de admin
+
+Essa funcao valida que quem esta chamando e admin antes de executar qualquer acao.
 
 ## Alteracoes por arquivo
 
 | Arquivo | Acao |
 |---|---|
-| `supabase/functions/check-expired-subscriptions/index.ts` | Nova edge function que marca usuarios expirados como inadimplentes |
-| Migration SQL | Criar cron job que chama a edge function a cada hora |
-| `src/components/home/SubscriptionBanner.tsx` | Novo componente: banner de inadimplencia e aviso de expiracao |
-| `src/pages/Home.tsx` | Adicionar SubscriptionBanner no topo |
-| `src/hooks/usePremium.ts` | Reforcar verificacao de expiracao + exportar dias restantes |
-| `src/pages/Profile.tsx` | Adicionar secao de status da assinatura |
+| `supabase/functions/admin-manage-users/index.ts` | Nova edge function para criar, importar em massa, excluir e gerenciar roles |
+| `supabase/config.toml` | Registrar a nova edge function com verify_jwt = false |
+| `src/components/admin/AdminUsers.tsx` | Reescrever com formulario de criacao, importador JSON, acoes expandidas e modal de edicao |
+| `src/hooks/useAdminData.ts` | Sem alteracao (ja tem o que precisa) |
 
 ## Detalhes Tecnicos
 
-### Edge Function: check-expired-subscriptions
+### Edge Function: admin-manage-users
+
+Responsabilidades:
+
+**create_single / create_bulk:**
+- Usa `supabase.auth.admin.createUser()` com `email_confirm: true`
+- Cria registro em `profiles` com `display_name`, `is_premium`, `subscription_status`
+- Se marcado como admin, insere em `user_roles`
+- Para bulk, processa em loop e retorna relatorio: `{ success: [...], failed: [...] }`
+
+**delete_user:**
+- Usa `supabase.auth.admin.deleteUser()` para remover da autenticacao
+- Os registros em `profiles`, `user_roles`, etc. sao removidos automaticamente pelo `ON DELETE CASCADE`
+
+**toggle_admin:**
+- Verifica se ja tem role admin: se sim, remove; se nao, insere
+
+**Seguranca:**
+- Extrai o token JWT do header Authorization
+- Verifica se o usuario que esta chamando tem role admin usando `has_role()`
+- Usa `SUPABASE_SERVICE_ROLE_KEY` apenas para operacoes de auth admin
+
+### AdminUsers.tsx - Novo Layout
+
+A pagina tera 3 secoes visiveis:
+
+1. **Barra de acoes**: Botao "Adicionar Usuario" e "Importar em Massa" no topo
+2. **Formulario colapsavel**: Abre ao clicar em "Adicionar Usuario" com os campos listados acima
+3. **Importador colapsavel**: Abre ao clicar em "Importar em Massa" com textarea para JSON
+4. **Tabela de usuarios**: A tabela existente com colunas extras de acoes
+
+Cada linha da tabela tera um menu de acoes (dropdown) com:
+- Editar perfil
+- Liberar/Travar premium
+- Tornar/Remover admin
+- Excluir usuario
+
+### Modal de Edicao
+
+Ao clicar em "Editar", abre um Dialog com:
+- Nome de exibicao
+- Genero (select)
+- Religiao (select)
+- Dia de cuidado (select com dias da semana)
+- Status da assinatura (select: free, active, overdue, cancelled)
+- Data de expiracao (input date)
+- Salvamento direto na tabela profiles via Supabase client
+
+## Fluxo de Uso
 
 ```text
--- Logica:
-1. Buscar todos os profiles onde is_premium = true
-   E subscription_expires_at < now()
-2. Atualizar esses registros:
-   is_premium = false, subscription_status = 'overdue'
-3. Retornar quantidade de usuarios afetados
-```
-
-A funcao usa `SUPABASE_SERVICE_ROLE_KEY` para ter permissao de atualizar qualquer perfil.
-
-### Cron Job (pg_cron + pg_net)
-
-Agendamento para chamar a edge function a cada hora:
-
-```text
-cron.schedule('check-expired-subs', '0 * * * *', ...)
-```
-
-### SubscriptionBanner
-
-Componente que usa o hook `usePremium` para decidir o que mostrar:
-
-- **Status "overdue"**: Banner vermelho — "Seu acesso esta suspenso. Regularize seu pagamento para continuar usando o conteudo exclusivo." + Botao "Renovar Agora"
-- **Status "cancelled"**: Banner amarelo — "Sua assinatura foi cancelada. Assine novamente para recuperar o acesso." + Botao "Ver Planos"
-- **Expiracao proxima (3 dias ou menos)**: Banner amarelo suave — "Sua assinatura expira em X dia(s). Renove para nao perder acesso."
-- **Status "active" com mais de 3 dias**: Nao mostra nada
-
-### usePremium - Melhorias
-
-Adicionar ao retorno:
-- `daysRemaining`: numero de dias ate a expiracao (null se nao tem assinatura)
-- `isExpiringSoon`: true se faltam 3 dias ou menos
-- `isOverdue`: true se status e "overdue"
-
-### Perfil - Secao de Assinatura
-
-Cartao mostrando:
-- Icone e badge colorido com o status
-- "Expira em DD/MM/AAAA" ou "Expirou em DD/MM/AAAA"
-- Botao contextual: "Renovar" (se overdue/cancelled) ou "Gerenciar" (se ativo)
-
-## Fluxo Completo de Protecao
-
-```text
-Aluno paga na Guru
-       |
-       v
-Webhook atualiza: is_premium=true, expires_at=+30 dias
-       |
-       v
-Aluno usa o app normalmente
-       |
-       v
-Faltam 3 dias --> Banner amarelo de aviso
-       |
-       v
-Data expira sem renovacao
-       |
-       v
-Cron job (a cada hora) --> marca overdue, is_premium=false
-       |
-       v
-Aluno ve banner vermelho + conteudo bloqueado
-       |
-       v
-Aluno renova --> Webhook reativa --> Ciclo recomeça
+Admin abre painel > Usuarios
+         |
+    +---------+---------+
+    |         |         |
+  Adicionar  Importar  Tabela
+  manual     em massa  existente
+    |         |         |
+  Preenche   Cola JSON  Ve lista
+  formulario            com acoes
+    |         |         |
+  Edge fn    Edge fn   Editar/Excluir/
+  cria 1     cria N    Toggle Admin
+  usuario    usuarios
+    |         |         |
+  Tabela atualiza automaticamente
 ```
 
 ## Resultado Esperado
 
-1. Nenhum aluno consegue consumir conteudo premium apos a data de expiracao
-2. O sistema se auto-corrige mesmo se o webhook falhar, gracas ao cron job
-3. O aluno recebe avisos visuais claros antes e depois da expiracao
-4. O admin pode ver o status de cada usuario no painel (ja existe)
-5. Protecao em duas camadas: servidor (cron) + cliente (hook usePremium)
-
+1. O admin pode criar qualquer usuario direto pelo painel, sem precisar de intervencao tecnica
+2. Pode importar dezenas/centenas de usuarios de uma vez colando um JSON
+3. Pode editar dados de qualquer usuario (nome, genero, religiao, assinatura)
+4. Pode promover ou rebaixar admins
+5. Pode excluir usuarios que nao deveriam estar no sistema
+6. Todas as acoes sao protegidas -- so admins autenticados podem executar
