@@ -1,4 +1,6 @@
-import { Play, MessageCircle, HelpCircle, List, Sparkles, ArrowUpDown, PenLine, ClipboardCheck } from "lucide-react";
+import { useState } from "react";
+import { Play, MessageCircle, HelpCircle, List, Sparkles, ArrowUpDown, PenLine, ClipboardCheck, Blocks } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const NODE_TYPES = [
   { type: "start", label: "Início", icon: Play, color: "text-primary" },
@@ -11,15 +13,20 @@ const NODE_TYPES = [
   { type: "diagnosis", label: "Diagnóstico", icon: ClipboardCheck, color: "text-secondary-foreground" },
 ];
 
-const NodePalette = () => {
+interface NodePaletteProps {
+  floating?: boolean;
+}
+
+const NodePalette = ({ floating }: NodePaletteProps) => {
+  const [open, setOpen] = useState(false);
+
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
   };
 
-  return (
-    <div className="bg-card border border-border rounded-xl p-3 space-y-1">
-      <h3 className="text-xs font-bold text-foreground mb-2">Blocos</h3>
+  const paletteItems = (
+    <>
       {NODE_TYPES.map(({ type, label, icon: Icon, color }) => (
         <div
           key={type}
@@ -31,6 +38,29 @@ const NodePalette = () => {
           <span className="text-foreground font-medium">{label}</span>
         </div>
       ))}
+    </>
+  );
+
+  if (floating) {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button className="absolute bottom-3 left-3 z-10 bg-primary text-primary-foreground p-3 rounded-xl shadow-lg">
+            <Blocks className="h-5 w-5" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="start" className="w-52 p-2 space-y-1">
+          <h3 className="text-xs font-bold text-foreground mb-2">Blocos</h3>
+          {paletteItems}
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-3 space-y-1 shrink-0">
+      <h3 className="text-xs font-bold text-foreground mb-2">Blocos</h3>
+      {paletteItems}
     </div>
   );
 };

@@ -24,6 +24,8 @@ import OpenQuestionNode from "./nodes/OpenQuestionNode";
 import DiagnosisNode from "./nodes/DiagnosisNode";
 import NodePalette from "./NodePalette";
 import NodeConfigPanel from "./NodeConfigPanel";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 import {
   useFlowNodes,
@@ -91,6 +93,7 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
   const saveCanvas = useSaveFlowCanvas();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const isMobile = useIsMobile();
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -218,9 +221,27 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
     }
   };
 
+  const configPanelContent = selectedNode ? (
+    <NodeConfigPanel
+      nodeId={selectedNode.id}
+      nodeType={selectedNode.type || "message"}
+      config={(selectedNode.data as any)?.config || {}}
+      label={(selectedNode.data as any)?.label || ""}
+      onUpdate={updateNodeData}
+      onClose={() => setSelectedNode(null)}
+      onDelete={deleteNode}
+      availableVariables={nodes
+        .filter((n) => n.id !== selectedNode.id && (n.data as any)?.config?.variable_name)
+        .map((n) => ({
+          name: (n.data as any).config.variable_name as string,
+          nodeType: n.type || "message",
+        }))}
+    />
+  ) : null;
+
   return (
-    <div className="flex gap-4 h-[70vh]">
-      <NodePalette />
+    <div className="flex gap-2 sm:gap-4 flex-1 min-h-0">
+      {!isMobile && <NodePalette />}
       <div className="flex-1 rounded-xl border border-border overflow-hidden relative" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
@@ -239,6 +260,7 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
           <Controls />
           <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
         </ReactFlow>
+        {isMobile && <NodePalette floating />}
         <button
           onClick={handleSave}
           disabled={saveCanvas.isPending}
@@ -248,22 +270,14 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
           {saveCanvas.isPending ? "Salvando..." : "Salvar Fluxo"}
         </button>
       </div>
-      {selectedNode && (
-        <NodeConfigPanel
-          nodeId={selectedNode.id}
-          nodeType={selectedNode.type || "message"}
-          config={(selectedNode.data as any)?.config || {}}
-          label={(selectedNode.data as any)?.label || ""}
-          onUpdate={updateNodeData}
-          onClose={() => setSelectedNode(null)}
-          onDelete={deleteNode}
-          availableVariables={nodes
-            .filter((n) => n.id !== selectedNode.id && (n.data as any)?.config?.variable_name)
-            .map((n) => ({
-              name: (n.data as any).config.variable_name as string,
-              nodeType: n.type || "message",
-            }))}
-        />
+      {isMobile ? (
+        <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
+          <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto p-4">
+            {configPanelContent}
+          </SheetContent>
+        </Sheet>
+      ) : (
+        configPanelContent
       )}
     </div>
   );

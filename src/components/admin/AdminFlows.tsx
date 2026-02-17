@@ -218,11 +218,13 @@ const AdminFlows = () => {
   if (editingFlowId) {
     const flow = flows?.find((f) => f.id === editingFlowId);
     return (
-      <div className="space-y-4">
-        <button onClick={() => setEditingFlowId(null)} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Voltar à lista
-        </button>
-        <h1 className="text-2xl font-display font-bold text-foreground">{flow?.name || "Editor de Fluxo"}</h1>
+      <div className="flex flex-col flex-1 min-h-0 gap-2">
+        <div className="flex items-center gap-3 shrink-0">
+          <button onClick={() => setEditingFlowId(null)} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" /> Voltar
+          </button>
+          <h1 className="text-lg font-display font-bold text-foreground truncate">{flow?.name || "Editor de Fluxo"}</h1>
+        </div>
         <FlowBuilder flowId={editingFlowId} />
       </div>
     );
