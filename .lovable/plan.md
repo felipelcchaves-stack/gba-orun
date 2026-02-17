@@ -1,50 +1,41 @@
 
 
-# Restaurar UX do Oraculo + Template "Quero uma Orientacao"
+# Corrigir erro de RLS ao criar ritual
 
-## 1. Oracle.tsx -- Sempre mostrar tela de selecao
+## Problema encontrado
 
-Remover o auto-start que pula a tela de selecao quando ha apenas 1 fluxo ativo (linhas 27-35). O usuario sempre vera a tela "Como posso te ajudar hoje?" com os cards dos fluxos ativos, independente de quantos existam. So avanca direto quando o usuario clica em um card.
+Ao investigar os logs de rede, descobri que a requisicao POST para criar o ritual foi enviada **sem autenticacao**. O header `authorization` continha a chave anonima em vez do JWT do usuario logado. Resultado: `auth.uid()` retornou nulo, a politica RLS verificou `has_role(null, 'admin')` que retornou falso, e a insercao foi bloqueada.
 
-Tambem adicionar um botao de "Voltar" quando o usuario ja esta dentro de um fluxo, para poder retornar a tela de selecao.
+**Causa raiz:** Quando o codigo e atualizado (hot-reload), a pagina recarrega e a sessao de autenticacao pode nao ser restaurada a tempo. O formulario continua visivel na tela, mas o usuario ja nao esta autenticado. Ao submeter, a requisicao vai sem token.
 
-## 2. AdminFlows.tsx -- Novo template "Quero uma Orientacao"
+## Solucao
 
-Adicionar um segundo botao de template no admin: **"Criar Fluxo: Quero uma Orientacao"**. Este fluxo sera mais simples e direto, sem lancamento de Obi:
+Adicionar verificacao de sessao ativa antes de executar qualquer mutacao administrativa. Se a sessao nao existir, exibir uma mensagem pedindo para o usuario fazer login novamente.
 
-**Estrutura do fluxo:**
-- Inicio
-- Mensagem de acolhimento: "O que esta tirando sua paz? Vamos buscar uma orientacao juntos."
-- Pergunta aberta (multiple_choice): "Qual area da sua vida precisa de atencao?" com opcoes: Saude, Financeiro, Relacionamento, Espiritual, Trabalho
-- Sim/Nao: "Ja fez algum cuidado espiritual recentemente?"
-- Sim/Nao: "Sente necessidade de uma limpeza espiritual?"
-- Sim/Nao: "O Ori precisa de fortalecimento?"
-- Diagnostico com tarefas condicionais baseadas nas respostas
+## Alteracoes
 
-**Nos (~8 blocos):**
-
-| Bloco | Tipo | Conteudo |
-|---|---|---|
-| Inicio | start | Ponto de partida |
-| Acolhimento | message | "O que esta tirando sua paz? Vamos buscar uma orientacao juntos." |
-| Area de Atencao | multiple_choice | Saude, Financeiro, Relacionamento, Espiritual, Trabalho |
-| Cuidado Recente | yes_no | "Ja fez algum cuidado espiritual recentemente?" |
-| Limpeza | yes_no | "Sente necessidade de uma limpeza espiritual?" |
-| Ori | yes_no | "O Ori precisa de fortalecimento?" |
-| Diagnostico | diagnosis | Tarefas condicionais |
-
-**Tarefas do diagnostico:**
-- "Ebo de Limpeza" (condicao: limpeza = sim)
-- "Ibori de Fortalecimento" (condicao: ori = sim)
-- "Oracao da Manha" (condicao: always)
-- "Oracao ao Ori" (condicao: ori = sim)
-
-O botao ficara ao lado do botao existente "Criar Fluxo Padrao (Cuidado Semanal)", oferecendo as duas opcoes de template.
-
-## Arquivos modificados
-
-| Arquivo | Alteracao |
+| Arquivo | O que muda |
 |---|---|
-| `src/pages/Oracle.tsx` | Remover auto-start de 1 fluxo; adicionar botao voltar dentro do fluxo |
-| `src/components/admin/AdminFlows.tsx` | Adicionar funcao `handleCreateOrientationFlow` com o template "Quero uma Orientacao" e botao correspondente |
+| `src/hooks/useRituals.ts` | Nas funcoes `useCreateRitual`, `useUpdateRitual` e `useDeleteRitual`, verificar se existe sessao ativa antes de executar a mutacao. Se nao houver, lancar erro claro "Sessao expirada. Faca login novamente." |
+| `src/pages/Admin.tsx` | No `handleSave`, tratar o erro de sessao expirada e redirecionar para a tela de login (limpar o estado do usuario) |
+
+## Detalhe tecnico
+
+No `mutationFn` de cada mutacao, adicionar antes da operacao:
+
+```typescript
+const { data: { session } } = await supabase.auth.getSession();
+if (!session) throw new Error("Sessao expirada. Faca login novamente.");
+```
+
+Isso garante que:
+1. Se a sessao foi perdida por hot-reload, o usuario recebe uma mensagem clara
+2. Nao envia requisicoes ao banco sem autenticacao
+3. O toast de erro orienta o usuario a fazer login novamente
+
+## Impacto
+
+- Nenhuma mudanca no banco de dados
+- Nenhuma mudanca nas politicas RLS (elas estao corretas)
+- Apenas uma camada de protecao no frontend para evitar requisicoes sem autenticacao
 
