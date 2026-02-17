@@ -1,41 +1,36 @@
 
 
-# Corrigir erro de RLS ao criar ritual
+# Exibir ritual vinculado nas etapas do fluxo
 
-## Problema encontrado
+## Problema
 
-Ao investigar os logs de rede, descobri que a requisicao POST para criar o ritual foi enviada **sem autenticacao**. O header `authorization` continha a chave anonima em vez do JWT do usuario logado. Resultado: `auth.uid()` retornou nulo, a politica RLS verificou `has_role(null, 'admin')` que retornou falso, e a insercao foi bloqueada.
-
-**Causa raiz:** Quando o codigo e atualizado (hot-reload), a pagina recarrega e a sessao de autenticacao pode nao ser restaurada a tempo. O formulario continua visivel na tela, mas o usuario ja nao esta autenticado. Ao submeter, a requisicao vai sem token.
+No painel de configuracao do Flow Builder, cada bloco tem uma secao "Vinculos" onde o admin pode associar um ritual e uma oferenda. Porem, o `FlowStepRenderer` ignora completamente esses campos (`config.ritual_id` e `config.offering_id`). O aluno ve a orientacao do mestre mas nao tem acesso ao ritual vinculado.
 
 ## Solucao
 
-Adicionar verificacao de sessao ativa antes de executar qualquer mutacao administrativa. Se a sessao nao existir, exibir uma mensagem pedindo para o usuario fazer login novamente.
+Adicionar ao componente `StepHeader` (que ja renderiza titulo, descricao e orientacao) um botao de acesso ao ritual vinculado. Quando `config.ritual_id` existir, um botao "Ver Ritual" aparece logo apos a orientacao do mestre. Ao clicar, abre um modal com o conteudo completo do ritual (texto Markdown + audio), igual ao `RitualHelpButton` ja existente.
 
-## Alteracoes
+## O que muda na experiencia do aluno
 
-| Arquivo | O que muda |
+- Nas etapas que tiverem ritual vinculado, aparece um botao discreto abaixo da orientacao do mestre
+- Ao clicar, abre um modal com o conteudo do ritual sem sair do fluxo
+- Se o bloco tambem tiver oferenda vinculada, mostra um segundo botao para a oferenda
+
+## Arquivo modificado
+
+| Arquivo | Alteracao |
 |---|---|
-| `src/hooks/useRituals.ts` | Nas funcoes `useCreateRitual`, `useUpdateRitual` e `useDeleteRitual`, verificar se existe sessao ativa antes de executar a mutacao. Se nao houver, lancar erro claro "Sessao expirada. Faca login novamente." |
-| `src/pages/Admin.tsx` | No `handleSave`, tratar o erro de sessao expirada e redirecionar para a tela de login (limpar o estado do usuario) |
+| `src/components/oracle/FlowStepRenderer.tsx` | No componente `StepHeader`, apos a orientacao do mestre, verificar se `config.ritual_id` existe. Se sim, usar o hook `useRitual` para buscar o conteudo e renderizar um botao "Ver Ritual" que abre um modal com o Markdown e audio do ritual |
 
 ## Detalhe tecnico
 
-No `mutationFn` de cada mutacao, adicionar antes da operacao:
+No `StepHeader`, adicionar:
 
-```typescript
-const { data: { session } } = await supabase.auth.getSession();
-if (!session) throw new Error("Sessao expirada. Faca login novamente.");
-```
+1. Importar `useRitual` de `@/hooks/useRituals`, `Dialog`, `ReactMarkdown` e `AudioPlayer`
+2. Verificar `config.ritual_id` -- se existir, buscar o ritual com `useRitual(config.ritual_id)`
+3. Renderizar um botao com icone de livro ("Ver Ritual") apos o bloco de orientacao
+4. Ao clicar, abrir um `Dialog` com o titulo, conteudo Markdown e player de audio do ritual
+5. Incluir link "Ver ritual completo" que leva a `/rituais/{id}`
 
-Isso garante que:
-1. Se a sessao foi perdida por hot-reload, o usuario recebe uma mensagem clara
-2. Nao envia requisicoes ao banco sem autenticacao
-3. O toast de erro orienta o usuario a fazer login novamente
-
-## Impacto
-
-- Nenhuma mudanca no banco de dados
-- Nenhuma mudanca nas politicas RLS (elas estao corretas)
-- Apenas uma camada de protecao no frontend para evitar requisicoes sem autenticacao
+O mesmo padrao pode ser aplicado para `config.offering_id` futuramente, mas o foco agora e o ritual.
 
