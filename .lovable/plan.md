@@ -1,83 +1,70 @@
 
+# Variáveis Intuitivas no Flow Builder
 
-# Variaveis de Contexto no Fluxo do Oraculo
+## O que muda para o usuário
 
-## Problema atual
+Hoje, para usar variáveis o admin precisa:
+1. Saber digitar um nome técnico (ex: `resultado_obi`)
+2. Lembrar de digitar `{{resultado_obi}}` nos campos de texto
+3. Não errar a grafia
 
-O sistema ja preserva respostas em um dicionario `answers`, mas com problemas graves:
+Isso é confuso para leigos. A proposta é tornar tudo visual e automático.
 
-1. **Chaves sao UUIDs dos nos** - mudam a cada salvamento, quebrando condicoes no Diagnostico
-2. **Busca de Obi e fragil** - o IreIbiStep varre todos os valores procurando por nomes como "alafia", "ejife", sem saber de qual no veio
-3. **Nao e possivel referenciar respostas anteriores** em textos de mensagem ou orientacao
-4. **Condicoes do Diagnostico referenciam UUIDs** que mudam, tornando-as inuteis
+## Melhorias propostas
 
-## Solucao: Variaveis Nomeadas
+### 1. Nome de variável automático ao criar o nó
 
-Cada no do fluxo podera definir um **nome de variavel** (ex: `resultado_obi`, `tipo_ire_ibi`, `intencao`). As respostas serao armazenadas com essas chaves nomeadas alem do nodeId, e poderao ser usadas em:
+Quando o admin arrastar um nó para o canvas, o sistema já preenche automaticamente o `variable_name` com um nome legível baseado no tipo:
 
-- Condicoes do Diagnostico (ex: `answer_equals:resultado_obi:ejife`)
-- Interpolacao em textos de mensagem (ex: `"Seu resultado foi {{resultado_obi}}"`)
-- Logica do IreIbiStep para encontrar o resultado do Obi automaticamente
+- Obi -> `resultado_obi`
+- Ire/Ibi -> `tipo_ire_ibi`
+- Sim/Não -> `pergunta_1` (incrementa se já existir)
+- Múltipla Escolha -> `escolha_1`
+- Pergunta Aberta -> `resposta_1`
+- Mensagem -> (sem variável, não captura resposta)
 
-## Mudancas por arquivo
+O admin pode editar se quiser, mas já vem preenchido.
 
-### Arquivo 1: `src/components/admin/flow-builder/NodeConfigPanel.tsx`
+### 2. Botão "Inserir Variável" nos campos de texto
 
-Adicionar campo "Nome da variavel" no painel de configuracao de TODOS os tipos de no (exceto `start`). Campo de texto simples com placeholder "Ex: resultado_obi". Sera salvo em `config.variable_name`.
+Em vez de digitar `{{nome}}` manualmente, os campos de texto (Mensagem, Descrição, Orientação) terão um botão clicável que abre uma lista com todas as variáveis definidas nos outros nós do fluxo. Ao clicar em uma variável, ela é inserida automaticamente no campo na posição do cursor.
 
-### Arquivo 2: `src/components/oracle/DynamicFlowRunner.tsx`
+A lista mostra o nome amigável + o tipo do nó de origem:
+- "resultado_obi (Obi)"
+- "tipo_ire_ibi (Irê/Ibi)"
+- "pergunta_1 (Sim/Não)"
 
-Alterar o estado `answers` para usar o `variable_name` do no como chave (quando definido), em vez do UUID:
+### 3. Variáveis visíveis como chips coloridos nos nós do canvas
 
-- Quando `handleNext` recebe uma resposta, verificar se o no atual tem `config.variable_name`
-- Se sim, usar esse nome como chave no dicionario
-- Se nao, usar o nodeId como fallback
-- Manter tambem um mapa `nodeIdToVarName` para traducao
+Cada nó no canvas mostrará um pequeno chip/badge com o nome da variável definida (ex: um badge verde escrito "resultado_obi" abaixo do título do nó). Isso dá visibilidade imediata de quais nós geram dados reutilizáveis.
 
-### Arquivo 3: `src/components/oracle/FlowStepRenderer.tsx`
+## Detalhes técnicos
 
-Tres ajustes:
+### Arquivo 1: `src/components/admin/flow-builder/FlowBuilder.tsx`
 
-1. **IreIbiStep**: Em vez de varrer todos os valores de `answers` procurando nomes de resultado Obi, buscar pela chave nomeada (qualquer chave cujo valor seja um resultado Obi valido). Isso ja funciona porque a busca continua sendo por valor, mas agora a chave e legivel.
+- No `onDrop`, ao criar um novo nó, preencher `config.variable_name` automaticamente com base no tipo do nó
+- Criar função `generateVariableName(type, existingNodes)` que gera nomes únicos incrementais
 
-2. **DiagnosisStep - evaluateCondition**: Aceitar tanto nodeId quanto variable_name nas condicoes. A sintaxe `answer_equals:resultado_obi:ejife` funcionara porque `answers["resultado_obi"]` existira.
+### Arquivo 2: `src/components/admin/flow-builder/NodeConfigPanel.tsx`
 
-3. **DiagnosisStep - Resumo**: Mostrar o nome da variavel em vez do UUID no resumo da consulta. Tambem interpolar variaveis em textos usando `{{nome_variavel}}`.
+- Receber lista de todas as variáveis disponíveis no fluxo (via nova prop `availableVariables`)
+- Criar componente `VariableInsertButton` que aparece ao lado dos campos Textarea
+- Ao clicar, abre um Popover com a lista de variáveis clicáveis
+- Ao selecionar, insere `{{nome}}` no campo na posição do cursor
+- Renomear o label "Nome da variável" para "Apelido desta resposta" com dica mais amigável
 
-4. **StepHeader e mensagens**: Adicionar funcao `interpolateVars(text, answers)` que substitui `{{nome}}` pelo valor correspondente no dicionario de respostas.
+### Arquivo 3: Nós visuais do canvas (todos os arquivos de nós)
 
-## Detalhes tecnicos
+- Adicionar badge com o `variable_name` quando definido nos componentes:
+  - `ObiNode.tsx`, `IreIbiNode.tsx`, `YesNoNode.tsx`, `MultipleChoiceNode.tsx`, `OpenQuestionNode.tsx`, `DiagnosisNode.tsx`
 
-### Nova funcao utilitaria (em FlowStepRenderer.tsx)
+### Arquivos modificados: 8
 
-```text
-function interpolateVars(text: string, answers: Record<string, string>): string {
-  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => answers[key] || `{{${key}}}`);
-}
-```
-
-### Mudanca em DynamicFlowRunner.handleNext
-
-```text
-Antes:
-  setAnswers(prev => ({ ...prev, [currentNodeId]: answer }))
-
-Depois:
-  const varName = currentNode?.config?.variable_name || currentNodeId;
-  setAnswers(prev => ({ ...prev, [varName]: answer }))
-```
-
-### Mudanca em NodeConfigPanel
-
-Adicionar acima dos campos existentes:
-- Label: "Nome da variavel (opcional)"
-- Input tipo texto, valor: config.variable_name
-- Placeholder: "Ex: resultado_obi"
-- Dica: "Use para referenciar esta resposta em outros passos"
-
-### Arquivos modificados: 3
-
-1. `src/components/admin/flow-builder/NodeConfigPanel.tsx` - campo variable_name
-2. `src/components/oracle/DynamicFlowRunner.tsx` - usar variable_name como chave
-3. `src/components/oracle/FlowStepRenderer.tsx` - interpolacao de variaveis e resumo legivel
-
+1. `src/components/admin/flow-builder/FlowBuilder.tsx` - auto-gerar nome de variável
+2. `src/components/admin/flow-builder/NodeConfigPanel.tsx` - botão inserir variável + label amigável
+3. `src/components/admin/flow-builder/nodes/ObiNode.tsx` - badge de variável
+4. `src/components/admin/flow-builder/nodes/IreIbiNode.tsx` - badge de variável
+5. `src/components/admin/flow-builder/nodes/YesNoNode.tsx` - badge de variável
+6. `src/components/admin/flow-builder/nodes/MultipleChoiceNode.tsx` - badge de variável
+7. `src/components/admin/flow-builder/nodes/OpenQuestionNode.tsx` - badge de variável
+8. `src/components/admin/flow-builder/nodes/DiagnosisNode.tsx` - badge de variável
