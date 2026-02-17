@@ -17,20 +17,31 @@ export const usePremium = () => {
       
       let isPremium = data?.is_premium ?? false;
       const expiresAt = (data as any)?.subscription_expires_at as string | null;
+      const status = (data as any)?.subscription_status ?? "free";
       
       // Double-check: if expires_at is in the past, treat as not premium
       if (isPremium && expiresAt && new Date(expiresAt) < new Date()) {
         isPremium = false;
       }
+
+      // Calculate days remaining
+      let daysRemaining: number | null = null;
+      if (expiresAt) {
+        const diff = new Date(expiresAt).getTime() - Date.now();
+        daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+      }
       
       return {
         isPremium,
-        status: (data as any)?.subscription_status ?? "free",
+        status,
         expiresAt,
+        daysRemaining,
       };
     },
     enabled: !!user,
   });
+
+  const daysRemaining = data?.daysRemaining ?? null;
 
   return {
     isPremium: data?.isPremium ?? false,
@@ -38,5 +49,8 @@ export const usePremium = () => {
     expiresAt: data?.expiresAt ?? null,
     loading: isLoading,
     isLoggedIn: !!user,
+    daysRemaining,
+    isExpiringSoon: daysRemaining !== null && daysRemaining > 0 && daysRemaining <= 3,
+    isOverdue: data?.status === "overdue",
   };
 };

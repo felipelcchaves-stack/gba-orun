@@ -10,6 +10,7 @@ import SpiritualCareCard from "@/components/home/SpiritualCareCard";
 import SpiritualEnergyDashboard from "@/components/home/SpiritualEnergyDashboard";
 import SpiritualEvolutionChart from "@/components/home/SpiritualEvolutionChart";
 import PromoBanner from "@/components/home/PromoBanner";
+import SubscriptionBanner from "@/components/home/SubscriptionBanner";
 import { useCareReminder } from "@/hooks/useCareReminder";
 
 import heroBanner from "@/assets/hero-banner.jpg";
@@ -60,6 +61,13 @@ const HomePage = () => {
               <span className="text-xs font-semibold">{stats.streak_days}</span>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Subscription Banner */}
+      <div className="px-6 mb-5">
+        <div className="max-w-lg mx-auto">
+          <SubscriptionBanner />
         </div>
       </div>
 
