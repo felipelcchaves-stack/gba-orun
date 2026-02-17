@@ -1,16 +1,30 @@
 import { useRitual } from "@/hooks/useRituals";
 import { usePremium } from "@/hooks/usePremium";
+import { useAuth } from "@/hooks/useAuth";
+import { useAddXP } from "@/hooks/useUserStats";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import PremiumLockModal from "@/components/PremiumLockModal";
-import { useState } from "react";
+import AudioPlayer from "@/components/AudioPlayer";
+import { useState, useEffect, useRef } from "react";
 
 const RitualReader = () => {
   const { id } = useParams<{ id: string }>();
   const { data: ritual, isLoading } = useRitual(id!);
   const { isPremium } = usePremium();
+  const { user } = useAuth();
+  const addXP = useAddXP();
   const [showModal, setShowModal] = useState(false);
+  const xpAdded = useRef(false);
+
+  // Add XP when reading a ritual (once)
+  useEffect(() => {
+    if (ritual && user && !xpAdded.current && !(ritual.is_premium && !isPremium)) {
+      xpAdded.current = true;
+      addXP.mutate({ xp: 20, field: "rituals_read" });
+    }
+  }, [ritual, user, isPremium]);
 
   if (isLoading) {
     return (
@@ -39,7 +53,7 @@ const RitualReader = () => {
   return (
     <div className="min-h-screen pb-24">
       {/* Header */}
-      <div className="gradient-sacred text-primary-foreground px-5 pt-8 pb-10 rounded-b-[2rem]">
+      <div className="bg-secondary text-secondary-foreground px-5 pt-8 pb-10 rounded-b-[2rem]">
         <div className="max-w-2xl mx-auto">
           <Link to="/rituais" className="inline-flex items-center gap-1 text-sm opacity-80 hover:opacity-100 mb-4">
             <ArrowLeft className="h-4 w-4" /> Voltar
@@ -47,10 +61,10 @@ const RitualReader = () => {
           <h1 className="text-3xl font-display font-bold flex items-center gap-3">
             {ritual.title}
             {ritual.is_premium && (
-              <span className="text-sm bg-primary-foreground/20 px-3 py-1 rounded-full">Premium</span>
+              <span className="text-sm bg-secondary-foreground/20 px-3 py-1 rounded-full">Premium</span>
             )}
           </h1>
-          <span className="inline-block mt-2 bg-primary-foreground/20 px-3 py-1 rounded-full text-sm capitalize">
+          <span className="inline-block mt-2 bg-secondary-foreground/20 px-3 py-1 rounded-full text-sm capitalize">
             {ritual.category}
           </span>
         </div>
@@ -58,7 +72,7 @@ const RitualReader = () => {
 
       {/* Content */}
       <div className="px-5 -mt-4 relative z-10">
-        <div className="max-w-2xl mx-auto bg-card rounded-2xl p-6 md:p-8 border border-border shadow-sm">
+        <div className="max-w-2xl mx-auto bg-card rounded-3xl p-6 md:p-8 border border-border shadow-sm">
           {isLocked ? (
             <div className="text-center py-12">
               <Lock className="h-16 w-16 mx-auto text-accent mb-4" />
@@ -68,18 +82,23 @@ const RitualReader = () => {
               </p>
               <button
                 onClick={() => setShowModal(true)}
-                className="gradient-gold text-accent-foreground px-8 py-3 rounded-2xl font-bold shadow-gold transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                className="bg-accent text-accent-foreground px-8 py-3 rounded-2xl font-bold shadow-gold transition-transform hover:scale-[1.02] active:scale-[0.98]"
               >
                 Desbloquear Acesso
               </button>
             </div>
           ) : (
             <>
+              {(ritual as any).audio_url && (
+                <div className="mb-6">
+                  <AudioPlayer url={(ritual as any).audio_url} title="Ouvir este ritual" />
+                </div>
+              )}
               {ritual.image_url && (
                 <img
                   src={ritual.image_url}
                   alt={ritual.title}
-                  className="w-full h-48 object-cover rounded-xl mb-6"
+                  className="w-full h-48 object-cover rounded-2xl mb-6"
                 />
               )}
               <div className="prose-ritual">

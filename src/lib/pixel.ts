@@ -1,5 +1,4 @@
-// Meta Pixel helper — drop your Pixel ID in the PIXEL_ID constant
-const PIXEL_ID = ""; // TODO: Add your Meta Pixel ID here
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 declare global {
   interface Window {
@@ -10,9 +9,15 @@ declare global {
 
 let initialized = false;
 
-export const initPixel = () => {
-  if (initialized || !PIXEL_ID) return;
+export const initPixel = async () => {
+  if (initialized) return;
   initialized = true;
+
+  // Pixel will be initialized when settings load - call initPixelWithId separately
+};
+
+export const initPixelWithId = (pixelId: string) => {
+  if (!pixelId) return;
 
   /* eslint-disable */
   (function (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) {
@@ -33,16 +38,15 @@ export const initPixel = () => {
   })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
   /* eslint-enable */
 
-  window.fbq("init", PIXEL_ID);
+  window.fbq("init", pixelId);
   window.fbq("track", "PageView");
 };
 
 export const trackEvent = (event: string, data?: Record<string, any>) => {
-  if (!PIXEL_ID || typeof window.fbq !== "function") return;
+  if (typeof window.fbq !== "function") return;
   window.fbq("track", event, data);
 };
 
-// Convenience helpers
 export const trackLead = () => trackEvent("Lead");
 export const trackInitiateCheckout = () => trackEvent("InitiateCheckout");
 export const trackPurchase = (value?: number, currency = "BRL") =>

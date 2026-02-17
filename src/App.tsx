@@ -8,6 +8,9 @@ import Home from "./pages/Home";
 import Oracle from "./pages/Oracle";
 import Rituals from "./pages/Rituals";
 import RitualReader from "./pages/RitualReader";
+import Journey from "./pages/Journey";
+import Learn from "./pages/Learn";
+import Profile from "./pages/Profile";
 import Oferta from "./pages/Oferta";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
@@ -29,6 +32,9 @@ const AppContent = () => {
         <Route path="/oraculo" element={<Oracle />} />
         <Route path="/rituais" element={<Rituals />} />
         <Route path="/rituais/:id" element={<RitualReader />} />
+        <Route path="/jornada" element={<Journey />} />
+        <Route path="/aprender" element={<Learn />} />
+        <Route path="/perfil" element={<Profile />} />
         <Route path="/oferta" element={<Oferta />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
