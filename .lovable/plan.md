@@ -1,131 +1,109 @@
 
 
-# Plano: Sistema de Assinaturas, Inadimplencia e Metricas Financeiras
+# Plano: Reset de Jornada, Aba de Promocoes e Icones Tematicos
 
-Transicao do modelo vitalicio para assinatura mensal via Guru, com controle de inadimplencia, gestao de planos e metricas financeiras no dashboard admin.
-
----
-
-## O que muda para o usuario
-
-- A landing page `/oferta` passa a mostrar **preco mensal** em vez de vitalicio, com textos como "por mes" e FAQ atualizado
-- O modal Premium (cadeado) tambem reflete o modelo de assinatura
-- Se a assinatura vencer ou for cancelada, o acesso premium e **travado automaticamente** (volta a ser gratuito)
-- Na tela de perfil, o usuario ve o status da sua assinatura (ativa, vencida, data de renovacao)
-
-## O que muda para o admin
-
-- Novos KPIs no dashboard: **Ativos**, **Inadimplentes**, **Previsao de Receita Mensal**
-- Tabela de usuarios mostra status da assinatura (Ativo, Inadimplente, Gratuito) com datas
-- Nova secao **"Planos"** no sidebar para criar/editar planos com nome, preco, link Guru e descricao
-- Capacidade de **travar manualmente** uma conta inadimplente
+Tres melhorias principais: botao para resetar dados do usuario, sistema de promocoes gerenciavel no admin, e substituicao de imagens por icones tematicos.
 
 ---
 
-## Detalhes Tecnicos
+## 1. Botao de Reset da Jornada
 
-### 1. Migration SQL -- Novas tabelas e colunas
+**O que faz:** Um botao na tela de Perfil que apaga todos os dados de progresso do usuario (jornada, tarefas, stats, conquistas) para ele recomecar do zero.
 
-**Tabela `subscription_plans` (planos editaveis)**
-```
-id UUID PK
-name TEXT NOT NULL (ex: "Mensal", "Trimestral")
-price DECIMAL NOT NULL
-billing_period TEXT NOT NULL DEFAULT 'monthly' (monthly, quarterly, yearly)
-guru_checkout_url TEXT (link direto do checkout na Guru)
-description TEXT
-is_active BOOLEAN DEFAULT true
-display_order INT DEFAULT 0
-created_at TIMESTAMPTZ DEFAULT now()
-```
+**Experiencia do usuario:**
+- Botao vermelho "Recomecar Jornada" na tela de Perfil, acima do botao "Sair"
+- Ao clicar, abre um dialogo de confirmacao pedindo para digitar "RESETAR" para evitar cliques acidentais
+- Apos confirmacao, todos os dados sao apagados e a tela recarrega
 
-**Novas colunas em `profiles`**
-```
-subscription_status TEXT DEFAULT 'free' (free, active, overdue, cancelled)
-subscription_plan_id UUID NULL FK -> subscription_plans
-subscription_started_at TIMESTAMPTZ NULL
-subscription_expires_at TIMESTAMPTZ NULL
-guru_subscription_id TEXT NULL
+**Detalhes tecnicos:**
+- Criar RPC `reset_user_journey(p_user_id UUID)` no banco que deleta de: `user_journey`, `journey_tasks`, `user_stats`, `user_achievements` onde `user_id = p_user_id`
+- Usar SECURITY DEFINER para permitir o delete (ja que o usuario nao tem policy de DELETE nessas tabelas)
+- Validar que `auth.uid() = p_user_id` dentro da funcao
+- Novo hook `useResetJourney` em `src/hooks/useResetJourney.ts`
+- Componente de confirmacao em `src/pages/Profile.tsx`
+
+---
+
+## 2. Sistema de Promocoes
+
+**O que faz:** Uma aba "Promocoes" no app onde o usuario ve banners de cursos/ofertas. O admin gerencia tudo pelo painel, e cada clique e rastreado para metricas.
+
+### Para o usuario:
+- Nova aba "Ofertas" no BottomNav (icone de Tag/Gift)
+- Pagina `/promocoes` com cards de promocoes ativas (banner, titulo, descricao curta, botao "Acessar")
+- Ao clicar, registra o clique no banco e abre o link externo
+
+### Para o admin:
+- Nova secao "Promocoes" no sidebar do admin
+- Formulario para criar/editar promocao: titulo, descricao, URL da imagem/banner, link de checkout, ativo/inativo, ordem de exibicao
+- Tabela listando promocoes com toggle de ativo/inativo
+- Dashboard: novo KPI "Cliques em Promocoes (hoje/total)" e tabela mostrando qual promocao teve mais cliques
+
+### Detalhes tecnicos:
+
+**Novas tabelas:**
+
+```text
+promotions
+- id UUID PK
+- title TEXT NOT NULL
+- description TEXT
+- banner_url TEXT (URL da imagem do banner)
+- checkout_url TEXT NOT NULL (link externo)
+- is_active BOOLEAN DEFAULT true
+- display_order INT DEFAULT 0
+- created_at TIMESTAMPTZ DEFAULT now()
+
+promotion_clicks
+- id UUID PK
+- promotion_id UUID FK -> promotions
+- user_id UUID NOT NULL
+- clicked_at TIMESTAMPTZ DEFAULT now()
 ```
 
 **RLS:**
-- `subscription_plans`: SELECT publico, ALL para admin
-- Colunas novas em `profiles`: ja protegidas pelas policies existentes
+- `promotions`: SELECT publico (para todos verem), ALL para admin
+- `promotion_clicks`: INSERT para usuarios autenticados (user_id = auth.uid()), SELECT para admin
 
-**Atualizar funcao `admin_list_profiles`:** retornar os novos campos de assinatura
+**Novos arquivos:**
+- `src/hooks/usePromotions.ts` -- CRUD + hook de registro de clique
+- `src/pages/Promotions.tsx` -- pagina do usuario com cards
+- `src/components/admin/AdminPromotions.tsx` -- gestao no admin
 
-**Atualizar funcao `admin_get_stats`:** adicionar `active_subscribers`, `overdue_users`, `monthly_revenue_forecast`
-
-### 2. Webhook da Guru -- Suportar eventos de assinatura (`guru-webhook/index.ts`)
-
-Alem de `payment_approved`, tratar novos eventos:
-- `subscription_created` / `subscription_renewed` -> `subscription_status = 'active'`, atualizar `subscription_expires_at` (+30 dias), `is_premium = true`
-- `subscription_overdue` / `payment_refunded` -> `subscription_status = 'overdue'`, `is_premium = false` (trava acesso)
-- `subscription_cancelled` -> `subscription_status = 'cancelled'`, `is_premium = false`
-
-O webhook busca o plano correspondente via `guru_checkout_url` ou `guru_subscription_id` para vincular ao `subscription_plan_id`.
-
-### 3. Hook `usePremium.ts` -- Verificacao dupla
-
-Alem de checar `is_premium`, verificar se `subscription_expires_at` nao esta no passado. Se estiver, tratar como inadimplente no frontend (mesmo que o webhook ainda nao tenha atualizado).
-
-### 4. Nova secao Admin: Planos (`AdminPlans.tsx`)
-
-- Listar planos cadastrados (nome, preco, periodo, link Guru, ativo/inativo)
-- Formulario para criar/editar plano
-- Toggle para ativar/desativar plano
-- Os planos ativos aparecem na landing page automaticamente
-
-**Hook: `useSubscriptionPlans.ts`** -- CRUD da tabela `subscription_plans`
-
-### 5. Dashboard Admin -- Novas metricas (`AdminDashboard.tsx`)
-
-Novos KPI cards:
-- **Assinantes Ativos** (subscription_status = 'active')
-- **Inadimplentes** (subscription_status = 'overdue')
-- **Previsao de Receita** = assinantes ativos x preco do plano vinculado (calculado no frontend a partir dos profiles + plans)
-
-### 6. Tabela de Usuarios Admin (`AdminUsers.tsx`)
-
-- Coluna "Assinatura" com badges coloridos:
-  - Verde: Ativo
-  - Vermelho: Inadimplente
-  - Cinza: Gratuito
-  - Amarelo: Cancelado
-- Coluna "Expira em" com a data de `subscription_expires_at`
-- Filtro novo: por status de assinatura (Ativo / Inadimplente / Cancelado / Gratuito)
-- Botao para admin travar/destravar manualmente (atualiza `is_premium` e `subscription_status`)
-
-### 7. Landing Page (`Oferta.tsx`) -- Modelo de assinatura
-
-- Trocar "Acesso Vitalicio" por "Assinatura Mensal" (ou o nome do plano ativo)
-- Mostrar preco como "R$ XX/mes"
-- Se houver mais de um plano ativo, mostrar cards de comparacao de planos
-- Atualizar FAQ: remover pergunta sobre "acesso vitalicio", adicionar "posso cancelar a qualquer momento?"
-- CTA abre o `guru_checkout_url` do plano selecionado
-
-### 8. Modal Premium (`PremiumLockModal.tsx`)
-
-- Atualizar texto para refletir assinatura mensal
-- Mostrar preco do plano ativo mais barato
-- Link vai para a LP `/oferta` ou direto para o checkout do plano
-
-### 9. Sidebar Admin (`AdminSidebar.tsx`)
-
-- Adicionar item "Planos" com icone `CreditCard` entre "Usuarios" e "Rituais"
-- Expandir `AdminSection` com `"plans"`
-
-### 10. Admin.tsx
-
-- Adicionar render da secao `"plans"` -> `<AdminPlans />`
+**Atualizacoes:**
+- `src/components/BottomNav.tsx` -- adicionar link "Ofertas" com icone Tag
+- `src/components/admin/AdminSidebar.tsx` -- adicionar item "Promocoes"
+- `src/pages/Admin.tsx` -- renderizar secao "promotions"
+- `src/App.tsx` -- rota `/promocoes` protegida
+- `src/components/admin/AdminDashboard.tsx` -- KPI de cliques em promocoes
+- `admin_get_stats` -- adicionar contagem de cliques
 
 ---
 
-## Dados mockados para teste
+## 3. Icones Tematicos (substituir imagens chapadas)
 
-Inserir via migration 2 planos iniciais:
-- **Mensal**: R$ 29,90/mes, link placeholder `https://pay.guru.com/mensal`
-- **Trimestral**: R$ 69,90/trimestre, link placeholder `https://pay.guru.com/trimestral`
+**O que muda:** Os Quick Access da Home e os cards de categorias passam a usar icones Lucide estilizados com fundos coloridos em vez de imagens JPG repetitivas.
+
+**Mapeamento de icones por categoria:**
+
+```text
+Obi (Oraculo)  -> Compass com fundo dourado
+Rituais        -> BookOpen com fundo verde
+Ibori          -> Heart com fundo rosa
+Oriki          -> Sparkles com fundo roxo
+Ebo            -> Shield com fundo laranja
+Oracoes        -> Sunrise com fundo amarelo
+Cantigas       -> Music com fundo azul
+Jornada        -> Map com fundo verde-escuro
+Ofertas        -> Gift com fundo vermelho
+```
+
+**Implementacao:**
+- Atualizar `QUICK_ACCESS` em `Home.tsx` para usar icones com fundo colorido em vez de `<img>`
+- Cada icone fica dentro de um `div` com `rounded-2xl` e cor de fundo suave (ex: `bg-amber-100 text-amber-600`)
+- Manter a mesma grade horizontal scroll
+- Atualizar `CATEGORIES_MAP` em `src/lib/categories.ts` para incluir uma propriedade `bgColor` por categoria
+- Os cards de Destaques e Rituais do Dia continuam com imagem (quando disponivel) mas usam o icone como fallback
 
 ---
 
@@ -133,17 +111,17 @@ Inserir via migration 2 planos iniciais:
 
 | Arquivo | Acao |
 |---|---|
-| Migration SQL | Tabela `subscription_plans`, colunas em `profiles`, atualizar funcoes admin |
-| Migration SQL (dados) | Inserir 2 planos mockados |
-| `supabase/functions/guru-webhook/index.ts` | Tratar eventos de assinatura |
-| `src/hooks/useSubscriptionPlans.ts` | Criar: CRUD de planos |
-| `src/hooks/usePremium.ts` | Verificacao de expiracao |
-| `src/hooks/useAdminData.ts` | Expandir tipos com campos de assinatura |
-| `src/components/admin/AdminPlans.tsx` | Criar: gestao de planos |
-| `src/components/admin/AdminDashboard.tsx` | Novos KPIs financeiros |
-| `src/components/admin/AdminUsers.tsx` | Status assinatura + acoes manuais |
-| `src/components/admin/AdminSidebar.tsx` | Item "Planos" |
-| `src/pages/Admin.tsx` | Secao "plans" |
-| `src/pages/Oferta.tsx` | Modelo mensal + cards de planos |
-| `src/components/PremiumLockModal.tsx` | Texto de assinatura |
+| Migration SQL | Criar tabelas `promotions` e `promotion_clicks`, RPC `reset_user_journey`, atualizar `admin_get_stats` |
+| `src/hooks/useResetJourney.ts` | Criar: hook de reset |
+| `src/hooks/usePromotions.ts` | Criar: CRUD promocoes + registro de clique |
+| `src/pages/Profile.tsx` | Adicionar botao de reset com confirmacao |
+| `src/pages/Promotions.tsx` | Criar: pagina de promocoes do usuario |
+| `src/components/admin/AdminPromotions.tsx` | Criar: gestao de promocoes |
+| `src/components/admin/AdminSidebar.tsx` | Adicionar "Promocoes" |
+| `src/components/admin/AdminDashboard.tsx` | KPI de cliques |
+| `src/pages/Admin.tsx` | Secao "promotions" |
+| `src/App.tsx` | Rota `/promocoes` |
+| `src/components/BottomNav.tsx` | Link "Ofertas" |
+| `src/pages/Home.tsx` | Icones coloridos no Quick Access |
+| `src/lib/categories.ts` | Adicionar `bgColor` por categoria |
 
