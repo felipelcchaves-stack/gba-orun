@@ -191,14 +191,14 @@
 
 /* Markdown content styling */
 .prose-ritual {
-  @apply leading-relaxed;
+  @apply leading-snug;
 }
-.prose-ritual h1 { @apply text-3xl font-display font-bold mb-4; color: hsl(var(--foreground)); }
-.prose-ritual h2 { @apply text-2xl font-display font-bold mb-3; color: hsl(var(--foreground)); }
-.prose-ritual h3 { @apply text-xl font-display font-bold mb-2; }
-.prose-ritual p { @apply mb-2 text-sm leading-6; color: hsl(var(--muted-foreground)); white-space: pre-line; }
-.prose-ritual ul { @apply list-disc pl-6 mb-4 space-y-1; }
-.prose-ritual ol { @apply list-decimal pl-6 mb-4 space-y-1; }
+.prose-ritual h1 { @apply text-2xl font-display font-bold mb-2; color: hsl(var(--foreground)); }
+.prose-ritual h2 { @apply text-xl font-display font-bold mb-2; color: hsl(var(--foreground)); }
+.prose-ritual h3 { @apply text-lg font-display font-bold mb-1; }
+.prose-ritual p { @apply mb-1 text-sm leading-5; color: hsl(var(--muted-foreground)); white-space: pre-line; }
+.prose-ritual ul { @apply list-disc pl-6 mb-2 space-y-0.5; }
+.prose-ritual ol { @apply list-decimal pl-6 mb-2 space-y-0.5; }
 .prose-ritual blockquote {
   @apply border-l-4 pl-4 italic my-4 py-3 rounded-r-lg;
   border-color: hsl(var(--gold));
