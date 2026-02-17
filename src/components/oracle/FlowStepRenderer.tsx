@@ -77,6 +77,8 @@ const LinkedRitualButton = ({ ritualId }: { ritualId: string }) => {
 
   if (!ritual) return null;
 
+  const imageUrl = ritual.image_url || getCategoryImage(ritual.category);
+
   return (
     <>
       <button
@@ -89,24 +91,16 @@ const LinkedRitualButton = ({ ritualId }: { ritualId: string }) => {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-0">
-          {ritual.image_url && (
-            <div className="relative w-full h-36 sm:h-44 rounded-t-2xl overflow-hidden">
-              <img src={ritual.image_url} alt={ritual.title} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-              <div className="absolute bottom-3 left-4 right-4">
-                <h2 className="text-white font-display font-bold text-lg leading-tight">{ritual.title}</h2>
-                <span className="text-white/70 text-xs capitalize">{ritual.category}</span>
-              </div>
+          <div className="relative w-full h-36 sm:h-44 rounded-t-2xl overflow-hidden">
+            <img src={imageUrl} alt={ritual.title} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+            <div className="absolute bottom-3 left-4 right-4">
+              <h2 className="text-white font-display font-bold text-lg leading-tight">{ritual.title}</h2>
+              <span className="text-white/70 text-xs capitalize">{ritual.category}</span>
             </div>
-          )}
+          </div>
 
           <div className="p-4 sm:p-6">
-            {!ritual.image_url && (
-              <DialogHeader>
-                <DialogTitle className="font-display">{ritual.title}</DialogTitle>
-                <span className="text-xs text-muted-foreground capitalize">{ritual.category}</span>
-              </DialogHeader>
-            )}
 
             {ritual.audio_url && (
               <div className="mb-4">
