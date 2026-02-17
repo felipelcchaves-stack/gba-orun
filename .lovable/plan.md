@@ -1,123 +1,102 @@
 
 
-# Plano: Combobox para Vincular Rituais/Rezas as Tarefas da Jornada
+# Plano: Links de Rituais em Qualquer Parte do App
 
 ## Resumo
 
-Adicionar um **combobox de busca** (searchable dropdown) em dois locais estrategicos:
-
-1. **Tela de Diagnostico (StepDiagnosis)**: Depois que o fluxo do oraculo gera as tarefas, o usuario (ou voce como admin) pode clicar em cada tarefa e vincular um ritual/reza especifico antes de iniciar a jornada.
-
-2. **Formulario de Ritual no Admin (AdminRitualForm)**: Ao cadastrar ou editar um ritual, voce pode indicar para quais **tipos de tarefa** aquele ritual serve (ex: "Este ritual e uma Oracao de Ori" ou "Este e um Ebo de Limpeza"), facilitando a vinculacao automatica.
+Criar uma tabela de configuracao no banco de dados chamada `app_ritual_links` que permite ao admin vincular rituais a "pontos" especificos do app (ex: step do oraculo, tela de Iyami, campo de Ebo, etc.). Quando um ritual estiver vinculado, um botao de ajuda (icone de livro/interrogacao) aparece automaticamente naquele ponto, e ao clicar abre um modal com o conteudo do ritual.
 
 ---
 
-## O Que Vai Mudar
+## Como Funciona
 
-### 1. Combobox nas Tarefas do Diagnostico
+### Para o Admin
 
-Na tela final do oraculo (StepDiagnosis), cada tarefa listada tera:
-- Um **botao/icone** de link ao lado
-- Ao clicar, abre um **combobox com busca** mostrando todos os rituais cadastrados, filtrados pela categoria da tarefa
-- O usuario seleciona o ritual desejado e ele fica vinculado aquela tarefa
-- Quando salvar a jornada, o `ritual_id` ja vai junto
+No painel Admin, uma nova secao "Links de Ajuda" com:
+- Uma lista de **pontos do app** pre-definidos (ex: "Oraculo - Resultado Obi", "Oraculo - Ire/Ibi", "Oraculo - Ebo", "Oraculo - Ori", "Oraculo - Iyami/Egbe", "Home - Cuidado Espiritual")
+- Cada ponto tem um **combobox de ritual** (usando o `RitualCombobox` ja existente)
+- Ao salvar, o link fica registrado no banco
 
-Isso permite que voce (como lider espiritual) escolha exatamente qual reza ou ritual a pessoa deve fazer para cada tarefa.
+### Para o Devoto
 
-### 2. Campo de Tipo de Tarefa no Admin
-
-No formulario de criacao/edicao de rituais (`AdminRitualForm`), adicionar:
-- Um campo **"Tipos de Tarefa Associados"** com multi-select (chips)
-- Opcoes: Ebo, Ibori, Oracao de Ori, Oracao de Iyami, Cantiga, Egbe Orun, Oracao da Manha, Oracao da Noite, Oriki
-- Isso sera salvo no campo `trigger_oracle` (ou em um novo campo `task_types`) para que o sistema saiba sugerir automaticamente esse ritual quando a tarefa correspondente aparecer
-
-### 3. Sugestao Automatica Inteligente
-
-Quando o oraculo gerar as tarefas, o sistema vai:
-1. Buscar rituais que tenham a mesma `category` da tarefa
-2. Pre-selecionar o ritual mais relevante no combobox
-3. Permitir que o usuario troque se quiser
+- Se o admin vinculou um ritual ao ponto "Oraculo - Ebo", quando o devoto chegar no step de Ebo, aparece um pequeno botao com icone de livro no canto superior direito
+- Ao clicar, abre um **Dialog modal** com o titulo do ritual e o conteudo em Markdown (usando `react-markdown` ja instalado)
+- Se nao ha ritual vinculado, o botao simplesmente nao aparece
 
 ---
 
 ## Detalhes Tecnicos
 
-### Componente: `RitualCombobox`
+### Migracao SQL
 
-Novo componente reutilizavel usando os componentes `Popover` + `Command` (cmdk) ja existentes no projeto:
+Nova tabela `app_ritual_links`:
 
 ```text
-+------------------------------------------+
-| [icone busca] Buscar ritual...           |
-+------------------------------------------+
-| Ebo                                      |
-|   - Ebo de Limpeza Espiritual           |
-|   - Ebo de Prosperidade                  |
-| Ibori                                    |
-|   - Ibori de Protecao do Ori            |
-| Oracoes                                  |
-|   - Oracao da Manha - Oduduwa           |
-+------------------------------------------+
+- id: uuid (PK)
+- app_point: text (unique) -- ex: "oracle_step_obi", "oracle_step_ebo", "oracle_step_ori"
+- ritual_id: uuid (FK -> rituals.id, nullable)
+- created_at: timestamptz
 ```
 
-- Agrupado por categoria
-- Filtravel por texto
-- Mostra badge "Premium" quando aplicavel
-- Pode receber prop `filterCategory` para mostrar so rituais de uma categoria
+RLS: leitura para todos (authenticated), escrita somente admin.
+
+### Pontos Pre-definidos
+
+| Chave (app_point) | Onde aparece |
+|---|---|
+| `oracle_step_obi` | StepObiResult - titulo do oraculo |
+| `oracle_step_ire_ibi` | StepIreIbi - escolha Ire/Ibi |
+| `oracle_step_ebo` | StepEbo - apurou ebo? |
+| `oracle_step_ori` | StepOri - cuidado com Ori |
+| `oracle_step_iyami_egbe` | StepIyamiEgbe - Iyami e Egbe |
+| `oracle_step_diagnosis` | StepDiagnosis - diagnostico final |
+| `home_spiritual_care` | Card de cuidado espiritual na Home |
+| `home_energy_dashboard` | Dashboard de energias na Home |
 
 ### Arquivos a Criar
 
 | Arquivo | Descricao |
 |---|---|
-| `src/components/RitualCombobox.tsx` | Combobox reutilizavel com busca para selecionar rituais |
+| `src/hooks/useRitualLinks.ts` | Hook para buscar/salvar links ritual-ponto do app |
+| `src/components/RitualHelpButton.tsx` | Botao de ajuda + modal com conteudo do ritual |
+| `src/components/admin/AdminRitualLinks.tsx` | Tela admin para gerenciar os links |
 
 ### Arquivos a Modificar
 
 | Arquivo | Mudanca |
 |---|---|
-| `src/components/oracle/StepDiagnosis.tsx` | Adicionar estado local para `ritual_id` por tarefa + RitualCombobox em cada item da lista |
-| `src/components/admin/AdminRitualForm.tsx` | Adicionar campo multi-select de "Tipos de Tarefa Associados" usando chips |
-| `src/components/journey/JourneyEntryCard.tsx` | Adicionar botao para trocar ritual vinculado em tarefas ja salvas (opcional, segunda fase) |
+| `src/components/oracle/StepObiResult.tsx` | Adicionar `<RitualHelpButton point="oracle_step_obi" />` |
+| `src/components/oracle/StepIreIbi.tsx` | Adicionar `<RitualHelpButton point="oracle_step_ire_ibi" />` |
+| `src/components/oracle/StepEbo.tsx` | Adicionar `<RitualHelpButton point="oracle_step_ebo" />` |
+| `src/components/oracle/StepOri.tsx` | Adicionar `<RitualHelpButton point="oracle_step_ori" />` |
+| `src/components/oracle/StepIyamiEgbe.tsx` | Adicionar `<RitualHelpButton point="oracle_step_iyami_egbe" />` |
+| `src/components/oracle/StepDiagnosis.tsx` | Adicionar `<RitualHelpButton point="oracle_step_diagnosis" />` |
+| `src/pages/Admin.tsx` | Adicionar aba/secao "Links de Ajuda" no sidebar |
+| `src/components/admin/AdminSidebar.tsx` | Adicionar item "Links de Ajuda" |
 
-### Mudancas no StepDiagnosis
+### Componente RitualHelpButton
 
-O componente vai manter um estado local:
+Recebe uma prop `point` (string). Internamente:
+1. Usa o hook `useRitualLinks` para buscar o `ritual_id` vinculado aquele ponto
+2. Se nao tem ritual vinculado, retorna `null` (nao renderiza nada)
+3. Se tem, renderiza um botao discreto (icone `BookOpen` ou `HelpCircle`)
+4. Ao clicar, abre um `Dialog` com:
+   - Titulo do ritual
+   - Conteudo renderizado com `react-markdown`
+   - Player de audio se houver `audio_url`
+   - Botao para ir ao ritual completo (`/rituais/{id}`)
 
-```text
-taskOverrides: Map<number, string | null>  // indice da tarefa -> ritual_id escolhido
-```
+### Tela Admin - Links de Ajuda
 
-Cada tarefa na lista tera o combobox ao lado. Ao salvar, o `ritual_id` do override sera usado no lugar da busca automatica atual.
-
-### Mudancas no AdminRitualForm
-
-Adicionar um campo com checkboxes ou chips para marcar quais `task_type` esse ritual atende. Isso sera salvo como texto separado por virgula no campo `trigger_oracle` (reaproveitando o campo existente) com prefixo `task:`, por exemplo: `task:ebo,task:ibori`.
-
-Alternativamente, podemos usar a `category` ja existente que ja faz esse match naturalmente -- nesse caso, basta garantir que o admin escolha a categoria correta e o sistema ja vincula automaticamente.
-
-### Fluxo Completo
-
-```text
-1. Admin cadastra ritual "Oracao do Ori para Fortalecimento"
-   -> Categoria: "oracao_ori"
-
-2. Usuario faz consulta ao oraculo
-   -> Resultado: Ori precisa de cuidado
-   -> Tarefa gerada: "Oracao de Ori" (category: oracao_ori)
-
-3. Na tela de diagnostico:
-   -> Tarefa "Oracao de Ori" aparece com combobox
-   -> Combobox pre-seleciona "Oracao do Ori para Fortalecimento" (match por category)
-   -> Usuario pode trocar para outro ritual se quiser
-
-4. Ao clicar "Iniciar Rotina":
-   -> Tarefa salva com ritual_id vinculado
-   -> Na Jornada, usuario clica na tarefa -> abre o ritual para leitura
-```
+Lista todos os pontos do app em cards. Cada card tem:
+- Nome amigavel do ponto (ex: "Oraculo - Etapa do Ebo")
+- Descricao curta do que e aquele ponto
+- `RitualCombobox` para selecionar/trocar o ritual vinculado
+- Botao "Salvar" por card (ou auto-save ao selecionar)
 
 ---
 
 ## Resultado Esperado
 
-Na tela de diagnostico do oraculo, cada tarefa tera um combobox que permite vincular um ritual/reza especifico. O sistema sugere automaticamente com base na categoria, mas o usuario pode trocar. No admin, ao cadastrar rituais, a categoria ja define para quais tarefas ele sera sugerido. Isso permite que o lider espiritual pre-configure os rituais e o usuario tenha autonomia para escolher suas proprias rezas.
+O admin pode vincular qualquer ritual/reza a pontos estrategicos do app. Quando vinculado, um botao de ajuda aparece automaticamente naquele ponto. O devoto clica e ve o conteudo do ritual em um modal, sem sair da tela em que esta. Se nenhum ritual esta vinculado, o botao nao aparece. O sistema e extensivel -- basta adicionar novas chaves de `app_point` para expandir para outras telas no futuro.
 
