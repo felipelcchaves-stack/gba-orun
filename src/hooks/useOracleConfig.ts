@@ -24,6 +24,8 @@ export interface OracleTaskTemplate {
   ritual_id: string | null;
   display_order: number;
   intention: string | null;
+  guidance_message: string;
+  guidance_audio_url: string | null;
 }
 
 export interface OracleStepText {

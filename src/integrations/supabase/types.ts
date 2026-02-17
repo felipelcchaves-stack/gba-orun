@@ -152,6 +152,8 @@ export type Database = {
           completed: boolean
           completed_at: string | null
           created_at: string
+          guidance_audio_url: string | null
+          guidance_message: string | null
           id: string
           journey_id: string
           ritual_id: string | null
@@ -163,6 +165,8 @@ export type Database = {
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          guidance_audio_url?: string | null
+          guidance_message?: string | null
           id?: string
           journey_id: string
           ritual_id?: string | null
@@ -174,6 +178,8 @@ export type Database = {
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          guidance_audio_url?: string | null
+          guidance_message?: string | null
           id?: string
           journey_id?: string
           ritual_id?: string | null
@@ -281,6 +287,8 @@ export type Database = {
           category: string
           condition: string
           display_order: number
+          guidance_audio_url: string | null
+          guidance_message: string | null
           id: string
           intention: string | null
           ire_or_ibi: string | null
@@ -293,6 +301,8 @@ export type Database = {
           category: string
           condition?: string
           display_order?: number
+          guidance_audio_url?: string | null
+          guidance_message?: string | null
           id?: string
           intention?: string | null
           ire_or_ibi?: string | null
@@ -305,6 +315,8 @@ export type Database = {
           category?: string
           condition?: string
           display_order?: number
+          guidance_audio_url?: string | null
+          guidance_message?: string | null
           id?: string
           intention?: string | null
           ire_or_ibi?: string | null
