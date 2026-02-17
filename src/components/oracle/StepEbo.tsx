@@ -31,7 +31,8 @@ const StepEbo = ({ ireOrIbi, onAnswer }: Props) => {
     return (
       <>
         <h2 className="text-2xl font-display font-bold text-center mb-1">{subStepText.title}</h2>
-        <p className="text-center text-muted-foreground text-sm mb-8">{subStepText.description}</p>
+        <p className="text-center text-muted-foreground text-sm mb-4">{subStepText.description}</p>
+        <GuidanceBubble pointKey="oracle_step_ebo_types" className="mb-6" />
         <div className="space-y-3">
           {EBO_TYPES.map(t => (
             <button

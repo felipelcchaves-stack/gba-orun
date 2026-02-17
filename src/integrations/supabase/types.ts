@@ -153,29 +153,56 @@ export type Database = {
           created_at: string
           description: string
           display_order: number
+          guidance_audio_url: string | null
+          guidance_message: string
           id: string
           is_active: boolean
           name: string
+          offering_id: string | null
+          ritual_id: string | null
         }
         Insert: {
           category: string
           created_at?: string
           description?: string
           display_order?: number
+          guidance_audio_url?: string | null
+          guidance_message?: string
           id?: string
           is_active?: boolean
           name: string
+          offering_id?: string | null
+          ritual_id?: string | null
         }
         Update: {
           category?: string
           created_at?: string
           description?: string
           display_order?: number
+          guidance_audio_url?: string | null
+          guidance_message?: string
           id?: string
           is_active?: boolean
           name?: string
+          offering_id?: string | null
+          ritual_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ire_ibi_types_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "offerings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ire_ibi_types_ritual_id_fkey"
+            columns: ["ritual_id"]
+            isOneToOne: false
+            referencedRelation: "rituals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       journey_tasks: {
         Row: {

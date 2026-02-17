@@ -9,6 +9,10 @@ export interface IreIbiType {
   display_order: number;
   is_active: boolean;
   created_at: string;
+  guidance_message: string;
+  guidance_audio_url: string | null;
+  ritual_id: string | null;
+  offering_id: string | null;
 }
 
 export const useIreIbiTypes = () =>
