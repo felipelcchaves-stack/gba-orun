@@ -1,5 +1,6 @@
-import { LayoutDashboard, Users, BookOpen, Sparkles, Settings, FileJson, LogOut, Link2 } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, Sparkles, Settings, FileJson, LogOut, Link2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 export type AdminSection = "dashboard" | "users" | "rituals" | "oracle" | "links" | "settings" | "import";
 
@@ -20,11 +21,20 @@ const NAV_ITEMS: { key: AdminSection; label: string; icon: React.ElementType }[]
 ];
 
 const AdminSidebar = ({ active, onNavigate, onSignOut }: AdminSidebarProps) => {
+  const navigate = useNavigate();
+
   return (
     <aside className="w-60 shrink-0 border-r border-border bg-card min-h-screen flex flex-col">
       <div className="p-6 border-b border-border">
         <h2 className="text-xl font-display font-bold text-foreground">Painel Admin</h2>
         <p className="text-xs text-muted-foreground mt-1">Gestão do Gbá Orun</p>
+        <button
+          onClick={() => navigate("/")}
+          className="mt-3 flex items-center gap-2 text-xs text-primary hover:underline"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Voltar ao App
+        </button>
       </div>
 
       <nav className="flex-1 py-4 px-3 space-y-1">
