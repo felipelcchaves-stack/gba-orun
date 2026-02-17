@@ -204,7 +204,7 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
 
       addXP.mutate({ xp: 15, field: "oracle_throws" });
       setSaved(true);
-      setTimeout(() => navigate("/jornada"), 1200);
+      setTimeout(() => navigate("/"), 1200);
     } catch {
       setSaving(false);
     }
@@ -247,7 +247,7 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
       <p className="text-xs text-muted-foreground mb-3">0 de {tasks.length} tarefas concluídas</p>
       <Progress value={0} className="h-2 mb-4" />
 
-      <div className="space-y-2.5 mb-6">
+      <div className="space-y-2.5 mb-24">
         {tasks.map((t, i) => (
           <div
             key={i}
@@ -276,25 +276,29 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
         ))}
       </div>
 
-      {user ? (
-        <button
-          onClick={handleSave}
-          disabled={saving || saved}
-          className="w-full bg-foreground text-background py-3.5 rounded-full font-medium text-sm disabled:opacity-60 transition-all active:scale-[0.98]"
-        >
-          {saving ? (
-            <span className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Salvando...</span>
-          ) : saved ? (
-            <span className="flex items-center justify-center gap-2"><CheckCircle className="h-4 w-4" /> Salvo! Redirecionando...</span>
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-10">
+        <div className="max-w-lg mx-auto">
+          {user ? (
+            <button
+              onClick={handleSave}
+              disabled={saving || saved}
+              className="w-full bg-foreground text-background py-3.5 rounded-full font-medium text-sm disabled:opacity-60 transition-all active:scale-[0.98]"
+            >
+              {saving ? (
+                <span className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Salvando...</span>
+              ) : saved ? (
+                <span className="flex items-center justify-center gap-2"><CheckCircle className="h-4 w-4" /> Salvo! Redirecionando...</span>
+              ) : (
+                "Iniciar Rotina"
+              )}
+            </button>
           ) : (
-            "Iniciar Rotina"
+            <Link to="/auth" className="block text-center bg-foreground text-background py-3.5 rounded-full font-medium text-sm">
+              Faça login para salvar
+            </Link>
           )}
-        </button>
-      ) : (
-        <Link to="/auth" className="block text-center bg-foreground text-background py-3.5 rounded-full font-medium text-sm">
-          Faça login para salvar
-        </Link>
-      )}
+        </div>
+      </div>
     </>
   );
 };
