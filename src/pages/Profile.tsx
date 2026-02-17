@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserStats } from "@/hooks/useUserStats";
 import { useAchievements, ACHIEVEMENTS } from "@/hooks/useAchievements";
+import { useResetJourney } from "@/hooks/useResetJourney";
 import { Link } from "react-router-dom";
-import { ArrowLeft, LogOut } from "lucide-react";
+import { ArrowLeft, LogOut, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import XPBar from "@/components/XPBar";
 import AvatarUpload from "@/components/profile/AvatarUpload";
 import ProfileForm from "@/components/profile/ProfileForm";
@@ -14,6 +19,9 @@ const ProfilePage = () => {
   const { user, signOut } = useAuth();
   const { data: stats } = useUserStats();
   const { data: unlocked } = useAchievements();
+  const resetJourney = useResetJourney();
+  const [showReset, setShowReset] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState("");
 
   const unlockedKeys = new Set(unlocked?.map((a: any) => a.achievement_key) ?? []);
 
@@ -73,6 +81,47 @@ const ProfilePage = () => {
             })}
           </div>
         </div>
+
+        {/* Reset Journey */}
+        <Button
+          variant="outline"
+          className="w-full border-destructive text-destructive hover:bg-destructive/10"
+          onClick={() => setShowReset(true)}
+        >
+          <RotateCcw className="h-4 w-4 mr-2" /> Recomeçar Jornada
+        </Button>
+
+        <Dialog open={showReset} onOpenChange={v => { setShowReset(v); setResetConfirm(""); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Recomeçar Jornada</DialogTitle>
+              <DialogDescription>
+                Isso apagará todo seu progresso: jornada, tarefas, conquistas e estatísticas. Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Digite <strong>RESETAR</strong> para confirmar:</p>
+              <Input value={resetConfirm} onChange={e => setResetConfirm(e.target.value)} placeholder="RESETAR" />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowReset(false)}>Cancelar</Button>
+              <Button
+                variant="destructive"
+                disabled={resetConfirm !== "RESETAR" || resetJourney.isPending}
+                onClick={async () => {
+                  try {
+                    await resetJourney.mutateAsync();
+                    toast.success("Jornada resetada com sucesso!");
+                    setShowReset(false);
+                    setResetConfirm("");
+                  } catch (e: any) { toast.error(e.message); }
+                }}
+              >
+                {resetJourney.isPending ? "Resetando..." : "Confirmar Reset"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Sign out */}
         <Button variant="outline" className="w-full" onClick={signOut}>

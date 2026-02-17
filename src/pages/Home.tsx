@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Compass, BookOpen, GraduationCap, Flame, Map, Heart, Bookmark, Sunrise, Moon, Music } from "lucide-react";
+import { Compass, BookOpen, GraduationCap, Flame, Map, Heart, Bookmark, Sunrise, Moon, Music, Shield, Sparkles, Tag } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserStats } from "@/hooks/useUserStats";
 import { useRituals } from "@/hooks/useRituals";
@@ -11,26 +11,25 @@ import SpiritualEvolutionChart from "@/components/home/SpiritualEvolutionChart";
 import { useCareReminder } from "@/hooks/useCareReminder";
 
 import heroBanner from "@/assets/hero-banner.jpg";
-import obiOracle from "@/assets/obi-oracle.jpg";
+
+const QUICK_ACCESS = [
+  { to: "/oraculo", icon: Compass, label: "Obi", bg: "bg-amber-100 dark:bg-amber-900/40", fg: "text-amber-600 dark:text-amber-400" },
+  { to: "/rituais", icon: BookOpen, label: "Rituais", bg: "bg-emerald-100 dark:bg-emerald-900/40", fg: "text-emerald-600 dark:text-emerald-400" },
+  { to: "/rituais?cat=ibori", icon: Heart, label: "Ibori", bg: "bg-pink-100 dark:bg-pink-900/40", fg: "text-pink-600 dark:text-pink-400" },
+  { to: "/rituais?cat=oriki", icon: Sparkles, label: "Oriki", bg: "bg-purple-100 dark:bg-purple-900/40", fg: "text-purple-600 dark:text-purple-400" },
+  { to: "/rituais?cat=ebo", icon: Shield, label: "Ebó", bg: "bg-orange-100 dark:bg-orange-900/40", fg: "text-orange-600 dark:text-orange-400" },
+  { to: "/rituais?cat=oracao_manha", icon: Sunrise, label: "Orações", bg: "bg-yellow-100 dark:bg-yellow-900/40", fg: "text-yellow-600 dark:text-yellow-400" },
+  { to: "/rituais?cat=cantiga", icon: Music, label: "Cantigas", bg: "bg-blue-100 dark:bg-blue-900/40", fg: "text-blue-600 dark:text-blue-400" },
+  { to: "/jornada", icon: Map, label: "Jornada", bg: "bg-teal-100 dark:bg-teal-900/40", fg: "text-teal-600 dark:text-teal-400" },
+  { to: "/promocoes", icon: Tag, label: "Ofertas", bg: "bg-red-100 dark:bg-red-900/40", fg: "text-red-600 dark:text-red-400" },
+];
+
 import eboCategory from "@/assets/ebo-category.jpg";
 import iboriCategory from "@/assets/ibori-category.jpg";
 import orikiCategory from "@/assets/oriki-category.jpg";
-import egbeOrunCategory from "@/assets/egbe-orun-category.jpg";
-import iyamiCategory from "@/assets/iyami-category.jpg";
 import dailyRoutine from "@/assets/daily-routine.jpg";
 import ritualPlaceholder1 from "@/assets/ritual-placeholder-1.jpg";
 import ritualPlaceholder2 from "@/assets/ritual-placeholder-2.jpg";
-
-const QUICK_ACCESS = [
-  { to: "/oraculo", icon: Compass, label: "Obi", image: obiOracle },
-  { to: "/rituais", icon: BookOpen, label: "Rituais", image: ritualPlaceholder1 },
-  { to: "/rituais?cat=ibori", icon: Heart, label: "Ibori", image: iboriCategory },
-  { to: "/rituais?cat=oriki", icon: BookOpen, label: "Oriki", image: orikiCategory },
-  { to: "/rituais?cat=ebo", icon: Flame, label: "Ebó", image: eboCategory },
-  { to: "/rituais?cat=oracao_manha", icon: Sunrise, label: "Orações", image: dailyRoutine },
-  { to: "/rituais?cat=cantiga", icon: Music, label: "Cantigas", image: egbeOrunCategory },
-  { to: "/jornada", icon: Map, label: "Jornada", image: dailyRoutine },
-];
 
 const FALLBACK_IMAGES = [ritualPlaceholder1, ritualPlaceholder2, eboCategory, iboriCategory, orikiCategory, dailyRoutine];
 
@@ -93,18 +92,21 @@ const HomePage = () => {
       <div className="px-6 mt-5 mb-6">
         <div className="max-w-lg mx-auto">
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-            {QUICK_ACCESS.map(item => (
-              <Link
-                key={item.to + item.label}
-                to={item.to}
-                className="shrink-0 w-[72px] flex flex-col items-center gap-2 group"
-              >
-                <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-card bg-card group-hover:shadow-soft transition-all group-active:scale-95">
-                  <img src={item.image} alt={item.label} className="w-full h-full object-cover" />
-                </div>
-                <span className="text-xs font-medium text-foreground">{item.label}</span>
-              </Link>
-            ))}
+            {QUICK_ACCESS.map(item => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.to + item.label}
+                  to={item.to}
+                  className="shrink-0 w-[72px] flex flex-col items-center gap-2 group"
+                >
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-card group-hover:shadow-soft transition-all group-active:scale-95 ${item.bg}`}>
+                    <Icon className={`h-7 w-7 ${item.fg}`} strokeWidth={1.5} />
+                  </div>
+                  <span className="text-xs font-medium text-foreground">{item.label}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

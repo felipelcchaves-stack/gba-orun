@@ -358,6 +358,68 @@ export type Database = {
           },
         ]
       }
+      promotion_clicks: {
+        Row: {
+          clicked_at: string
+          id: string
+          promotion_id: string
+          user_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          id?: string
+          promotion_id: string
+          user_id: string
+        }
+        Update: {
+          clicked_at?: string
+          id?: string
+          promotion_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_clicks_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          banner_url: string | null
+          checkout_url: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          title: string
+        }
+        Insert: {
+          banner_url?: string | null
+          checkout_url: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          title: string
+        }
+        Update: {
+          banner_url?: string | null
+          checkout_url?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          title?: string
+        }
+        Relationships: []
+      }
       rituals: {
         Row: {
           audio_url: string | null
@@ -562,8 +624,10 @@ export type Database = {
           free_users: number
           overdue_users: number
           premium_users: number
+          promo_clicks_today: number
           total_consultations: number
           total_posts: number
+          total_promo_clicks: number
           total_replies: number
           total_rituals: number
           total_users: number
@@ -597,6 +661,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      reset_user_journey: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user"

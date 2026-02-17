@@ -16,6 +16,7 @@ import AdminUsers from "@/components/admin/AdminUsers";
 import AdminRitualLinks from "@/components/admin/AdminRitualLinks";
 import AdminCommunity from "@/components/admin/AdminCommunity";
 import AdminPlans from "@/components/admin/AdminPlans";
+import AdminPromotions from "@/components/admin/AdminPromotions";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -235,6 +236,8 @@ const AdminPage = () => {
         {activeSection === "links" && <AdminRitualLinks />}
 
         {activeSection === "community" && <AdminCommunity />}
+
+        {activeSection === "promotions" && <AdminPromotions />}
 
         {activeSection === "settings" && (
           <div className="space-y-6">
