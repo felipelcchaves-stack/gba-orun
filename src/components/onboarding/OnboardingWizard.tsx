@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,6 +21,7 @@ const KNOWLEDGE_QUESTIONS = [
 
 const OnboardingWizard = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: profile } = useProfile();
   const saveOnboarding = useSaveOnboarding();
 
@@ -48,6 +50,8 @@ const OnboardingWizard = () => {
         gender: gender || undefined,
         knowledge,
       });
+      await queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
+      await queryClient.refetchQueries({ queryKey: ["onboarding-status"] });
       toast.success("Bem-vindo à sua jornada espiritual! 🌟");
       navigate("/", { replace: true });
     } catch {
@@ -56,7 +60,7 @@ const OnboardingWizard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex flex-col items-center p-4 pt-8 pb-28 overflow-y-auto">
       <div className="w-full max-w-md space-y-6">
         <Progress value={progress} className="h-2" />
 
@@ -151,9 +155,17 @@ const OnboardingWizard = () => {
               );
             })}
 
-            <Button onClick={() => setStep(2)} className="w-full bg-primary text-primary-foreground font-semibold rounded-xl h-12">
-              Continuar
-            </Button>
+            <div className="h-16" />
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-10">
+            <div className="max-w-md mx-auto">
+              <Button onClick={() => setStep(2)} className="w-full bg-primary text-primary-foreground font-semibold rounded-xl h-12">
+                Continuar
+              </Button>
+            </div>
           </div>
         )}
 
@@ -175,6 +187,14 @@ const OnboardingWizard = () => {
                   : "Seus Orixás vão adorar ver você evoluindo! 🙏"}
               </p>
 
+              <div className="h-16" />
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 2 && (
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-10">
+            <div className="max-w-md mx-auto">
               <Button
                 onClick={handleFinish}
                 disabled={saveOnboarding.isPending}
@@ -182,8 +202,8 @@ const OnboardingWizard = () => {
               >
                 {saveOnboarding.isPending ? "Salvando..." : "Começar Jornada 🚀"}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     </div>
