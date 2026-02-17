@@ -1,34 +1,50 @@
 
 
-# Auto-pular o bloco "Início" no fluxo do usuário
+# Restaurar UX do Oraculo + Template "Quero uma Orientacao"
 
-## Problema
+## 1. Oracle.tsx -- Sempre mostrar tela de selecao
 
-O bloco "Início" e um elemento estrutural do construtor de fluxos -- serve apenas para marcar o ponto de partida no grafo visual. Ele nao deveria aparecer como uma etapa visivel para o aluno. Quando o aluno entra no Oraculo, ele ve "Inicio, Bem-vindo a consulta espiritual" com um botao "Comecar", em vez de ir direto para a primeira etapa real do fluxo (que e a proxima apos o Inicio).
+Remover o auto-start que pula a tela de selecao quando ha apenas 1 fluxo ativo (linhas 27-35). O usuario sempre vera a tela "Como posso te ajudar hoje?" com os cards dos fluxos ativos, independente de quantos existam. So avanca direto quando o usuario clica em um card.
 
-## Solucao
+Tambem adicionar um botao de "Voltar" quando o usuario ja esta dentro de um fluxo, para poder retornar a tela de selecao.
 
-Modificar o `DynamicFlowRunner` para que, ao encontrar o no de tipo `start`, ele automaticamente avance para o proximo no conectado, sem renderizar nada na tela. Assim, o aluno nunca ve a tela "Inicio" -- ele entra direto no conteudo configurado pelo mestre.
+## 2. AdminFlows.tsx -- Novo template "Quero uma Orientacao"
 
-## O que muda
+Adicionar um segundo botao de template no admin: **"Criar Fluxo: Quero uma Orientacao"**. Este fluxo sera mais simples e direto, sem lancamento de Obi:
 
-- O bloco Start continua existindo no construtor de fluxos (o admin precisa dele para definir o ponto de partida)
-- Mas no lado do aluno, ele e invisivel -- o fluxo comeca automaticamente no primeiro no real conectado ao Start
-- A orientacao do mestre configurada no Start (guidance_message) pode ser movida para o primeiro bloco real do fluxo
+**Estrutura do fluxo:**
+- Inicio
+- Mensagem de acolhimento: "O que esta tirando sua paz? Vamos buscar uma orientacao juntos."
+- Pergunta aberta (multiple_choice): "Qual area da sua vida precisa de atencao?" com opcoes: Saude, Financeiro, Relacionamento, Espiritual, Trabalho
+- Sim/Nao: "Ja fez algum cuidado espiritual recentemente?"
+- Sim/Nao: "Sente necessidade de uma limpeza espiritual?"
+- Sim/Nao: "O Ori precisa de fortalecimento?"
+- Diagnostico com tarefas condicionais baseadas nas respostas
 
-## Arquivo modificado
+**Nos (~8 blocos):**
+
+| Bloco | Tipo | Conteudo |
+|---|---|---|
+| Inicio | start | Ponto de partida |
+| Acolhimento | message | "O que esta tirando sua paz? Vamos buscar uma orientacao juntos." |
+| Area de Atencao | multiple_choice | Saude, Financeiro, Relacionamento, Espiritual, Trabalho |
+| Cuidado Recente | yes_no | "Ja fez algum cuidado espiritual recentemente?" |
+| Limpeza | yes_no | "Sente necessidade de uma limpeza espiritual?" |
+| Ori | yes_no | "O Ori precisa de fortalecimento?" |
+| Diagnostico | diagnosis | Tarefas condicionais |
+
+**Tarefas do diagnostico:**
+- "Ebo de Limpeza" (condicao: limpeza = sim)
+- "Ibori de Fortalecimento" (condicao: ori = sim)
+- "Oracao da Manha" (condicao: always)
+- "Oracao ao Ori" (condicao: ori = sim)
+
+O botao ficara ao lado do botao existente "Criar Fluxo Padrao (Cuidado Semanal)", oferecendo as duas opcoes de template.
+
+## Arquivos modificados
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/components/oracle/DynamicFlowRunner.tsx` | No useEffect que define o no inicial, ao encontrar o no `start`, seguir automaticamente a edge `default` para o proximo no e usar esse como ponto de partida |
+| `src/pages/Oracle.tsx` | Remover auto-start de 1 fluxo; adicionar botao voltar dentro do fluxo |
+| `src/components/admin/AdminFlows.tsx` | Adicionar funcao `handleCreateOrientationFlow` com o template "Quero uma Orientacao" e botao correspondente |
 
-## Detalhe tecnico
-
-No `useEffect` que inicializa o `currentNodeId`:
-
-1. Encontrar o no de tipo `start`
-2. Buscar a edge que sai dele (source_handle = "default")
-3. Definir `currentNodeId` como o `target_node_id` dessa edge (o proximo no real)
-4. Se nao houver edge conectada ao start, usar o start como fallback (comportamento atual)
-
-Isso elimina a tela intermediaria sem perder nenhuma funcionalidade.
