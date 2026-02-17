@@ -18,6 +18,7 @@ import AdminCommunity from "@/components/admin/AdminCommunity";
 import AdminPlans from "@/components/admin/AdminPlans";
 import AdminPromotions from "@/components/admin/AdminPromotions";
 import AdminGuidance from "@/components/admin/AdminGuidance";
+import AdminIreIbiTypes from "@/components/admin/AdminIreIbiTypes";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -36,7 +37,7 @@ const AdminPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [defaultFormCategory, setDefaultFormCategory] = useState<string | undefined>(undefined);
-  const [oracleSubTab, setOracleSubTab] = useState<"configs" | "tasks" | "texts">("configs");
+  const [oracleSubTab, setOracleSubTab] = useState<"configs" | "tasks" | "texts" | "ire_ibi">("configs");
   const [filterCat, setFilterCat] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -209,11 +210,12 @@ const AdminPage = () => {
               <h1 className="text-2xl font-display font-bold text-foreground">Oráculo</h1>
               <p className="text-sm text-muted-foreground mt-1">Configure o motor de decisão</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {([
                 { key: "configs" as const, label: "Resultados do Obi" },
                 { key: "tasks" as const, label: "Tarefas Sugeridas" },
                 { key: "texts" as const, label: "Textos das Etapas" },
+                { key: "ire_ibi" as const, label: "Tipos de Irê/Ibi" },
               ]).map(sub => (
                 <button
                   key={sub.key}
@@ -231,6 +233,7 @@ const AdminPage = () => {
             {oracleSubTab === "configs" && <AdminOracleConfigs />}
             {oracleSubTab === "tasks" && <AdminOracleTaskTemplates />}
             {oracleSubTab === "texts" && <AdminOracleStepTexts />}
+            {oracleSubTab === "ire_ibi" && <AdminIreIbiTypes />}
           </div>
         )}
 
