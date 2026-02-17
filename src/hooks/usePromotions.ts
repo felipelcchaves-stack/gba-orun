@@ -10,6 +10,7 @@ export interface Promotion {
   checkout_url: string;
   is_active: boolean;
   display_order: number;
+  show_on_home: boolean;
   created_at: string;
 }
 
@@ -25,6 +26,24 @@ export const usePromotions = (activeOnly = false) => {
       const { data, error } = await q;
       if (error) throw error;
       return data as Promotion[];
+    },
+  });
+};
+
+export const useHomeBannerPromotion = () => {
+  return useQuery({
+    queryKey: ["promotions", "home-banner"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("promotions")
+        .select("*")
+        .eq("is_active", true)
+        .eq("show_on_home", true)
+        .order("display_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Promotion | null;
     },
   });
 };

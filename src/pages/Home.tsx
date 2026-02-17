@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Compass, Flame, Map, Bookmark, Sunrise, Moon, Tag } from "lucide-react";
+import { Flame, Bookmark, Sunrise, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserStats } from "@/hooks/useUserStats";
@@ -9,15 +9,11 @@ import { getCategoryLabel } from "@/lib/categories";
 import SpiritualCareCard from "@/components/home/SpiritualCareCard";
 import SpiritualEnergyDashboard from "@/components/home/SpiritualEnergyDashboard";
 import SpiritualEvolutionChart from "@/components/home/SpiritualEvolutionChart";
+import PromoBanner from "@/components/home/PromoBanner";
 import { useCareReminder } from "@/hooks/useCareReminder";
 
 import heroBanner from "@/assets/hero-banner.jpg";
 
-const QUICK_ACCESS = [
-  { to: "/oraculo", icon: Compass, label: "Oráculo", bg: "bg-amber-100 dark:bg-amber-900/40", fg: "text-amber-600 dark:text-amber-400" },
-  { to: "/jornada", icon: Map, label: "Jornada", bg: "bg-teal-100 dark:bg-teal-900/40", fg: "text-teal-600 dark:text-teal-400" },
-  { to: "/promocoes", icon: Tag, label: "Ofertas", bg: "bg-red-100 dark:bg-red-900/40", fg: "text-red-600 dark:text-red-400" },
-];
 
 import eboCategory from "@/assets/ebo-category.jpg";
 import iboriCategory from "@/assets/ibori-category.jpg";
@@ -74,7 +70,13 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Spiritual Energy Dashboard */}
+      {/* Promo Banner */}
+      <div className="px-6 mb-5">
+        <div className="max-w-lg mx-auto">
+          <PromoBanner />
+        </div>
+      </div>
+
       {user && (
         <div className="px-6 mb-5">
           <div className="max-w-lg mx-auto space-y-4">
@@ -84,28 +86,6 @@ const HomePage = () => {
         </div>
       )}
 
-      {/* Quick access */}
-      <div className="px-6 mt-5 mb-6">
-        <div className="max-w-lg mx-auto">
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-            {QUICK_ACCESS.map(item => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.to + item.label}
-                  to={item.to}
-                  className="shrink-0 w-[72px] flex flex-col items-center gap-2 group"
-                >
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-card group-hover:shadow-soft transition-all group-active:scale-95 ${item.bg}`}>
-                    <Icon className={`h-7 w-7 ${item.fg}`} strokeWidth={1.5} />
-                  </div>
-                  <span className="text-xs font-medium text-foreground">{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
       {/* Hero banner */}
       <div className="px-6 mb-6">

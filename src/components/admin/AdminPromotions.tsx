@@ -16,6 +16,7 @@ const EMPTY: Omit<Promotion, "id" | "created_at"> = {
   checkout_url: "",
   is_active: true,
   display_order: 0,
+  show_on_home: false,
 };
 
 const AdminPromotions = () => {
@@ -32,7 +33,7 @@ const AdminPromotions = () => {
   const openNew = () => { setEditing(null); setForm(EMPTY); setShowForm(true); };
   const openEdit = (p: Promotion) => {
     setEditing(p);
-    setForm({ title: p.title, description: p.description || "", banner_url: p.banner_url || "", checkout_url: p.checkout_url, is_active: p.is_active, display_order: p.display_order });
+    setForm({ title: p.title, description: p.description || "", banner_url: p.banner_url || "", checkout_url: p.checkout_url, is_active: p.is_active, display_order: p.display_order, show_on_home: p.show_on_home });
     setShowForm(true);
   };
 
@@ -83,6 +84,10 @@ const AdminPromotions = () => {
               <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
               <Label>Ativa</Label>
             </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={form.show_on_home} onCheckedChange={v => setForm(f => ({ ...f, show_on_home: v }))} />
+              <Label>Exibir na Home</Label>
+            </div>
             <div className="flex gap-2">
               <Button onClick={handleSave}>{editing ? "Salvar" : "Criar"}</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
@@ -97,6 +102,7 @@ const AdminPromotions = () => {
             <TableRow>
               <TableHead>Título</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Home</TableHead>
               <TableHead>Ordem</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
@@ -109,6 +115,11 @@ const AdminPromotions = () => {
                   <button onClick={() => toggleActive(p)} className="flex items-center gap-1.5 text-xs">
                     {p.is_active ? <><Eye className="h-3.5 w-3.5 text-green-600" /> Ativa</> : <><EyeOff className="h-3.5 w-3.5 text-muted-foreground" /> Inativa</>}
                   </button>
+                </TableCell>
+                <TableCell>
+                  <span className={`text-xs ${p.show_on_home ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                    {p.show_on_home ? "Sim" : "Não"}
+                  </span>
                 </TableCell>
                 <TableCell>{p.display_order}</TableCell>
                 <TableCell>
