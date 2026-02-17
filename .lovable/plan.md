@@ -1,63 +1,35 @@
 
-# Flow Builder Responsivo - Tela Cheia
 
-## Problema atual
+# Exibir Oferendas Vinculadas no Fluxo do Oraculo
 
-O Flow Builder esta limitado a `h-[70vh]` fixo, com padding de `p-8` da area admin e o painel de configuracao com `max-h-[70vh]` e largura fixa `w-80`. Isso desperdiça espaco util, especialmente em telas menores onde a sidebar admin (w-60) consome area importante.
+## Problema
 
-## Mudancas propostas
+O `StepHeader` (componente que renderiza o cabecalho de cada etapa do fluxo para o aluno) exibe botoes para rituais vinculados (`ritual_ids`), mas ignora completamente o campo `offering_id`. O dado esta salvo na configuracao do no, porem nada aparece na tela do aluno.
 
-### 1. FlowBuilder ocupa toda a altura disponivel
+## Solucao
 
-Trocar `h-[70vh]` por `h-full` e garantir que o container pai preencha o espaco restante da tela. O FlowBuilder usara `flex-1` para crescer e ocupar tudo.
-
-### 2. AdminFlows em modo edicao usa layout de tela cheia
-
-Quando editando um fluxo, o container remove o padding extra e usa `flex flex-col h-full` para que o FlowBuilder ocupe todo o espaco vertical disponivel. O botao "Voltar" e titulo ficam compactos no topo.
-
-### 3. Admin page reduz padding no modo fluxos
-
-A `<main>` do Admin passa de `p-8` para padding reduzido quando a secao ativa for "flows" e estiver editando, maximizando a area do canvas.
-
-### 4. NodeConfigPanel responsivo
-
-- Em desktop: mantem o painel lateral com `max-h-[calc(100vh-8rem)]` em vez de `70vh`
-- Em mobile: o painel se torna um overlay/sheet que desliza por cima do canvas, evitando esmagar o canvas
-
-### 5. NodePalette colapsavel em mobile
-
-A paleta de blocos fica como um botao flutuante em telas pequenas, abrindo um popover ao clicar, liberando espaco horizontal para o canvas.
+Criar um componente `LinkedOfferingButton` similar ao `LinkedRitualButton` e adiciona-lo ao `StepHeader`, logo abaixo dos botoes de rituais.
 
 ## Detalhes tecnicos
 
-### Arquivo 1: `src/pages/Admin.tsx`
+### Arquivo: `src/components/oracle/FlowStepRenderer.tsx`
 
-- Quando `activeSection === "flows"`, a `<main>` usa padding menor (`p-4` em vez de `p-8`) e `flex flex-col` com `h-screen` para permitir que o conteudo interno cresca
+1. **Criar componente `LinkedOfferingButton`**
+   - Recebe `offeringId` como prop
+   - Usa o hook `useOfferings` (ou uma query individual) para buscar os dados da oferenda
+   - Renderiza um botao com icone de oferenda (UtensilsCrossed)
+   - Ao clicar, abre um Dialog/Modal com titulo, ingredientes, instrucoes (Markdown) e audio player
 
-### Arquivo 2: `src/components/admin/AdminFlows.tsx`
+2. **Atualizar `StepHeader`**
+   - Apos renderizar os `LinkedRitualButton`, verificar se `config.offering_id` existe
+   - Se existir, renderizar `<LinkedOfferingButton offeringId={config.offering_id} />`
+   - O botao aparece na mesma linha dos rituais (dentro do mesmo `flex flex-wrap gap-2`)
 
-- No modo edicao (`editingFlowId`), o container usa `flex flex-col flex-1 min-h-0` para que o FlowBuilder preencha o espaco
-- Header compacto com titulo + botao voltar em uma unica linha
+### Hook necessario
 
-### Arquivo 3: `src/components/admin/flow-builder/FlowBuilder.tsx`
+O `useOfferings` ja existe e retorna todas as oferendas. Para buscar uma unica oferenda por ID, pode-se filtrar localmente ou criar um pequeno hook `useOffering(id)`. A abordagem mais simples e filtrar do array ja carregado.
 
-- Trocar `h-[70vh]` por `flex-1 min-h-0` (cresce com o container pai)
-- Em mobile (usar `useIsMobile`): NodePalette renderiza como botao flutuante + Popover
-- NodeConfigPanel em mobile: renderiza dentro de um Sheet (drawer) em vez de coluna lateral
+### Arquivos modificados: 1
 
-### Arquivo 4: `src/components/admin/flow-builder/NodeConfigPanel.tsx`
+1. `src/components/oracle/FlowStepRenderer.tsx` - adicionar `LinkedOfferingButton` e integrar no `StepHeader`
 
-- Trocar `max-h-[70vh]` por `max-h-[calc(100vh-6rem)]` para usar mais altura
-- Exportar tambem uma versao que pode ser usada dentro de um Sheet
-
-### Arquivo 5: `src/components/admin/flow-builder/NodePalette.tsx`
-
-- Aceitar prop `collapsed` para renderizar como botao flutuante + Popover em mobile
-
-### Arquivos modificados: 5
-
-1. `src/pages/Admin.tsx` - padding dinamico para fluxos
-2. `src/components/admin/AdminFlows.tsx` - layout flex para modo edicao
-3. `src/components/admin/flow-builder/FlowBuilder.tsx` - altura flexivel + mobile adaptations
-4. `src/components/admin/flow-builder/NodeConfigPanel.tsx` - altura dinamica
-5. `src/components/admin/flow-builder/NodePalette.tsx` - modo colapsavel
