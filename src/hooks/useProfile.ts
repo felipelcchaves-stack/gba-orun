@@ -11,6 +11,8 @@ export interface Profile {
   care_day: number | null;
   is_premium: boolean;
   avatar_url: string | null;
+  gender: string | null;
+  birth_date: string | null;
 }
 
 export const useProfile = () => {
@@ -34,7 +36,7 @@ export const useUpdateProfile = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (updates: { display_name?: string; religion?: string; care_day?: number | null }) => {
+    mutationFn: async (updates: { display_name?: string; religion?: string; care_day?: number | null; gender?: string | null; birth_date?: string | null }) => {
       if (!user) throw new Error("Not logged in");
       const { error } = await supabase
         .from("profiles")

@@ -8,6 +8,7 @@ import { getCategoryLabel } from "@/lib/categories";
 import SpiritualCareCard from "@/components/home/SpiritualCareCard";
 import SpiritualEnergyDashboard from "@/components/home/SpiritualEnergyDashboard";
 import SpiritualEvolutionChart from "@/components/home/SpiritualEvolutionChart";
+import { useCareReminder } from "@/hooks/useCareReminder";
 
 import heroBanner from "@/assets/hero-banner.jpg";
 import obiOracle from "@/assets/obi-oracle.jpg";
@@ -38,6 +39,9 @@ const HomePage = () => {
   const { data: stats } = useUserStats();
   const { data: rituals } = useRituals();
   const { data: settings } = useAppSettings();
+
+  // Fire care reminder on home load
+  useCareReminder();
 
   const displayName = user?.user_metadata?.display_name || "Visitante";
   const featured = rituals?.slice(0, 6) ?? [];

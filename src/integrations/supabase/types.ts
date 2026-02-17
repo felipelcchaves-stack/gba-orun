@@ -296,9 +296,11 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          birth_date: string | null
           care_day: number | null
           created_at: string
           display_name: string | null
+          gender: string | null
           guru_id: string | null
           id: string
           is_premium: boolean
@@ -307,9 +309,11 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          birth_date?: string | null
           care_day?: number | null
           created_at?: string
           display_name?: string | null
+          gender?: string | null
           guru_id?: string | null
           id?: string
           is_premium?: boolean
@@ -318,9 +322,11 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          birth_date?: string | null
           care_day?: number | null
           created_at?: string
           display_name?: string | null
+          gender?: string | null
           guru_id?: string | null
           id?: string
           is_premium?: boolean
@@ -496,6 +502,8 @@ export type Database = {
           free_users: number
           premium_users: number
           total_consultations: number
+          total_posts: number
+          total_replies: number
           total_rituals: number
           total_users: number
         }[]
@@ -503,10 +511,12 @@ export type Database = {
       admin_list_profiles: {
         Args: never
         Returns: {
+          birth_date: string
           care_day: number
           created_at: string
           display_name: string
           email: string
+          gender: string
           guru_id: string
           id: string
           is_premium: boolean

@@ -5,13 +5,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Save } from "lucide-react";
+import { User, Save, Bell } from "lucide-react";
+import { toast } from "sonner";
 
 const RELIGIONS = [
   { value: "candomble", label: "Candomblé" },
   { value: "umbanda", label: "Umbanda" },
   { value: "ifa", label: "Ifá" },
   { value: "outra", label: "Outra" },
+  { value: "prefiro_nao_dizer", label: "Prefiro não dizer" },
+];
+
+const GENDERS = [
+  { value: "masculino", label: "Masculino" },
+  { value: "feminino", label: "Feminino" },
+  { value: "nao_binario", label: "Não-binário" },
   { value: "prefiro_nao_dizer", label: "Prefiro não dizer" },
 ];
 
@@ -32,22 +40,36 @@ const ProfileForm = () => {
 
   const [name, setName] = useState("");
   const [religion, setReligion] = useState("");
+  const [gender, setGender] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [careDay, setCareDay] = useState("");
 
   useEffect(() => {
     if (profile) {
       setName(profile.display_name || "");
       setReligion(profile.religion || "");
+      setGender(profile.gender || "");
+      setBirthDate(profile.birth_date || "");
       setCareDay(profile.care_day !== null && profile.care_day !== undefined ? String(profile.care_day) : "");
     }
   }, [profile]);
 
-  const handleSave = () => {
-    updateProfile.mutate({
+  const handleSave = async () => {
+    await updateProfile.mutateAsync({
       display_name: name.trim() || null,
       religion: religion || null,
+      gender: gender || null,
+      birth_date: birthDate || null,
       care_day: careDay !== "" ? parseInt(careDay) : null,
     } as any);
+
+    // Request notification permission when care day is set
+    if (careDay !== "" && "Notification" in window && Notification.permission === "default") {
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") {
+        toast.success("Notificações ativadas! Você será lembrado no seu dia de cuidado.");
+      }
+    }
   };
 
   return (
@@ -65,6 +87,23 @@ const ProfileForm = () => {
       <div className="space-y-1.5">
         <Label>Email</Label>
         <Input value={user?.email || ""} disabled className="opacity-60" />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Gênero</Label>
+        <Select value={gender} onValueChange={setGender}>
+          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+          <SelectContent>
+            {GENDERS.map(g => (
+              <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="birthDate">Data de Nascimento</Label>
+        <Input id="birthDate" type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
       </div>
 
       <div className="space-y-1.5">
@@ -89,7 +128,12 @@ const ProfileForm = () => {
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground mt-1">O dia da semana que você reserva para se cuidar espiritualmente.</p>
+        <div className="flex items-start gap-2 mt-1.5">
+          <Bell className="h-3.5 w-3.5 text-accent mt-0.5 shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Ao salvar, pediremos permissão para te lembrar no seu dia de cuidado espiritual.
+          </p>
+        </div>
       </div>
 
       <Button onClick={handleSave} disabled={updateProfile.isPending} className="w-full">
