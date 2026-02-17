@@ -1,11 +1,14 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import BottomNav from "@/components/BottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import OfflineBanner from "@/components/OfflineBanner";
 import Home from "./pages/Home";
 import Oracle from "./pages/Oracle";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
@@ -25,7 +28,24 @@ import { useEffect } from "react";
 import { initPixelWithId, initGoogleAds } from "@/lib/pixel";
 import { useAppSettings } from "@/hooks/useAppSettings";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60 * 24, // 24h
+      staleTime: 1000 * 60 * 5, // 5 min default
+      retry: (failureCount, error) => {
+        // Don't retry when offline
+        if (!navigator.onLine) return false;
+        return failureCount < 3;
+      },
+    },
+  },
+});
+
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: "gba-orun-cache",
+});
 
 const AppContent = () => {
   const { data: settings } = useAppSettings();
@@ -38,6 +58,7 @@ const AppContent = () => {
 
   return (
     <>
+      <OfflineBanner />
       <Routes>
         <Route path="/oferta" element={<Oferta />} />
         <Route path="/auth" element={<Auth />} />
@@ -62,7 +83,7 @@ const AppContent = () => {
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 }}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -70,7 +91,7 @@ const App = () => (
           <AppContent />
         </BrowserRouter>
       </TooltipProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </ThemeProvider>
 );
 

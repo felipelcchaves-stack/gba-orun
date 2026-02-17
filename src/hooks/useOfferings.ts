@@ -18,6 +18,7 @@ export interface Offering {
 export const useOfferings = (category?: string) => {
   return useQuery({
     queryKey: ["offerings", category],
+    staleTime: 1000 * 60 * 30,
     queryFn: async () => {
       let query = (supabase.from("offerings" as any) as any).select("*").order("display_order");
       if (category) query = query.eq("category", category);
