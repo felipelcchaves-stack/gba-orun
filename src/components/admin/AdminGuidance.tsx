@@ -117,9 +117,16 @@ const AdminGuidance = () => {
         <div className="flex gap-2">
           <Input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." className="flex-1" />
           <button
-            onClick={() => {
+            onClick={async () => {
               if (profile?.avatar_url) {
                 setAvatarUrl(profile.avatar_url);
+                const { error } = await supabase
+                  .from("app_settings")
+                  .upsert({ key: "guidance_avatar_url", value: profile.avatar_url, updated_at: new Date().toISOString() }, { onConflict: "key" });
+                if (!error) {
+                  qc.invalidateQueries({ queryKey: ["app_settings"] });
+                  toast.success("Foto do orientador salva!");
+                }
               } else {
                 toast.info("Você ainda não tem foto de perfil. Vá em Meu Perfil para enviar uma.");
               }
