@@ -3,6 +3,7 @@ import { BookOpen, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRitualLinkForPoint } from "@/hooks/useRitualLinks";
 import { useRitual } from "@/hooks/useRituals";
+import { getCategoryImage } from "@/lib/categories";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import AudioPlayer from "@/components/AudioPlayer";
@@ -33,24 +34,21 @@ const RitualHelpButton = ({ point, className = "" }: Props) => {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-0">
-          {(ritual as any).image_url && (
-            <div className="relative w-full h-36 sm:h-44 rounded-t-2xl overflow-hidden">
-              <img src={(ritual as any).image_url} alt={ritual.title} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-              <div className="absolute bottom-3 left-4 right-4">
-                <h2 className="text-white font-display font-bold text-lg leading-tight">{ritual.title}</h2>
-                <span className="text-white/70 text-xs capitalize">{(ritual as any).category}</span>
+          {(() => {
+            const imageUrl = (ritual as any).image_url || getCategoryImage((ritual as any).category);
+            return (
+              <div className="relative w-full h-36 sm:h-44 rounded-t-2xl overflow-hidden">
+                <img src={imageUrl} alt={ritual.title} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                <div className="absolute bottom-3 left-4 right-4">
+                  <h2 className="text-white font-display font-bold text-lg leading-tight">{ritual.title}</h2>
+                  <span className="text-white/70 text-xs capitalize">{(ritual as any).category}</span>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div className="p-4 sm:p-6">
-            {!(ritual as any).image_url && (
-              <DialogHeader>
-                <DialogTitle className="font-display">{ritual.title}</DialogTitle>
-                <span className="text-xs text-muted-foreground capitalize">{(ritual as any).category}</span>
-              </DialogHeader>
-            )}
 
             {(ritual as any).audio_url && (
               <div className="mb-4">
