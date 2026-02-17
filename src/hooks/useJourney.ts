@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 export const useJourney = () => {
   const { user } = useAuth();
@@ -114,4 +115,47 @@ export const useCompleteTask = () => {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["journey-tasks"] }),
   });
+};
+
+// Fetch all journey entries + tasks for a given month
+export const useJourneyByMonth = (year: number, month: number) => {
+  const { user } = useAuth();
+  const monthDate = new Date(year, month);
+  const start = startOfMonth(monthDate).toISOString();
+  const end = endOfMonth(monthDate).toISOString();
+
+  const entriesQuery = useQuery({
+    queryKey: ["journey-month", user?.id, year, month],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("user_journey")
+        .select("*, rituals(title, category, image_url)")
+        .eq("user_id", user.id)
+        .gte("created_at", start)
+        .lte("created_at", end)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
+
+  const tasksQuery = useQuery({
+    queryKey: ["journey-month-tasks", user?.id, year, month],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("journey_tasks" as any)
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("created_at", start)
+        .lte("created_at", end);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
+
+  return { entries: entriesQuery.data ?? [], tasks: tasksQuery.data ?? [], isLoading: entriesQuery.isLoading || tasksQuery.isLoading };
 };
