@@ -1,35 +1,66 @@
 
-
-# Exibir Oferendas Vinculadas no Fluxo do Oraculo
+# Auto-Save para o Flow Builder
 
 ## Problema
 
-O `StepHeader` (componente que renderiza o cabecalho de cada etapa do fluxo para o aluno) exibe botoes para rituais vinculados (`ritual_ids`), mas ignora completamente o campo `offering_id`. O dado esta salvo na configuracao do no, porem nada aparece na tela do aluno.
+Atualmente o fluxo so e salvo quando voce clica manualmente em "Salvar Fluxo". Se a pagina recarregar (refresh, queda de internet, fechar aba acidentalmente), todo o trabalho nao salvo se perde.
 
 ## Solucao
 
-Criar um componente `LinkedOfferingButton` similar ao `LinkedRitualButton` e adiciona-lo ao `StepHeader`, logo abaixo dos botoes de rituais.
+Implementar um sistema de auto-save em duas camadas:
+
+### Camada 1: Rascunho local (localStorage)
+
+A cada alteracao no canvas (mover no, adicionar no, conectar, editar config), o estado completo de nodes e edges e salvo automaticamente no `localStorage` do navegador com a chave `flow_draft_{flowId}`.
+
+- **Quando salva localmente:** A cada mudanca, com debounce de 1 segundo (evita salvar a cada pixel de arraste)
+- **Quando carrega:** Ao abrir o FlowBuilder, verifica se existe rascunho local MAIS RECENTE que os dados do banco. Se sim, pergunta ao usuario: "Encontramos um rascunho nao salvo. Deseja restaurar?"
+- **Quando limpa:** Apos um save com sucesso no banco, o rascunho local e apagado
+
+### Camada 2: Auto-save no banco (periodico)
+
+A cada 60 segundos, se houver alteracoes pendentes, o sistema salva automaticamente no banco (usando o mesmo `useSaveFlowCanvas`). Um indicador visual mostra o status:
+
+- Circulo verde: "Salvo"
+- Circulo amarelo: "Alteracoes nao salvas"
+- Animacao de loading: "Salvando..."
+
+### Camada 3: Protecao contra saida
+
+Um `beforeunload` event listener avisa o usuario se ele tentar fechar a aba com alteracoes nao salvas.
 
 ## Detalhes tecnicos
 
-### Arquivo: `src/components/oracle/FlowStepRenderer.tsx`
+### Arquivo 1: `src/hooks/useFlowAutoSave.ts` (novo)
 
-1. **Criar componente `LinkedOfferingButton`**
-   - Recebe `offeringId` como prop
-   - Usa o hook `useOfferings` (ou uma query individual) para buscar os dados da oferenda
-   - Renderiza um botao com icone de oferenda (UtensilsCrossed)
-   - Ao clicar, abre um Dialog/Modal com titulo, ingredientes, instrucoes (Markdown) e audio player
+Hook customizado que encapsula toda a logica:
 
-2. **Atualizar `StepHeader`**
-   - Apos renderizar os `LinkedRitualButton`, verificar se `config.offering_id` existe
-   - Se existir, renderizar `<LinkedOfferingButton offeringId={config.offering_id} />`
-   - O botao aparece na mesma linha dos rituais (dentro do mesmo `flex flex-wrap gap-2`)
+- Recebe `flowId`, `nodes`, `edges`, `loaded` (se ja carregou do banco)
+- **Debounced localStorage save:** Salva nodes/edges no localStorage 1s apos qualquer mudanca
+- **Draft detection:** Ao montar, verifica se existe draft e retorna `hasDraft: true` + funcao `restoreDraft()`
+- **Dirty tracking:** Compara estado atual com ultimo save para saber se ha alteracoes pendentes (`isDirty`)
+- **Auto-save periodico:** `setInterval` de 60s que chama `handleSave` se `isDirty`
+- **beforeunload:** Registra/remove listener quando `isDirty` muda
+- **clearDraft:** Limpa localStorage apos save bem-sucedido
 
-### Hook necessario
+### Arquivo 2: `src/components/admin/flow-builder/FlowBuilder.tsx` (modificado)
 
-O `useOfferings` ja existe e retorna todas as oferendas. Para buscar uma unica oferenda por ID, pode-se filtrar localmente ou criar um pequeno hook `useOffering(id)`. A abordagem mais simples e filtrar do array ja carregado.
+- Importar e usar `useFlowAutoSave`
+- Adicionar indicador de status ao lado do botao "Salvar Fluxo" (circulo colorido + texto)
+- Mostrar dialog de restauracao de rascunho ao carregar (se houver draft)
+- Passar callbacks de `onNodesChange` e `onEdgesChange` para o hook marcar como dirty
+- Apos save com sucesso, chamar `clearDraft()` e `markClean()`
 
-### Arquivos modificados: 1
+### Arquivo 3: `src/components/admin/flow-builder/AutoSaveIndicator.tsx` (novo)
 
-1. `src/components/oracle/FlowStepRenderer.tsx` - adicionar `LinkedOfferingButton` e integrar no `StepHeader`
+Componente visual pequeno que mostra:
+- "Salvo" (verde) quando nao ha alteracoes
+- "Alteracoes nao salvas" (amarelo) quando dirty
+- "Salvando..." (animacao) durante save
+- "Ultimo save: ha X min" com timestamp
 
+### Arquivos modificados: 3
+
+1. `src/hooks/useFlowAutoSave.ts` - novo hook com logica de auto-save
+2. `src/components/admin/flow-builder/FlowBuilder.tsx` - integrar auto-save + indicador + dialog de restauracao
+3. `src/components/admin/flow-builder/AutoSaveIndicator.tsx` - novo componente visual de status
