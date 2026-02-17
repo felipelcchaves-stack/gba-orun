@@ -1,70 +1,104 @@
 
 
-# Plano: Historico Completo de Consultas com Calendario
+# Plano: Perfil Completo + Dark Mode + Dashboard Espiritual
 
 ## O Que Existe Hoje
 
-A pagina "Jornada" (`/jornada`) ja mostra as consultas do dia com um seletor de dias da semana. Porem, ela so mostra a **semana atual** -- o usuario nao consegue voltar no tempo para ver o que aconteceu no dia 10 de janeiro, por exemplo. Tambem nao ha nenhum resumo visual de quais dias tiveram atividade.
+A pagina de perfil (`/perfil`) mostra apenas o email, XP, stats e conquistas. Nao tem como o usuario editar seu nome, trocar senha, escolher sua religiao, definir um dia de cuidado espiritual, nem alternar entre tema claro e escuro. O dashboard (Home) so mostra rituais e oracoes, sem nenhum indicador personalizado de como o usuario esta com seus cuidados.
 
 ## O Que Vai Mudar
 
-### 1. Calendario Mensal Navegavel
-Substituir o seletor de 7 dias por um calendario mensal completo (usando o componente Calendar/DayPicker que ja esta instalado no projeto). O usuario podera:
-- Navegar entre meses (setas para frente e para tras)
-- Ver quais dias tiveram consultas (dias marcados com um ponto colorido)
-- Tocar em qualquer dia para ver as consultas e tarefas daquele dia
+### 1. Perfil Completo e Editavel
 
-### 2. Indicadores Visuais no Calendario
-Cada dia com atividade tera um ponto abaixo do numero:
-- **Verde**: todas as tarefas do dia foram concluidas
-- **Amarelo**: tarefas parcialmente concluidas
-- **Vermelho/Laranja**: nenhuma tarefa concluida
+A pagina de perfil sera reorganizada em secoes claras:
 
-### 3. Detalhes do Dia Selecionado
-Ao tocar num dia, a area abaixo do calendario mostra:
-- Todas as consultas feitas naquele dia (cards com resultado do Obi, Ire/Ibi, horario)
-- Checklist de tarefas de cada consulta com progresso
-- Se nao houve consulta: mensagem incentivando a consultar o Oraculo
+**Secao: Dados Pessoais**
+- Nome de exibicao (editavel)
+- Email (somente leitura)
+- Religiao/Tradicao: seletor com opcoes (Candomble, Umbanda, Ifa, Outra, Prefiro nao dizer)
+- Dia de Cuidado Espiritual: seletor de dia da semana (Segunda a Domingo) -- o dia que o usuario reserva para se cuidar espiritualmente
 
-### 4. Estatisticas do Mes (resumo no topo)
-Um mini-resumo acima do calendario:
-- "X consultas este mes"
-- "Y tarefas concluidas"
-- "Z dias de atividade"
+**Secao: Seguranca**
+- Alterar senha: campos "Nova senha" e "Confirmar senha" com botao salvar
+- Usa `supabase.auth.updateUser({ password })` -- nao precisa da senha atual
 
-Isso reforça o habito e mostra ao usuario que o app esta registrando tudo.
+**Secao: Aparencia**
+- Toggle Dark Mode / Light Mode
+- Preview instantaneo ao alternar
+
+**Secao: Conta**
+- Botao "Sair" (logout)
+
+### 2. Dark Mode Funcional
+
+O projeto ja tem as variaveis CSS para `.dark` e `darkMode: ["class"]` no Tailwind, alem do pacote `next-themes` instalado. So falta:
+- Adicionar o `ThemeProvider` do `next-themes` no `App.tsx`
+- Colocar o toggle no perfil
+
+### 3. Dashboard Espiritual na Home
+
+Um novo card na Home que mostra o "Status Espiritual" do usuario, considerando o dia de cuidado que ele definiu no perfil:
+
+**Card "Seu Cuidado Espiritual":**
+- Se hoje e o dia de cuidado: destaque dourado com mensagem "Hoje e seu dia de cuidado! Ja consultou o Oraculo?"
+- Se o dia ja passou esta semana e nao houve consulta: alerta laranja "Voce perdeu seu dia de cuidado esta semana"
+- Se o dia ainda vai chegar: mensagem neutra "Seu proximo cuidado e na [dia]. Faltam X dias"
+- Barra de progresso semanal: quantos dias o usuario fez atividade esta semana vs. meta
+- Ultima consulta: "Sua ultima consulta foi ha X dias" com resultado resumido
+
+Isso cria urgencia e habito.
 
 ---
 
+## Migracao de Banco de Dados
+
+Adicionar 2 colunas na tabela `profiles`:
+
+| Coluna | Tipo | Default | Descricao |
+|---|---|---|---|
+| religion | text | null | Candomble, Umbanda, Ifa, Outra |
+| care_day | integer | null | 0=Domingo, 1=Segunda... 6=Sabado |
+
+As RLS policies ja existem e cobrem update pelo dono.
+
 ## Detalhes Tecnicos
 
-### Nenhuma migracao SQL necessaria
-Todas as consultas ja sao salvas na tabela `user_journey` com `created_at`. As tarefas ficam em `journey_tasks`. So precisamos buscar os dados de forma diferente (por mes em vez de apenas a semana atual).
+### Arquivos a Criar
+
+| Arquivo | Descricao |
+|---|---|
+| `src/hooks/useProfile.ts` | Hook para buscar e atualizar dados do perfil (nome, religiao, care_day) |
+| `src/components/profile/ProfileForm.tsx` | Formulario de dados pessoais (nome, religiao, dia de cuidado) |
+| `src/components/profile/PasswordForm.tsx` | Formulario de alteracao de senha |
+| `src/components/profile/ThemeToggle.tsx` | Toggle dark/light mode |
+| `src/components/home/SpiritualCareCard.tsx` | Card do dashboard com status de cuidado espiritual |
 
 ### Arquivos a Modificar
 
 | Arquivo | Mudanca |
 |---|---|
-| `src/pages/Journey.tsx` | Substituir seletor semanal por calendario mensal, adicionar resumo do mes, manter cards de consulta do dia |
-| `src/hooks/useJourney.ts` | Adicionar hook `useJourneyByMonth` que busca entradas de um mes inteiro para marcar os dias no calendario |
+| `src/pages/Profile.tsx` | Reescrever com secoes: Dados, Seguranca, Aparencia, Conta |
+| `src/pages/Home.tsx` | Adicionar SpiritualCareCard abaixo do greeting |
+| `src/App.tsx` | Envolver app com ThemeProvider do next-themes |
+| `src/main.tsx` | Nenhuma mudanca necessaria |
 
-### Componentes Utilizados
-- `react-day-picker` (ja instalado) para o calendario
-- `date-fns` (ja instalado) para manipulacao de datas
-- Componente `Calendar` do shadcn (ja existe em `src/components/ui/calendar.tsx`)
+### Fluxo do Dark Mode
+1. `ThemeProvider` do `next-themes` com `attribute="class"` e `defaultTheme="light"`
+2. Toggle no perfil usa `useTheme()` do `next-themes`
+3. As variaveis CSS `.dark` ja existem no `index.css` -- tudo muda automaticamente
 
-### Fluxo de Dados
-1. Ao abrir a pagina, busca todas as entradas do mes atual via `useJourneyByMonth`
-2. Monta um mapa `dia -> [entradas]` para marcar os pontos no calendario
-3. Ao clicar num dia, filtra as entradas daquele dia e exibe os cards com tarefas
-4. Ao navegar para outro mes, refaz a query com o novo intervalo de datas
+### Fluxo do Card Espiritual na Home
+1. Busca `profiles.care_day` do usuario
+2. Busca ultima entrada de `user_journey` do usuario
+3. Calcula: hoje e dia de cuidado? O dia ja passou? Quantos dias ativos esta semana?
+4. Renderiza o card com a mensagem e barra de progresso adequadas
 
-### Hook `useJourneyByMonth`
-Recebe `year` e `month`, busca `user_journey` com `created_at` entre o primeiro e ultimo dia do mes. Retorna os dados agrupados por dia para o calendario.
+### Alteracao de Senha
+Usa `supabase.auth.updateUser({ password: novaSenha })` -- funciona para usuario ja logado, nao precisa da senha antiga.
 
 ---
 
 ## Resultado Esperado
 
-O usuario abre a Jornada e ve um calendario completo do mes. Dias com atividade tem pontinhos coloridos. Ele toca no dia 10 de janeiro e ve: "Caiu Okaran em Ibi -- 3 de 5 tarefas concluidas". Toca no dia 11 e ve outra consulta. Isso cria o habito de consultar todos os dias e da ao usuario a sensacao de que tudo esta sendo registrado e acompanhado.
+O usuario abre o perfil e ve um formulario limpo para editar nome, escolher sua religiao (Candomble, Umbanda, Ifa), definir seu dia de cuidado espiritual, trocar de senha e alternar entre tema claro/escuro. Na Home, ele ve um card personalizado que diz "Hoje e seu dia de cuidado! Consulte o Oraculo" ou "Faltam 3 dias para seu cuidado semanal", criando habito e engajamento.
 
