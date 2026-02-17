@@ -13,7 +13,7 @@ interface AdminSidebarProps {
 const NAV_ITEMS: { key: AdminSection; label: string; icon: React.ElementType }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "users", label: "Usuários", icon: Users },
-  { key: "rituals", label: "Rituais", icon: BookOpen },
+  { key: "rituals", label: "Rituais e Orações", icon: BookOpen },
   { key: "oracle", label: "Oráculo", icon: Sparkles },
   { key: "links", label: "Links de Ajuda", icon: Link2 },
   { key: "settings", label: "Configurações", icon: Settings },
