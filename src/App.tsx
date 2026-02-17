@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import BottomNav from "@/components/BottomNav";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Home from "./pages/Home";
 import Oracle from "./pages/Oracle";
 import Rituals from "./pages/Rituals";
@@ -36,18 +37,18 @@ const AppContent = () => {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/oraculo" element={<Oracle />} />
-        <Route path="/rituais" element={<Rituals />} />
-        <Route path="/rituais/:id" element={<RitualReader />} />
-        <Route path="/jornada" element={<Journey />} />
-        <Route path="/comunidade" element={<Community />} />
-        <Route path="/aprender" element={<Learn />} />
-        <Route path="/perfil" element={<Profile />} />
         <Route path="/oferta" element={<Oferta />} />
-        <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/instalar" element={<Install />} />
+        <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path="/oraculo" element={<ProtectedRoute><Oracle /></ProtectedRoute>} />
+        <Route path="/rituais" element={<ProtectedRoute><Rituals /></ProtectedRoute>} />
+        <Route path="/rituais/:id" element={<ProtectedRoute><RitualReader /></ProtectedRoute>} />
+        <Route path="/jornada" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
+        <Route path="/comunidade" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+        <Route path="/aprender" element={<ProtectedRoute><Learn /></ProtectedRoute>} />
+        <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/instalar" element={<ProtectedRoute><Install /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <BottomNav />
