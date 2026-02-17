@@ -9,6 +9,8 @@ import PremiumLockModal from "@/components/PremiumLockModal";
 import AudioPlayer from "@/components/AudioPlayer";
 import { useState, useEffect, useRef } from "react";
 
+import ritualPlaceholder1 from "@/assets/ritual-placeholder-1.jpg";
+
 const RitualReader = () => {
   const { id } = useParams<{ id: string }>();
   const { data: ritual, isLoading } = useRitual(id!);
@@ -32,7 +34,6 @@ const RitualReader = () => {
           <div className="animate-pulse space-y-4">
             <div className="h-6 bg-muted rounded w-1/4" />
             <div className="h-10 bg-muted rounded w-3/4" />
-            <div className="h-4 bg-muted rounded w-1/3" />
             <div className="h-64 bg-muted rounded-2xl mt-8" />
           </div>
         </div>
@@ -49,31 +50,28 @@ const RitualReader = () => {
   }
 
   const isLocked = ritual.is_premium && !isPremium;
+  const imageUrl = ritual.image_url || ritualPlaceholder1;
 
   return (
-    <div className="min-h-screen pb-24 bg-background">
+    <div className="min-h-screen pb-24 bg-card">
       {/* Header */}
       <div className="px-6 pt-10">
         <div className="max-w-2xl mx-auto">
-          <Link to="/rituais" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
+          <Link to="/rituais" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
             <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Voltar
           </Link>
 
-          <div className="flex items-start gap-5 mb-8">
-            {/* Circular image */}
-            {ritual.image_url ? (
-              <img src={ritual.image_url} alt={ritual.title} className="w-20 h-20 rounded-full object-cover shrink-0" />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-muted shrink-0" />
-            )}
-            <div>
-              <h1 className="text-3xl font-display font-medium leading-tight">
+          {/* Card header with image */}
+          <div className="flex items-center gap-4 mb-8 bg-background rounded-2xl p-4">
+            <img src={imageUrl} alt={ritual.title} className="w-16 h-16 rounded-full object-cover shrink-0" />
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-display font-bold leading-tight truncate">
                 {ritual.title}
               </h1>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-1">
                 <span className="text-sm text-muted-foreground capitalize">{ritual.category}</span>
                 {ritual.is_premium && (
-                  <span className="text-xs bg-accent/15 text-accent-foreground px-2.5 py-0.5 rounded-full font-medium">Premium</span>
+                  <span className="text-[10px] bg-accent/15 text-accent-foreground px-2 py-0.5 rounded-full font-medium">Premium</span>
                 )}
               </div>
             </div>
@@ -87,13 +85,13 @@ const RitualReader = () => {
           {isLocked ? (
             <div className="text-center py-16">
               <Lock className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" strokeWidth={1.5} />
-              <h3 className="font-display font-medium text-xl mb-2">Conteúdo Exclusivo</h3>
+              <h3 className="font-display font-bold text-xl mb-2">Conteúdo Exclusivo</h3>
               <p className="text-muted-foreground text-sm mb-8">
                 Este ritual é exclusivo para membros premium.
               </p>
               <button
                 onClick={() => setShowModal(true)}
-                className="bg-foreground text-background px-8 py-3 rounded-full font-medium text-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                className="bg-foreground text-background px-8 py-3 rounded-full font-medium text-sm"
               >
                 Desbloquear Acesso
               </button>
