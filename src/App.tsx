@@ -19,14 +19,19 @@ import Auth from "./pages/Auth";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
-import { initPixel } from "@/lib/pixel";
+import { initPixelWithId, initGoogleAds } from "@/lib/pixel";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
+  const { data: settings } = useAppSettings();
+
   useEffect(() => {
-    initPixel();
-  }, []);
+    if (!settings) return;
+    if (settings.meta_pixel_id) initPixelWithId(settings.meta_pixel_id);
+    if (settings.google_ads_id) initGoogleAds(settings.google_ads_id);
+  }, [settings]);
 
   return (
     <>
