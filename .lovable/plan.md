@@ -1,158 +1,168 @@
 
-# Plano Completo: Gba-Orun - Do MVP ao Produto Comercial
+# Plano: Redesign UX Completo Inspirado na Referencia Visual
 
-## Visao Geral
+## O Que Muda
 
-Transformar o app atual em uma plataforma completa de jornada espiritual gamificada, com visual inspirado na imagem de referencia (cards arredondados, saudacao personalizada, categorias com icones, banner hero com ilustracao, secao de destaques horizontais e bottom nav refinada).
+O app de referencia (cristao) tem um estilo visual muito especifico que o nosso app atual nao segue. As diferencas principais sao:
 
----
+### Diferencas Identificadas (Referencia vs. Atual)
 
-## FASE 1 - Redesign Visual (Inspirado na Imagem de Referencia)
-
-### 1.1 Nova Home Page
-Recriar a Home seguindo o layout da imagem:
-- **Saudacao personalizada**: "Ola, [Nome]!" no topo (usando display_name do perfil do usuario logado, ou "Visitante")
-- **3 cards de atalho** em linha horizontal (como "Oracoes / Rosario / Novenas" da imagem), adaptados para: **Obi** (icone de buzios), **Rituais** (icone de livro), **Aprender** (icone de graduacao)
-- **Banner hero grande** com gradiente quente (tons terra/dourado) e texto: "Jornada Espiritual - Monte sua rotina com o que os Orixas pedem de voce"
-- **Secao "Destaques"** com scroll horizontal de cards com imagens (rituais em destaque ou categorias: Ebo, Ibori, Oriki, Egbe Orun)
-- Cantos muito arredondados (border-radius 2xl/3xl), sombras suaves, espacamento generoso
-
-### 1.2 Refinamento do Design System
-- Ajustar a paleta para um tom mais quente e elegante (fundo creme mais claro, cards brancos com sombra sutil)
-- Adicionar classe `.card-elevated` para cards com sombra e bordas arredondadas como na imagem
-- Bottom Nav redesenhada: 5 itens (Inicio, Oraculo, Jornada, Favoritos/Aprender, Mais) com icones mais refinados
-- Tipografia: manter Playfair Display para titulos mas aumentar peso visual
-
-### 1.3 Paginas Atualizadas
-- **Oracle**: manter logica, melhorar visual dos buzios com cards mais brancos e sombras
-- **Rituals**: layout de cards com imagens como na secao "Destaques" da referencia
-- **RitualReader**: visual mais limpo, fundo branco, tipografia confortavel
+| Aspecto | App Referencia | Nosso App Atual |
+|---|---|---|
+| **Fundo** | Branco/Creme muito claro (#FAF8F5) | Bege acinzentado escuro |
+| **Tipografia titulos** | Serif elegante e grande, peso leve | Playfair Display (ok, mas peso muito grosso) |
+| **Tipografia corpo** | Sans-serif leve e arejada | Nunito (ok, mas muito densa) |
+| **Cards** | Brancos puros, bordas quase invisiveis, sombra sutil | Cards com borda visivel e fundo acinzentado |
+| **Imagens** | Grandes, arredondadas, ocupam bastante espaco | Pequenas ou ausentes |
+| **Chips de categoria** | Fundo solido escuro (selecionado) ou contorno leve | Fundo colorido com emoji |
+| **Lista de conteudo** | Imagem + titulo + descricao em lista vertical | Apenas titulo e icone |
+| **Banner hero** | Imagem real com texto cursivo por cima | Gradiente solido com emoji |
+| **Bottom nav** | Minimalista, 5 itens, icones finos | Similar mas precisa refinar |
+| **Espacamento** | Muito generoso, respira | Mais compacto |
+| **Pagina de leitura** | Fundo branco, tipografia serif elegante, imagem redonda | Card sobre fundo colorido |
 
 ---
 
-## FASE 2 - Jornada do Usuario (Bussola Espiritual)
+## Fase 1 - Design System (Cores + Tipografia)
 
-### 2.1 Fluxo de Jornada Oraculo -> Acao
-Criar uma nova pagina `/jornada` que conecta o resultado do Oraculo as acoes necessarias:
-- Apos jogar o Obi, o resultado sugere rituais relacionados (campo `trigger_oracle` ja existe na tabela `rituals`)
-- Ex: Okaran -> sugere Ebo de protecao; Ejife -> sugere Oriki de agradecimento
-- Cards de acao: "Apaziguar Ori" (link para Ibori), "Protecao Iyami" (link para rituais Iyami), "Cuidar do Egbe Orun" (link para oferendas)
+### 1.1 Nova Paleta CSS
+Atualizar `src/index.css` com tons mais claros e quentes:
+- **background**: Creme claro (#FAF8F5) em vez do bege escuro atual
+- **card**: Branco puro (#FFFFFF) com sombra sutil
+- **border**: Quase invisivel (cinza muito claro)
+- **foreground**: Marrom escuro quente para texto
 
-### 2.2 Tabela `user_journey` (Nova migracao)
-Registrar o progresso do usuario:
-- `id`, `user_id`, `oracle_result`, `suggested_ritual_id`, `completed`, `completed_at`, `created_at`
-- Permite rastrear quais rituais o usuario ja completou baseado nas consultas do oraculo
-
-### 2.3 Secao de Aprendizado
-Nova rota `/aprender` com:
-- Cards de conteudo organizados por modulos (Fundamentos, Obi, Ebo, Ibori, Iyami, Egbe Orun)
-- Suporte a audio: campo `audio_url` na tabela `rituals` (nova coluna) para que o admin suba URLs de audio
-- Player de audio embutido no RitualReader quando `audio_url` estiver preenchido
+### 1.2 Tipografia
+Trocar Google Fonts para uma combinacao mais proxima da referencia:
+- **Titulos**: Manter Playfair Display mas com peso 400/600 (mais leve e elegante, como na referencia)
+- **Corpo**: Trocar Nunito por **Inter** ou manter Nunito com peso mais leve (300/400)
+- Aumentar espacamento entre linhas globalmente
 
 ---
 
-## FASE 3 - Gamificacao
+## Fase 2 - Home Page (Inspirada na Imagem 1)
 
-### 3.1 Tabela `user_achievements` (Nova migracao)
-- `id`, `user_id`, `achievement_key`, `unlocked_at`
-- Achievements pre-definidos com palavras e simbolos Yoruba
+### 2.1 Saudacao
+- Manter "Ola, [Nome]!" mas com tipografia serif mais leve e elegante
+- Remover o "Axe!" - deixar mais clean
 
-### 3.2 Tabela `user_stats` (Nova migracao)
-- `id`, `user_id`, `oracle_throws`, `rituals_read`, `streak_days`, `last_active`, `xp_total`
+### 2.2 Cards de Atalho (3 colunas)
+- Fundo branco puro, sem borda visivel, apenas sombra suave
+- Icones mais refinados, sem fundo colorido ao redor
+- Texto em serif abaixo do icone (como "Oracoes / Rosario / Novenas" da referencia)
+- Adaptacao Yoruba: **Obi** / **Rituais** / **Aprender**
 
-### 3.3 Sistema de Recompensas
-Achievements baseados em pratica constante:
-- **Palavras Yoruba como recompensas**: "Ase!" (1a consulta), "Ire" (5 consultas), "Alafia" (10 dias seguidos), "Ogbon" (Sabedoria - leu 10 rituais), "Iwa Pele" (Bom carater - 30 dias ativos)
-- **Simbolos/Badges**: Icones estilizados de Odu, Opon Ifa, Opele, Iroke Ifa
-- Tela de perfil `/perfil` mostrando XP, streak, badges conquistados
-- Confete ao desbloquear achievement (animacao CSS)
+### 2.3 Banner Hero
+- Em vez de gradiente solido, usar uma imagem de fundo (campo `hero_image_url` que o admin pode trocar via `app_settings`) com texto cursivo/serif por cima
+- Texto: algo como "Jornada Espiritual" em estilo italic serif
+- Subtitulo: "Comece agora"
+- Overlay escuro sutil para legibilidade
 
-### 3.4 Integracao com Fluxo
-- Apos jogar Obi: +10 XP, verifica achievements
-- Apos ler ritual completo: +20 XP
-- Streak diario: bonus XP multiplicador
-- Toast/notificacao ao desbloquear novo achievement
+### 2.4 Secao Categorias
+- Titulo "Categorias" em serif
+- Cards horizontais com scroll, cada um tendo imagem de fundo + nome por cima (como "Destaques" na referencia)
+- Sem emojis - usar imagens reais ou gradientes bonitos
 
----
-
-## FASE 4 - Admin Avancado (Controle Total)
-
-### 4.1 Tabela `app_settings` (Nova migracao)
-- `id`, `key` (unique), `value` (text/json), `updated_at`
-- Chaves: `meta_pixel_id`, `google_ads_id`, `checkout_url`, `offer_price`, `offer_original_price`, `offer_headline`, `offer_video_url`
-
-### 4.2 Painel Admin - Novas Abas
-Reestruturar o admin com abas:
-- **Rituais**: gerenciamento existente + campo de `audio_url`
-- **Configuracoes da Oferta**: formulario para editar pixel, preco, URL de checkout, headline da landing page, URL do video
-- **Importador JSON**: ja existe, manter
-- **Usuarios**: lista basica de usuarios premium
-
-### 4.3 Dinamismo da Landing Page
-A pagina `/oferta` passara a ler os valores de `app_settings`:
-- Preco, titulo, URL do video e URL de checkout vem do banco
-- Pixel do Meta e Google Ads sao carregados dinamicamente conforme configuracao do admin
+### 2.5 Secao Destaques
+- Cards grandes com imagem ocupando a maior parte
+- Titulo e subtipo abaixo da imagem
+- Scroll horizontal
 
 ---
 
-## FASE 5 - Landing Page Redesenhada
+## Fase 3 - Pagina de Rituais/Conteudo (Inspirada nas Imagens 2 e 3)
 
-### 5.1 Visual Coerente com o App
-Redesenhar `/oferta` seguindo o mesmo design system:
-- Cards arredondados, tipografia Playfair Display, tons quentes
-- Hero com gradiente terra/dourado (nao mais o gradient-sacred verde)
-- Secao de beneficios com icones grandes em cards brancos com sombra
-- Depoimentos em cards arredondados com estrelas douradas
-- Botao de compra dourado pulsante
-- Preco riscado + preco de oferta (lido do banco)
+### 3.1 Chips de Filtro
+- Estilo: chip selecionado = fundo preto/escuro com texto branco (como na referencia "Todos" preto)
+- Chips nao selecionados = fundo transparente com borda leve
+- Sem emojis nos chips
 
-### 5.2 Integracao de Pixels Dinamica
-- `initPixel()` passara a buscar o pixel_id de `app_settings` ao inves de constante hardcoded
-- Mesmo para Google Ads tag
+### 3.2 Lista de Rituais
+- Cada item: imagem arredondada a esquerda (grande, ~80x80px) + titulo em serif + descricao curta em cinza
+- Sem icones de cadeado inline - cadeado aparece como badge sutil
+- Layout mais arejado, mais espaco entre itens
 
 ---
 
-## Resumo Tecnico das Migracoes SQL
+## Fase 4 - Pagina de Leitura (Inspirada nas Imagens 4 e 5)
 
-1. **Adicionar coluna `audio_url`** na tabela `rituals`
-2. **Criar tabela `user_journey`** com RLS (usuario ve apenas suas jornadas)
-3. **Criar tabela `user_achievements`** com RLS
-4. **Criar tabela `user_stats`** com RLS
-5. **Criar tabela `app_settings`** com RLS (leitura publica, escrita admin)
-6. Seed de achievements padrao e settings iniciais
+### 4.1 Cabecalho
+- Remover o header colorido/gradiente
+- Botao de voltar simples (seta) no topo
+- Imagem redonda/arredondada ao lado do titulo (como na referencia "Oracao diaria" com foto circular)
+- Titulo em serif grande
+- Descricao/subtitulo em cinza
 
-## Novos Arquivos a Criar
+### 4.2 Conteudo
+- Fundo branco puro, sem card wrapper
+- Tipografia serif para subtitulos, sans-serif para corpo
+- Secoes "Atividades sugeridas" com chips de filtro (Todas, Diariamente, etc.)
+- Separadores sutis entre secoes
 
-- `src/pages/Journey.tsx` - Pagina de jornada
-- `src/pages/Learn.tsx` - Pagina de aprendizado
-- `src/pages/Profile.tsx` - Perfil com XP e badges
-- `src/hooks/useJourney.ts` - Hook para jornada
-- `src/hooks/useAchievements.ts` - Hook para gamificacao
-- `src/hooks/useAppSettings.ts` - Hook para configuracoes dinamicas
-- `src/components/AchievementToast.tsx` - Notificacao de conquista
-- `src/components/AudioPlayer.tsx` - Player de audio embutido
-- `src/components/XPBar.tsx` - Barra de experiencia
-- `src/components/StreakCounter.tsx` - Contador de streak
+---
 
-## Arquivos a Modificar
+## Fase 5 - Pagina de Oraculo
 
-- `src/pages/Home.tsx` - Redesign completo
-- `src/pages/Oracle.tsx` - Integrar XP e jornada
-- `src/pages/Rituals.tsx` - Novo layout visual
-- `src/pages/RitualReader.tsx` - Audio player + XP ao completar
-- `src/pages/Oferta.tsx` - Redesign + dados dinamicos
-- `src/pages/Admin.tsx` - Abas + config de oferta/pixel
-- `src/components/BottomNav.tsx` - 5 itens + icones novos
-- `src/lib/pixel.ts` - Pixel dinamico do banco
-- `src/index.css` - Novos estilos e animacoes
-- `src/App.tsx` - Novas rotas
+- Manter a logica dos buzios
+- Visual: fundo branco, cards dos buzios brancos com sombra minimalista
+- Resultado em card branco com tipografia mais elegante
+- Menos cores saturadas, mais sutil e clean
 
-## Ordem de Execucao Sugerida
+---
 
-1. Migracoes SQL (todas de uma vez)
-2. Redesign Home + BottomNav + Design System
-3. Sistema de Jornada (Oracle -> Rituais)
-4. Gamificacao (XP, Achievements, Perfil)
-5. Admin Avancado (config oferta, pixel, audio)
-6. Landing Page redesenhada com dados dinamicos
-7. Testes end-to-end
+## Fase 6 - Demais Paginas (Journey, Learn, Profile)
+
+Aplicar o mesmo tratamento visual:
+- Fundos brancos/creme
+- Cards sem bordas visiveis, apenas sombras
+- Tipografia serif leve para titulos
+- Mais espaco, mais ar
+
+---
+
+## Fase 7 - Landing Page (/oferta)
+
+Redesenhar seguindo a mesma linguagem visual:
+- Hero com fundo creme claro (nao mais gradiente escuro) ou imagem real
+- Cards de beneficios brancos com sombra
+- Depoimentos em cards brancos
+- Tipografia coerente com o resto do app
+
+---
+
+## Fase 8 - Bottom Nav
+
+- Icones mais finos (strokeWidth 1.5)
+- Sem labels ou labels muito pequenas
+- Indicador do item ativo: ponto ou underline sutil (nao cor forte)
+
+---
+
+## Sobre os "Caprinos" (Conteudo Tematico)
+
+Todo o conteudo textual e icones serao mantidos como Yoruba. O plano adapta apenas o **estilo visual** (layout, tipografia, cores, espacamento) do app cristao de referencia, preservando:
+- Terminologia Yoruba (Obi, Ebo, Ibori, Oriki, Egbe Orun, Iyami)
+- Icones e simbolos relacionados a cultura Yoruba
+- Emojis contextuais onde apropriado (mas com mais sobriedade)
+
+O admin pode trocar imagens de banner, hero e categorias pelo painel de administracao usando os campos ja existentes em `app_settings` e `rituals.image_url`.
+
+---
+
+## Resumo Tecnico dos Arquivos a Modificar
+
+| Arquivo | Mudanca |
+|---|---|
+| `src/index.css` | Nova paleta de cores (mais clara), tipografia mais leve, espacamentos |
+| `tailwind.config.ts` | Ajustes de font-family se necessario |
+| `src/pages/Home.tsx` | Redesign completo seguindo layout da referencia |
+| `src/pages/Rituals.tsx` | Lista com imagens, chips escuros, layout arejado |
+| `src/pages/RitualReader.tsx` | Remover header colorido, layout branco clean |
+| `src/pages/Oracle.tsx` | Visual mais clean e branco |
+| `src/pages/Learn.tsx` | Mesmo padrao visual dos Rituais |
+| `src/pages/Journey.tsx` | Cards brancos, mais espaco |
+| `src/pages/Profile.tsx` | Layout clean |
+| `src/pages/Oferta.tsx` | Redesign coerente com novo visual |
+| `src/components/BottomNav.tsx` | Icones finos, estilo minimalista |
+
+Nenhuma migracao SQL necessaria - apenas mudancas visuais no frontend.
