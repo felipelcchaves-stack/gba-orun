@@ -1,5 +1,6 @@
 import { Check, X, Heart, Sun } from "lucide-react";
 import { useState } from "react";
+import { useStepText } from "@/hooks/useOracleConfig";
 
 const ORI_ACTIONS = [
   { key: "ibori", label: "Ibori", desc: "Ritual para fortalecer o Ori", icon: Heart },
@@ -14,12 +15,18 @@ interface Props {
 
 const StepOri = ({ ireOrIbi, onAnswer }: Props) => {
   const [showActions, setShowActions] = useState(false);
+  const stepText = useStepText("ori", "O Ori precisa de algo?", "");
+  const subText = useStepText(
+    ireOrIbi === "ibi" ? "ori_ibi" : "ori_ire",
+    "O que o Ori precisa?",
+    "Selecione a ação necessária"
+  );
 
   if (showActions) {
     return (
       <>
-        <h2 className="text-2xl font-display font-bold text-center mb-1">O que o Ori precisa?</h2>
-        <p className="text-center text-muted-foreground text-sm mb-8">Selecione a ação necessária</p>
+        <h2 className="text-2xl font-display font-bold text-center mb-1">{subText.title}</h2>
+        <p className="text-center text-muted-foreground text-sm mb-8">{subText.description}</p>
         <div className="space-y-3">
           {ORI_ACTIONS.map(a => {
             const Icon = a.icon;
@@ -44,13 +51,15 @@ const StepOri = ({ ireOrIbi, onAnswer }: Props) => {
     );
   }
 
+  const defaultDesc = ireOrIbi === "ibi"
+    ? "Em Ibi, o Ori quase sempre precisa de cuidado e fortalecimento."
+    : "Em Irê, o Ori pode precisar de manutenção para manter a harmonia.";
+
   return (
     <>
-      <h2 className="text-2xl font-display font-bold text-center mb-1">O Ori precisa de algo?</h2>
+      <h2 className="text-2xl font-display font-bold text-center mb-1">{stepText.title}</h2>
       <p className="text-center text-muted-foreground text-sm mb-8">
-        {ireOrIbi === "ibi"
-          ? "Em Ibi, o Ori quase sempre precisa de cuidado e fortalecimento."
-          : "Em Irê, o Ori pode precisar de manutenção para manter a harmonia."}
+        {stepText.description || defaultDesc}
       </p>
 
       <div className="grid grid-cols-2 gap-4">

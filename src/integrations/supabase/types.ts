@@ -86,6 +86,39 @@ export type Database = {
           },
         ]
       }
+      oracle_configs: {
+        Row: {
+          color_type: string
+          description_ibi: string
+          description_ire: string
+          display_order: number
+          id: string
+          meaning: string
+          name: string
+          result_key: string
+        }
+        Insert: {
+          color_type?: string
+          description_ibi?: string
+          description_ire?: string
+          display_order?: number
+          id?: string
+          meaning?: string
+          name: string
+          result_key: string
+        }
+        Update: {
+          color_type?: string
+          description_ibi?: string
+          description_ire?: string
+          display_order?: number
+          id?: string
+          meaning?: string
+          name?: string
+          result_key?: string
+        }
+        Relationships: []
+      }
       oracle_meanings: {
         Row: {
           action: string
@@ -109,6 +142,71 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      oracle_step_texts: {
+        Row: {
+          description: string
+          id: string
+          step_key: string
+          title: string
+        }
+        Insert: {
+          description?: string
+          id?: string
+          step_key: string
+          title?: string
+        }
+        Update: {
+          description?: string
+          id?: string
+          step_key?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      oracle_task_templates: {
+        Row: {
+          category: string
+          condition: string
+          display_order: number
+          id: string
+          ire_or_ibi: string | null
+          oracle_result_key: string | null
+          ritual_id: string | null
+          task_title: string
+          task_type: string
+        }
+        Insert: {
+          category: string
+          condition?: string
+          display_order?: number
+          id?: string
+          ire_or_ibi?: string | null
+          oracle_result_key?: string | null
+          ritual_id?: string | null
+          task_title: string
+          task_type: string
+        }
+        Update: {
+          category?: string
+          condition?: string
+          display_order?: number
+          id?: string
+          ire_or_ibi?: string | null
+          oracle_result_key?: string | null
+          ritual_id?: string | null
+          task_title?: string
+          task_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oracle_task_templates_ritual_id_fkey"
+            columns: ["ritual_id"]
+            isOneToOne: false
+            referencedRelation: "rituals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
