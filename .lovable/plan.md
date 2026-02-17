@@ -1,168 +1,150 @@
 
-# Plano: Redesign UX Completo Inspirado na Referencia Visual
+# Plano: Transformar a Jornada em Bussola Espiritual de Rotina
 
-## O Que Muda
+## O Problema Atual
 
-O app de referencia (cristao) tem um estilo visual muito especifico que o nosso app atual nao segue. As diferencas principais sao:
+Hoje o app funciona assim:
+1. Usuario joga o Obi no app (aleatorio)
+2. O app salva o resultado na jornada
+3. A jornada e apenas uma lista cronologica de consultas passadas
 
-### Diferencas Identificadas (Referencia vs. Atual)
-
-| Aspecto | App Referencia | Nosso App Atual |
-|---|---|---|
-| **Fundo** | Branco/Creme muito claro (#FAF8F5) | Bege acinzentado escuro |
-| **Tipografia titulos** | Serif elegante e grande, peso leve | Playfair Display (ok, mas peso muito grosso) |
-| **Tipografia corpo** | Sans-serif leve e arejada | Nunito (ok, mas muito densa) |
-| **Cards** | Brancos puros, bordas quase invisiveis, sombra sutil | Cards com borda visivel e fundo acinzentado |
-| **Imagens** | Grandes, arredondadas, ocupam bastante espaco | Pequenas ou ausentes |
-| **Chips de categoria** | Fundo solido escuro (selecionado) ou contorno leve | Fundo colorido com emoji |
-| **Lista de conteudo** | Imagem + titulo + descricao em lista vertical | Apenas titulo e icone |
-| **Banner hero** | Imagem real com texto cursivo por cima | Gradiente solido com emoji |
-| **Bottom nav** | Minimalista, 5 itens, icones finos | Similar mas precisa refinar |
-| **Espacamento** | Muito generoso, respira | Mais compacto |
-| **Pagina de leitura** | Fundo branco, tipografia serif elegante, imagem redonda | Card sobre fundo colorido |
+**O que falta**: O usuario nao "informa" o resultado real do jogo dele. O app gera um resultado aleatorio, mas na vida real o usuario ja jogou fisicamente e sabe o resultado. Alem disso, a jornada nao funciona como um mapa de rotina -- ela e apenas um historico.
 
 ---
 
-## Fase 1 - Design System (Cores + Tipografia)
+## A Nova Logica: App como Bussola de Rotina
 
-### 1.1 Nova Paleta CSS
-Atualizar `src/index.css` com tons mais claros e quentes:
-- **background**: Creme claro (#FAF8F5) em vez do bege escuro atual
-- **card**: Branco puro (#FFFFFF) com sombra sutil
-- **border**: Quase invisivel (cinza muito claro)
-- **foreground**: Marrom escuro quente para texto
+O fluxo correto sera:
 
-### 1.2 Tipografia
-Trocar Google Fonts para uma combinacao mais proxima da referencia:
-- **Titulos**: Manter Playfair Display mas com peso 400/600 (mais leve e elegante, como na referencia)
-- **Corpo**: Trocar Nunito por **Inter** ou manter Nunito com peso mais leve (300/400)
-- Aumentar espacamento entre linhas globalmente
-
----
-
-## Fase 2 - Home Page (Inspirada na Imagem 1)
-
-### 2.1 Saudacao
-- Manter "Ola, [Nome]!" mas com tipografia serif mais leve e elegante
-- Remover o "Axe!" - deixar mais clean
-
-### 2.2 Cards de Atalho (3 colunas)
-- Fundo branco puro, sem borda visivel, apenas sombra suave
-- Icones mais refinados, sem fundo colorido ao redor
-- Texto em serif abaixo do icone (como "Oracoes / Rosario / Novenas" da referencia)
-- Adaptacao Yoruba: **Obi** / **Rituais** / **Aprender**
-
-### 2.3 Banner Hero
-- Em vez de gradiente solido, usar uma imagem de fundo (campo `hero_image_url` que o admin pode trocar via `app_settings`) com texto cursivo/serif por cima
-- Texto: algo como "Jornada Espiritual" em estilo italic serif
-- Subtitulo: "Comece agora"
-- Overlay escuro sutil para legibilidade
-
-### 2.4 Secao Categorias
-- Titulo "Categorias" em serif
-- Cards horizontais com scroll, cada um tendo imagem de fundo + nome por cima (como "Destaques" na referencia)
-- Sem emojis - usar imagens reais ou gradientes bonitos
-
-### 2.5 Secao Destaques
-- Cards grandes com imagem ocupando a maior parte
-- Titulo e subtipo abaixo da imagem
-- Scroll horizontal
+```text
++-------------------------------------------+
+|  1. USUARIO JOGA OBI NA VIDA REAL          |
++-------------------------------------------+
+              |
+              v
++-------------------------------------------+
+|  2. ABRE O APP E INFORMA O RESULTADO      |
+|     (seleciona: Oyekun, Okaran, Ejife,    |
+|      Etagun ou Alafia)                     |
++-------------------------------------------+
+              |
+              v
++-------------------------------------------+
+|  3. APP MOSTRA O DIAGNOSTICO              |
+|     - O que o Oraculo esta dizendo        |
+|     - Acoes sugeridas (Ebo, Ori, Iyami,   |
+|       Egbe Orun)                          |
+|     - Rituais especificos para executar   |
++-------------------------------------------+
+              |
+              v
++-------------------------------------------+
+|  4. JORNADA = MAPA DA ROTINA              |
+|     - Hoje: card do dia com acoes         |
+|     - Historico visual (timeline)         |
+|     - Checklist de tarefas espirituais    |
+|     - Streak de dias ativos              |
++-------------------------------------------+
+```
 
 ---
 
-## Fase 3 - Pagina de Rituais/Conteudo (Inspirada nas Imagens 2 e 3)
+## Fase 1 - Oraculo: De Aleatorio para Input Manual
 
-### 3.1 Chips de Filtro
-- Estilo: chip selecionado = fundo preto/escuro com texto branco (como na referencia "Todos" preto)
-- Chips nao selecionados = fundo transparente com borda leve
-- Sem emojis nos chips
+### Mudanca no Oracle.tsx
+Atualmente o app sorteia o resultado. O novo fluxo sera:
 
-### 3.2 Lista de Rituais
-- Cada item: imagem arredondada a esquerda (grande, ~80x80px) + titulo em serif + descricao curta em cinza
-- Sem icones de cadeado inline - cadeado aparece como badge sutil
-- Layout mais arejado, mais espaco entre itens
+- **Tela 1**: "Qual foi o resultado do seu Obi hoje?" com 5 botoes grandes e bonitos, um para cada resultado (Oyekun, Okaran, Ejife, Etagun, Alafia)
+- O usuario toca no resultado que ele obteve na vida real
+- **Tela 2**: Card de diagnostico aparece com:
+  - Nome e significado do resultado
+  - Diagnostico detalhado (o que o Orixa esta pedindo)
+  - Lista de acoes sugeridas organizadas por categoria:
+    - "Cuidar do Ori" (Ibori) -- quando o resultado pede protecao pessoal
+    - "Fazer Ebo" -- quando ha necessidade de limpeza/oferenda
+    - "Apaziguar Iyami" -- quando o resultado indica bloqueio das Maes
+    - "Cuidar do Egbe Orun" -- quando ha indicacao de trabalho com os ancestrais
+  - Cada acao e um link para o ritual correspondente no banco de dados
 
----
+### Logica de Sugestoes (Mapeamento)
+Criar um mapeamento inteligente entre cada resultado do Obi e as categorias de acao. Exemplo:
+- **Oyekun** (negativo): sugere Ebo de limpeza + Ibori + verificar Iyami
+- **Okaran** (duvida): sugere Ebo leve + Ibori
+- **Ejife** (sim): sugere Oriki de agradecimento
+- **Etagun** (sim forte): sugere Oriki + oferenda ao Egbe Orun
+- **Alafia** (confirmar): sugere jogar novamente e pede cautela
 
-## Fase 4 - Pagina de Leitura (Inspirada nas Imagens 4 e 5)
-
-### 4.1 Cabecalho
-- Remover o header colorido/gradiente
-- Botao de voltar simples (seta) no topo
-- Imagem redonda/arredondada ao lado do titulo (como na referencia "Oracao diaria" com foto circular)
-- Titulo em serif grande
-- Descricao/subtitulo em cinza
-
-### 4.2 Conteudo
-- Fundo branco puro, sem card wrapper
-- Tipografia serif para subtitulos, sans-serif para corpo
-- Secoes "Atividades sugeridas" com chips de filtro (Todas, Diariamente, etc.)
-- Separadores sutis entre secoes
+Este mapeamento sera uma constante no codigo, facilmente editavel.
 
 ---
 
-## Fase 5 - Pagina de Oraculo
+## Fase 2 - Jornada: De Historico para Mapa de Rotina
 
-- Manter a logica dos buzios
-- Visual: fundo branco, cards dos buzios brancos com sombra minimalista
-- Resultado em card branco com tipografia mais elegante
-- Menos cores saturadas, mais sutil e clean
+### Nova estrutura da pagina Journey.tsx
 
----
+**Secao 1: Card do Dia ("Hoje")**
+- Se o usuario ja consultou hoje: mostra o resultado + checklist de tarefas
+- Se nao consultou: botao "Registrar consulta de hoje" que leva ao Oraculo
+- Cada tarefa sugerida e um checkbox que o usuario marca ao completar
 
-## Fase 6 - Demais Paginas (Journey, Learn, Profile)
+**Secao 2: Calendario Visual (Timeline)**
+- Linha do tempo vertical mostrando os ultimos 7-14 dias
+- Cada dia mostra: o resultado do Obi + quantas tarefas foram completadas
+- Dias sem consulta aparecem em cinza ("Sem registro")
+- Visual inspirado em calendarios de habitos (como apps de meditacao)
 
-Aplicar o mesmo tratamento visual:
-- Fundos brancos/creme
-- Cards sem bordas visiveis, apenas sombras
-- Tipografia serif leve para titulos
-- Mais espaco, mais ar
+**Secao 3: Progresso Geral**
+- Barra de progresso: "X tarefas concluidas esta semana"
+- Streak de dias consecutivos consultando o Oraculo
 
----
-
-## Fase 7 - Landing Page (/oferta)
-
-Redesenhar seguindo a mesma linguagem visual:
-- Hero com fundo creme claro (nao mais gradiente escuro) ou imagem real
-- Cards de beneficios brancos com sombra
-- Depoimentos em cards brancos
-- Tipografia coerente com o resto do app
+### Nova tabela: journey_tasks
+Para rastrear as tarefas individuais de cada consulta:
+- `id`, `journey_id` (FK para user_journey), `task_type` (ebo, ibori, iyami, egbe_orun, oriki), `task_title`, `ritual_id` (opcional), `completed`, `completed_at`
+- Quando o usuario registra o resultado do Obi, o app automaticamente cria as tarefas sugeridas nesta tabela
 
 ---
 
-## Fase 8 - Bottom Nav
+## Fase 3 - Home Page: Bussola do Dia
 
-- Icones mais finos (strokeWidth 1.5)
-- Sem labels ou labels muito pequenas
-- Indicador do item ativo: ponto ou underline sutil (nao cor forte)
+### Mudanca no Home.tsx
+A Home passa a funcionar como a "tela de rotina diaria":
 
----
-
-## Sobre os "Caprinos" (Conteudo Tematico)
-
-Todo o conteudo textual e icones serao mantidos como Yoruba. O plano adapta apenas o **estilo visual** (layout, tipografia, cores, espacamento) do app cristao de referencia, preservando:
-- Terminologia Yoruba (Obi, Ebo, Ibori, Oriki, Egbe Orun, Iyami)
-- Icones e simbolos relacionados a cultura Yoruba
-- Emojis contextuais onde apropriado (mas com mais sobriedade)
-
-O admin pode trocar imagens de banner, hero e categorias pelo painel de administracao usando os campos ja existentes em `app_settings` e `rituals.image_url`.
+- **Card principal**: "Sua Rotina de Hoje"
+  - Se ja consultou: mostra resumo (resultado + X de Y tarefas feitas)
+  - Se nao consultou: "Comece seu dia - Registre o Obi de hoje" com botao
+- Os cards de atalho e categorias continuam abaixo
+- O banner hero muda o texto para reforcar a ideia de rotina/bussola
 
 ---
 
-## Resumo Tecnico dos Arquivos a Modificar
+## Fase 4 - Migracao SQL
+
+### Nova tabela `journey_tasks`
+- `id` (uuid, PK)
+- `journey_id` (uuid, FK -> user_journey.id)
+- `user_id` (uuid, para RLS)
+- `task_type` (text: 'ebo', 'ibori', 'iyami', 'egbe_orun', 'oriki')
+- `task_title` (text: descricao curta da tarefa)
+- `ritual_id` (uuid, nullable, FK -> rituals.id)
+- `completed` (boolean, default false)
+- `completed_at` (timestamptz, nullable)
+- `created_at` (timestamptz, default now())
+- RLS: usuario ve/edita apenas suas proprias tarefas
+
+### Adicionar coluna em user_journey
+- `notes` (text, nullable) -- para o usuario anotar observacoes do dia
+- `context` (text, nullable) -- "rotina_diaria", "consulta_especial" etc.
+
+---
+
+## Resumo dos Arquivos
 
 | Arquivo | Mudanca |
 |---|---|
-| `src/index.css` | Nova paleta de cores (mais clara), tipografia mais leve, espacamentos |
-| `tailwind.config.ts` | Ajustes de font-family se necessario |
-| `src/pages/Home.tsx` | Redesign completo seguindo layout da referencia |
-| `src/pages/Rituals.tsx` | Lista com imagens, chips escuros, layout arejado |
-| `src/pages/RitualReader.tsx` | Remover header colorido, layout branco clean |
-| `src/pages/Oracle.tsx` | Visual mais clean e branco |
-| `src/pages/Learn.tsx` | Mesmo padrao visual dos Rituais |
-| `src/pages/Journey.tsx` | Cards brancos, mais espaco |
-| `src/pages/Profile.tsx` | Layout clean |
-| `src/pages/Oferta.tsx` | Redesign coerente com novo visual |
-| `src/components/BottomNav.tsx` | Icones finos, estilo minimalista |
+| `src/pages/Oracle.tsx` | Trocar jogo aleatorio por selecao manual de resultado + diagnostico com acoes sugeridas |
+| `src/pages/Journey.tsx` | Redesign completo: card do dia + timeline + checklist de tarefas |
+| `src/pages/Home.tsx` | Adicionar card de rotina diaria no topo |
+| `src/hooks/useJourney.ts` | Adicionar hooks para tarefas (useJourneyTasks, useCompleteTask, useCreateTasks) |
+| Nova migracao SQL | Criar tabela `journey_tasks` + adicionar colunas em `user_journey` |
 
-Nenhuma migracao SQL necessaria - apenas mudancas visuais no frontend.
+Nenhuma mudanca na landing page, admin ou perfil -- apenas no fluxo central de uso do app.
