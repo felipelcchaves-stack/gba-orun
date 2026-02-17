@@ -438,6 +438,7 @@ export type Database = {
           display_order: number
           id: string
           is_active: boolean
+          show_on_home: boolean
           title: string
         }
         Insert: {
@@ -448,6 +449,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          show_on_home?: boolean
           title: string
         }
         Update: {
@@ -458,6 +460,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          show_on_home?: boolean
           title?: string
         }
         Relationships: []
