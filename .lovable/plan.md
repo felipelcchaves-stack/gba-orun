@@ -1,45 +1,45 @@
 
-# Corrigir duplo "Voltar" e criar barra de progresso criativa
 
-## Problema 1: Dois botoes "Voltar"
+# Preservar quebras de linha nos rituais e tornar modais responsivos
 
-Na screenshot, ha dois links "Voltar" empilhados:
-1. O de `Oracle.tsx` (linha 20-25) -- volta para a tela de selecao de fluxos
-2. O de `DynamicFlowRunner.tsx` (linha 91-94) -- volta para o passo anterior do fluxo
+## Problema 1: Quebras de linha ignoradas
 
-**Solucao:** Remover o botao "Voltar" do `Oracle.tsx`. O `DynamicFlowRunner` ja tem seu proprio botao de voltar que navega entre os passos. Quando o historico estiver vazio (primeiro passo), o botao de voltar do `DynamicFlowRunner` chamara uma callback `onExit` para retornar a tela de selecao.
+O conteudo dos rituais e salvo com quebras de linha (`\n`), mas o ReactMarkdown trata `\n` simples como espaco (comportamento padrao do Markdown). Resultado: todo o texto aparece corrido em um unico bloco.
 
-## Problema 2: Barra de progresso com numeros em bolinhas
+**Solucao:** Adicionar a prop `breaks` do ReactMarkdown em todos os locais que renderizam conteudo de rituais. Essa prop faz com que `\n` simples se torne `<br>`, respeitando as quebras de linha originais. Tambem garantir que o CSS `prose-ritual` inclua `white-space: pre-line` no paragrafo para maior seguranca.
 
-A `OracleProgressBar` atual mostra bolinhas numeradas com labels fixos ("Obi", "Ire/Ibi", etc.) que nao correspondem aos fluxos dinamicos. Alem disso, os numeros nao sao intuitivos.
+## Problema 2: Modais nao responsivos
 
-**Solucao:** Substituir por uma barra de progresso contínua e criativa, sem numeros nem labels fixos:
-- Uma barra arredondada unica com preenchimento animado em gradiente (dourado para o marrom terra)
-- Um indicador de porcentagem sutil (ex: "Passo 2 de 6")
-- Icone decorativo (estrela/brilho) na ponta do progresso que acompanha o avanco
-- Transicao suave ao avancar
+Os modais de ritual (tanto no `FlowStepRenderer` quanto no `RitualHelpButton`) usam `max-w-lg` fixo sem ajustes para telas pequenas. Em celulares, o modal pode cortar conteudo ou ficar apertado.
+
+**Solucao:** Ajustar as classes dos `DialogContent` para incluir margens laterais em mobile (`mx-4`), altura maxima segura (`max-h-[85vh]`), e padding adequado. Usar `w-[calc(100vw-2rem)]` em mobile com `sm:max-w-lg` para desktop.
 
 ## Arquivos modificados
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/pages/Oracle.tsx` | Remover o botao "Voltar" duplicado; passar callback `onExit` para o `DynamicFlowRunner` |
-| `src/components/oracle/DynamicFlowRunner.tsx` | Receber prop `onExit`; no primeiro passo, o botao "Voltar" chama `onExit`; remover importacao de `OracleProgressBar` antiga |
-| `src/components/oracle/OracleProgressBar.tsx` | Reescrever completamente: barra continua com gradiente dourado-marrom, texto "Passo X de Y", icone brilhante na ponta do progresso, sem bolinhas numeradas |
+| `src/pages/RitualReader.tsx` | Adicionar prop `breaks` no ReactMarkdown (linha 109) |
+| `src/components/oracle/FlowStepRenderer.tsx` | No `LinkedRitualButton`: adicionar `breaks` no ReactMarkdown (linha 102), trocar `prose prose-sm` por `prose-ritual`, e tornar o `DialogContent` responsivo |
+| `src/components/RitualHelpButton.tsx` | Adicionar `breaks` no ReactMarkdown, trocar `prose prose-sm` por `prose-ritual`, e tornar o `DialogContent` responsivo |
+| `src/index.css` | Na classe `.prose-ritual p`, adicionar `white-space: pre-line` como seguranca extra |
 
 ## Detalhe tecnico
 
-**Oracle.tsx:** Remover linhas 20-25 (botao Voltar). Passar `onExit={() => setSelectedFlowId(null)}` ao `DynamicFlowRunner`.
+**ReactMarkdown com breaks:**
+```tsx
+<ReactMarkdown breaks>{ritual.content_full}</ReactMarkdown>
+```
+A prop `breaks` converte `\n` em `<br>`, preservando as quebras de linha do autor.
 
-**DynamicFlowRunner.tsx:**
-- Adicionar prop `onExit?: () => void`
-- No botao "Voltar" (quando `history.length > 0`), manter `goBack()`
-- Quando `history.length === 0` e nao e diagnostico, mostrar botao "Voltar" que chama `onExit()`
-- Isso unifica a navegacao em um unico botao
+**DialogContent responsivo:**
+```tsx
+<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-4 sm:p-6">
+```
+Isso garante que em mobile o modal tenha margem lateral de 1rem de cada lado, e em desktop mantenha a largura maxima de `lg`.
 
-**OracleProgressBar.tsx:** Nova versao:
-- Barra arredondada com gradiente `from-[#FFD700] to-[#8B4513]` (dourado para marrom terra, paleta do projeto)
-- Texto centralizado abaixo: "Passo {current} de {total}"
-- Animacao suave do preenchimento com `transition-all duration-700 ease-out`
-- Pequeno icone de brilho (Sparkles) posicionado na ponta da barra
-- Sem bolinhas, sem numeros dentro de circulos, sem labels fixos
+**CSS prose-ritual (seguranca extra):**
+```css
+.prose-ritual p { @apply mb-4 text-base leading-7; color: hsl(var(--muted-foreground)); white-space: pre-line; }
+```
+O `white-space: pre-line` preserva as quebras de linha mesmo fora do ReactMarkdown.
+
