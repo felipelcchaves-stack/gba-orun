@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 const AuthPage = () => {
   const { signIn, signUp } = useAuth();
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,7 +19,7 @@ const AuthPage = () => {
     if (isLogin) {
       const { error } = await signIn(email, password);
       if (error) toast.error(error.message);
-      else toast.success("Bem-vindo de volta!");
+      else { toast.success("Bem-vindo de volta!"); navigate("/"); }
     } else {
       const { error } = await signUp(email, password, name);
       if (error) toast.error(error.message);
