@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, Pencil, Trash2, Save, X } from "lucide-react";
 import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
+import OfferingCombobox from "@/components/OfferingCombobox";
 import { toast } from "sonner";
 
 const CONDITIONS = [
@@ -38,6 +39,7 @@ const EMPTY: Partial<OracleTaskTemplate> = {
   task_type: "",
   category: "",
   ritual_id: null,
+  offering_id: null,
   display_order: 0,
   intention: null,
   guidance_message: "",
@@ -83,6 +85,7 @@ const AdminOracleTaskTemplates = () => {
         oracle_result_key: form.oracle_result_key || null,
         ire_or_ibi: form.ire_or_ibi || null,
         ritual_id: form.ritual_id || null,
+        offering_id: form.offering_id || null,
       };
       if (!isNew && editingId) payload.id = editingId;
       await upsert.mutateAsync(payload as any);
@@ -159,6 +162,12 @@ const AdminOracleTaskTemplates = () => {
             <option value="">Nenhum</option>
             {rituals?.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
           </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Oferenda vinculada (opcional)</label>
+          <OfferingCombobox value={form.offering_id || null} onChange={v => setForm(f => ({ ...f, offering_id: v }))} />
         </div>
       </div>
       <div>

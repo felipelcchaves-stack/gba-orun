@@ -19,6 +19,7 @@ import AdminPlans from "@/components/admin/AdminPlans";
 import AdminPromotions from "@/components/admin/AdminPromotions";
 import AdminGuidance from "@/components/admin/AdminGuidance";
 import AdminIreIbiTypes from "@/components/admin/AdminIreIbiTypes";
+import AdminOfferings from "@/components/admin/AdminOfferings";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -203,6 +204,8 @@ const AdminPage = () => {
             )}
           </div>
         )}
+
+        {activeSection === "offerings" && <AdminOfferings />}
 
         {activeSection === "oracle" && (
           <div className="space-y-6">
