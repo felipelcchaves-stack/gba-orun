@@ -116,7 +116,6 @@ export const useFlowNodes = (flowId: string | undefined) =>
   useQuery({
     queryKey: ["oracle_flow_nodes", flowId],
     enabled: !!flowId,
-    staleTime: 1000 * 60 * 30,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("oracle_flow_nodes")
@@ -131,7 +130,6 @@ export const useFlowEdges = (flowId: string | undefined) =>
   useQuery({
     queryKey: ["oracle_flow_edges", flowId],
     enabled: !!flowId,
-    staleTime: 1000 * 60 * 30,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("oracle_flow_edges")
@@ -206,9 +204,11 @@ export const useSaveFlowCanvas = () => {
       return { nodeIdMap };
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ["oracle_flow_nodes", vars.flowId] });
-      qc.invalidateQueries({ queryKey: ["oracle_flow_edges", vars.flowId] });
-      qc.invalidateQueries({ queryKey: ["oracle_flows"] });
+      qc.invalidateQueries({ queryKey: ["oracle_flow_nodes", vars.flowId], refetchType: "all" });
+      qc.invalidateQueries({ queryKey: ["oracle_flow_edges", vars.flowId], refetchType: "all" });
+      qc.invalidateQueries({ queryKey: ["oracle_flows"], refetchType: "all" });
+      qc.removeQueries({ queryKey: ["oracle_flow_nodes"], type: "inactive" });
+      qc.removeQueries({ queryKey: ["oracle_flow_edges"], type: "inactive" });
     },
   });
 };
