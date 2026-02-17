@@ -11,6 +11,8 @@ export interface AdminProfile {
   care_day: number | null;
   guru_id: string | null;
   created_at: string;
+  gender: string | null;
+  birth_date: string | null;
 }
 
 export interface AdminStats {
@@ -20,6 +22,8 @@ export interface AdminStats {
   total_consultations: number;
   consultations_today: number;
   total_rituals: number;
+  total_posts: number;
+  total_replies: number;
 }
 
 export const useAdminProfiles = () => {
@@ -40,7 +44,7 @@ export const useAdminStats = () => {
       const { data, error } = await supabase.rpc("admin_get_stats");
       if (error) throw error;
       const row = (data as unknown as AdminStats[])?.[0];
-      return row ?? { total_users: 0, premium_users: 0, free_users: 0, total_consultations: 0, consultations_today: 0, total_rituals: 0 };
+      return row ?? { total_users: 0, premium_users: 0, free_users: 0, total_consultations: 0, consultations_today: 0, total_rituals: 0, total_posts: 0, total_replies: 0 };
     },
   });
 };

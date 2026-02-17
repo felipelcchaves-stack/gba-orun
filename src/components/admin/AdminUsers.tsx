@@ -3,45 +3,51 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useAdminProfiles } from "@/hooks/useAdminData";
-import { format } from "date-fns";
+import { format, differenceInYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const WEEKDAYS = ["", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-const FILTERS = [
+const GENDER_LABELS: Record<string, string> = {
+  masculino: "Masculino",
+  feminino: "Feminino",
+  nao_binario: "Não-binário",
+  prefiro_nao_dizer: "N/I",
+};
+
+const RELIGION_LABELS: Record<string, string> = {
+  candomble: "Candomblé",
+  umbanda: "Umbanda",
+  ifa: "Ifá",
+  outra: "Outra",
+  prefiro_nao_dizer: "N/I",
+};
+
+const STATUS_FILTERS = [
   { key: "all", label: "Todos" },
   { key: "premium", label: "Premium" },
   { key: "free", label: "Gratuito" },
 ] as const;
 
-type FilterKey = (typeof FILTERS)[number]["key"];
+type FilterKey = (typeof STATUS_FILTERS)[number]["key"];
 
 const AdminUsers = () => {
   const { data: profiles, isLoading } = useAdminProfiles();
-  const [filter, setFilter] = useState<FilterKey>("all");
+  const [statusFilter, setStatusFilter] = useState<FilterKey>("all");
+  const [genderFilter, setGenderFilter] = useState("");
+  const [religionFilter, setReligionFilter] = useState("");
 
   const filtered = (profiles ?? []).filter((p) => {
-    if (filter === "premium") return p.is_premium;
-    if (filter === "free") return !p.is_premium;
+    if (statusFilter === "premium" && !p.is_premium) return false;
+    if (statusFilter === "free" && p.is_premium) return false;
+    if (genderFilter && (p.gender || "") !== genderFilter) return false;
+    if (religionFilter && (p.religion || "") !== religionFilter) return false;
     return true;
   });
 
-  // Mock payment status based on is_premium for now
-  const getPaymentStatus = (isPremium: boolean) => {
-    if (!isPremium) return { label: "N/A", variant: "outline" as const };
-    // Mock: 80% em dia, 20% inadimplente
-    return Math.random() > 0.2
-      ? { label: "Em dia", variant: "default" as const }
-      : { label: "Inadimplente", variant: "destructive" as const };
-  };
-
-  // Cache the mock statuses so they don't re-randomize on re-render
-  const [paymentStatuses] = useState<Record<string, { label: string; variant: "default" | "destructive" | "outline" }>>({});
-  const getStablePaymentStatus = (id: string, isPremium: boolean) => {
-    if (!paymentStatuses[id]) {
-      paymentStatuses[id] = getPaymentStatus(isPremium);
-    }
-    return paymentStatuses[id];
+  const calcAge = (birthDate: string | null) => {
+    if (!birthDate) return "—";
+    return differenceInYears(new Date(), new Date(birthDate));
   };
 
   return (
@@ -52,13 +58,13 @@ const AdminUsers = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2">
-        {FILTERS.map(({ key, label }) => (
+      <div className="flex flex-wrap gap-2 items-center">
+        {STATUS_FILTERS.map(({ key, label }) => (
           <button
             key={key}
-            onClick={() => setFilter(key)}
+            onClick={() => setStatusFilter(key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === key
+              statusFilter === key
                 ? "bg-secondary text-secondary-foreground"
                 : "border border-border text-muted-foreground hover:bg-muted"
             }`}
@@ -66,7 +72,30 @@ const AdminUsers = () => {
             {label}
           </button>
         ))}
-        <span className="ml-auto text-sm text-muted-foreground self-center">
+
+        <select
+          value={genderFilter}
+          onChange={e => setGenderFilter(e.target.value)}
+          className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground"
+        >
+          <option value="">Gênero: Todos</option>
+          {Object.entries(GENDER_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+
+        <select
+          value={religionFilter}
+          onChange={e => setReligionFilter(e.target.value)}
+          className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground"
+        >
+          <option value="">Religião: Todas</option>
+          {Object.entries(RELIGION_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+
+        <span className="ml-auto text-sm text-muted-foreground">
           {filtered.length} usuário(s)
         </span>
       </div>
@@ -78,9 +107,10 @@ const AdminUsers = () => {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Gênero</TableHead>
+              <TableHead>Idade</TableHead>
               <TableHead>Religião</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Pagamento</TableHead>
               <TableHead>Dia de Cuidado</TableHead>
               <TableHead>Cadastro</TableHead>
             </TableRow>
@@ -88,35 +118,31 @@ const AdminUsers = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado.</TableCell>
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado.</TableCell>
               </TableRow>
             ) : (
-              filtered.map((p) => {
-                const payment = getStablePaymentStatus(p.id, p.is_premium);
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.display_name || "—"}</TableCell>
-                    <TableCell>{p.email}</TableCell>
-                    <TableCell>{p.religion || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={p.is_premium ? "default" : "secondary"} className={p.is_premium ? "bg-green-600 hover:bg-green-700" : ""}>
-                        {p.is_premium ? "Premium" : "Gratuito"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={payment.variant}>{payment.label}</Badge>
-                    </TableCell>
-                    <TableCell>{p.care_day ? WEEKDAYS[p.care_day] : "—"}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              filtered.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">{p.display_name || "—"}</TableCell>
+                  <TableCell>{p.email}</TableCell>
+                  <TableCell>{GENDER_LABELS[p.gender || ""] || "—"}</TableCell>
+                  <TableCell>{calcAge(p.birth_date)}</TableCell>
+                  <TableCell>{RELIGION_LABELS[p.religion || ""] || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant={p.is_premium ? "default" : "secondary"} className={p.is_premium ? "bg-green-600 hover:bg-green-700" : ""}>
+                      {p.is_premium ? "Premium" : "Gratuito"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{p.care_day !== null && p.care_day !== undefined ? WEEKDAYS[p.care_day] : "—"}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
