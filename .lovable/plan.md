@@ -1,102 +1,85 @@
 
+# Plano: Pergunta de Intenção antes do Oráculo
 
-# Plano: Links de Rituais em Qualquer Parte do App
+## O que muda
 
-## Resumo
+Hoje o fluxo do oráculo começa direto no resultado do Obi (Step 1). A ideia e adicionar um **Step 0** -- uma tela de "intenção" onde o usuario escolhe entre:
 
-Criar uma tabela de configuracao no banco de dados chamada `app_ritual_links` que permite ao admin vincular rituais a "pontos" especificos do app (ex: step do oraculo, tela de Iyami, campo de Ebo, etc.). Quando um ritual estiver vinculado, um botao de ajuda (icone de livro/interrogacao) aparece automaticamente naquele ponto, e ao clicar abre um modal com o conteudo do ritual.
+- **Cuidado Espiritual Semanal** -- rotina de manutenção
+- **Quero uma Orientação** -- consulta pontual/diagnóstico
 
----
-
-## Como Funciona
-
-### Para o Admin
-
-No painel Admin, uma nova secao "Links de Ajuda" com:
-- Uma lista de **pontos do app** pre-definidos (ex: "Oraculo - Resultado Obi", "Oraculo - Ire/Ibi", "Oraculo - Ebo", "Oraculo - Ori", "Oraculo - Iyami/Egbe", "Home - Cuidado Espiritual")
-- Cada ponto tem um **combobox de ritual** (usando o `RitualCombobox` ja existente)
-- Ao salvar, o link fica registrado no banco
-
-### Para o Devoto
-
-- Se o admin vinculou um ritual ao ponto "Oraculo - Ebo", quando o devoto chegar no step de Ebo, aparece um pequeno botao com icone de livro no canto superior direito
-- Ao clicar, abre um **Dialog modal** com o titulo do ritual e o conteudo em Markdown (usando `react-markdown` ja instalado)
-- Se nao ha ritual vinculado, o botao simplesmente nao aparece
+Essa escolha (chamada `intention`) sera salva no estado do wizard e propagada para:
+1. O fluxo visual (textos contextuais em cada step)
+2. A geração de tarefas (filtro por intenção nos templates)
+3. O registro da jornada (salvo no campo `context`)
 
 ---
 
-## Detalhes Tecnicos
+## Como funciona para o usuario
 
-### Migracao SQL
+1. Ao entrar em `/oraculo`, ve a nova tela com duas opções grandes e bonitas (mesmo estilo dos botões Ire/Ibi)
+2. Ao escolher, avança para o Step 1 (resultado do Obi) normalmente
+3. Os textos dos steps seguintes podem variar conforme a intenção (via `oracle_step_texts` no banco)
+4. No diagnóstico final, as tarefas geradas podem ser filtradas pela intenção (campo `intention` nos templates)
 
-Nova tabela `app_ritual_links`:
+---
 
+## Detalhes Técnicos
+
+### 1. Banco de Dados
+
+**Tabela `oracle_task_templates`** -- adicionar coluna:
 ```text
-- id: uuid (PK)
-- app_point: text (unique) -- ex: "oracle_step_obi", "oracle_step_ebo", "oracle_step_ori"
-- ritual_id: uuid (FK -> rituals.id, nullable)
-- created_at: timestamptz
+intention TEXT DEFAULT NULL
 ```
+- `NULL` = aplica para qualquer intenção (backward compatible)
+- `"cuidado_semanal"` = so aparece para cuidado semanal
+- `"orientacao"` = so aparece para orientação
 
-RLS: leitura para todos (authenticated), escrita somente admin.
+**Tabela `oracle_step_texts`** -- sem mudança estrutural. Basta cadastrar novas step_keys como `ebo_cuidado_semanal`, `ori_orientacao` etc. para textos contextuais (opcional, funciona com fallback).
 
-### Pontos Pre-definidos
+### 2. Novo Componente: `StepIntention.tsx`
 
-| Chave (app_point) | Onde aparece |
-|---|---|
-| `oracle_step_obi` | StepObiResult - titulo do oraculo |
-| `oracle_step_ire_ibi` | StepIreIbi - escolha Ire/Ibi |
-| `oracle_step_ebo` | StepEbo - apurou ebo? |
-| `oracle_step_ori` | StepOri - cuidado com Ori |
-| `oracle_step_iyami_egbe` | StepIyamiEgbe - Iyami e Egbe |
-| `oracle_step_diagnosis` | StepDiagnosis - diagnostico final |
-| `home_spiritual_care` | Card de cuidado espiritual na Home |
-| `home_energy_dashboard` | Dashboard de energias na Home |
+- Tela com titulo "Como posso te ajudar hoje?"
+- Dois cards: "Cuidado Espiritual Semanal" (icone calendario/escudo) e "Quero uma Orientação" (icone bussola/sparkles)
+- Callback `onSelect(intention: "cuidado_semanal" | "orientacao")`
 
-### Arquivos a Criar
+### 3. Alterações no `Oracle.tsx` (página principal)
 
-| Arquivo | Descricao |
-|---|---|
-| `src/hooks/useRitualLinks.ts` | Hook para buscar/salvar links ritual-ponto do app |
-| `src/components/RitualHelpButton.tsx` | Botao de ajuda + modal com conteudo do ritual |
-| `src/components/admin/AdminRitualLinks.tsx` | Tela admin para gerenciar os links |
+- Estado `intention` adicionado ao `WizardState`
+- Step 0 = StepIntention, Steps 1-6 viram Steps 2-7
+- A barra de progresso e o botão "Voltar" se ajustam ao novo total de steps
 
-### Arquivos a Modificar
+### 4. Alterações no `StepDiagnosis.tsx`
 
-| Arquivo | Mudanca |
-|---|---|
-| `src/components/oracle/StepObiResult.tsx` | Adicionar `<RitualHelpButton point="oracle_step_obi" />` |
-| `src/components/oracle/StepIreIbi.tsx` | Adicionar `<RitualHelpButton point="oracle_step_ire_ibi" />` |
-| `src/components/oracle/StepEbo.tsx` | Adicionar `<RitualHelpButton point="oracle_step_ebo" />` |
-| `src/components/oracle/StepOri.tsx` | Adicionar `<RitualHelpButton point="oracle_step_ori" />` |
-| `src/components/oracle/StepIyamiEgbe.tsx` | Adicionar `<RitualHelpButton point="oracle_step_iyami_egbe" />` |
-| `src/components/oracle/StepDiagnosis.tsx` | Adicionar `<RitualHelpButton point="oracle_step_diagnosis" />` |
-| `src/pages/Admin.tsx` | Adicionar aba/secao "Links de Ajuda" no sidebar |
-| `src/components/admin/AdminSidebar.tsx` | Adicionar item "Links de Ajuda" |
+- O `WizardState` ganha o campo `intention: "cuidado_semanal" | "orientacao"`
+- O filtro de templates adiciona: `if (t.intention && t.intention !== state.intention) return false;`
+- O `contextJson` salvo inclui a intenção
+- As notas do diagnóstico incluem a intenção
 
-### Componente RitualHelpButton
+### 5. Alterações no `AdminOracleTaskTemplates.tsx`
 
-Recebe uma prop `point` (string). Internamente:
-1. Usa o hook `useRitualLinks` para buscar o `ritual_id` vinculado aquele ponto
-2. Se nao tem ritual vinculado, retorna `null` (nao renderiza nada)
-3. Se tem, renderiza um botao discreto (icone `BookOpen` ou `HelpCircle`)
-4. Ao clicar, abre um `Dialog` com:
-   - Titulo do ritual
-   - Conteudo renderizado com `react-markdown`
-   - Player de audio se houver `audio_url`
-   - Botao para ir ao ritual completo (`/rituais/{id}`)
+- Novo campo "Intenção" no formulário de regra (select: Todas / Cuidado Semanal / Orientação)
+- Exibição da intenção na listagem de regras
 
-### Tela Admin - Links de Ajuda
+### 6. Ajuste no `OracleProgressBar`
 
-Lista todos os pontos do app em cards. Cada card tem:
-- Nome amigavel do ponto (ex: "Oraculo - Etapa do Ebo")
-- Descricao curta do que e aquele ponto
-- `RitualCombobox` para selecionar/trocar o ritual vinculado
-- Botao "Salvar" por card (ou auto-save ao selecionar)
+- Atualizar para suportar 7 steps ao inves de 6
+
+### 7. Hook `useOracleConfig.ts`
+
+- Tipo `OracleTaskTemplate` ganha `intention: string | null`
 
 ---
 
-## Resultado Esperado
+## Resumo das alterações
 
-O admin pode vincular qualquer ritual/reza a pontos estrategicos do app. Quando vinculado, um botao de ajuda aparece automaticamente naquele ponto. O devoto clica e ve o conteudo do ritual em um modal, sem sair da tela em que esta. Se nenhum ritual esta vinculado, o botao nao aparece. O sistema e extensivel -- basta adicionar novas chaves de `app_point` para expandir para outras telas no futuro.
-
+| Arquivo | Ação |
+|---|---|
+| Migration SQL | Adicionar coluna `intention` em `oracle_task_templates` |
+| `src/components/oracle/StepIntention.tsx` | Criar (novo step 0) |
+| `src/pages/Oracle.tsx` | Adicionar step 0, ajustar numeração |
+| `src/components/oracle/StepDiagnosis.tsx` | Filtrar por intention, salvar no context |
+| `src/components/oracle/OracleProgressBar.tsx` | Suportar 7 steps |
+| `src/hooks/useOracleConfig.ts` | Adicionar `intention` ao tipo |
+| `src/components/admin/AdminOracleTaskTemplates.tsx` | Campo intention no form |
