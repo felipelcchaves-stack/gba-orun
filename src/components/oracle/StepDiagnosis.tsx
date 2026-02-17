@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { CheckCircle, ChevronRight, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddXP } from "@/hooks/useUserStats";
 import { useAddJourneyEntry, useCreateJourneyTasks } from "@/hooks/useJourney";
@@ -9,6 +9,7 @@ import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
 import { useOracleConfigs, useOracleTaskTemplates } from "@/hooks/useOracleConfig";
 import { getObiIcon, getObiColor, OBI_RESULTS_FALLBACK } from "./StepObiResult";
 import { Progress } from "@/components/ui/progress";
+import RitualCombobox from "@/components/RitualCombobox";
 
 export interface WizardState {
   result: string;
@@ -94,6 +95,7 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [taskRitualOverrides, setTaskRitualOverrides] = useState<Record<number, string | null>>({});
 
   // Generate tasks from DB templates or fallback
   const tasks: TaskDef[] = (() => {
@@ -114,6 +116,21 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
       }));
   })();
 
+  // Auto-suggest rituals based on category match
+  useEffect(() => {
+    if (!rituals || rituals.length === 0 || tasks.length === 0) return;
+    const defaults: Record<number, string | null> = {};
+    tasks.forEach((t, i) => {
+      if (taskRitualOverrides[i] !== undefined) return; // already overridden
+      const match = t.ritual_id
+        ? rituals.find(r => r.id === t.ritual_id)
+        : rituals.find(r => r.category === t.category);
+      if (match) defaults[i] = match.id;
+    });
+    if (Object.keys(defaults).length > 0) {
+      setTaskRitualOverrides(prev => ({ ...defaults, ...prev }));
+    }
+  }, [rituals, tasks.length]);
   // Get config from DB or fallback
   const obiConfig = dbConfigs?.find(c => c.result_key === state.result);
   const fallback = OBI_RESULTS_FALLBACK.find(r => r.key === state.result);
@@ -150,15 +167,18 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
       });
 
       if (entry) {
-        const taskRows = tasks.map(t => {
-          const linkedRitual = t.ritual_id
-            ? rituals?.find(r => r.id === t.ritual_id)
-            : rituals?.find(r => r.category === t.category);
+        const taskRows = tasks.map((t, i) => {
+          const overrideId = taskRitualOverrides[i];
+          const ritualId = overrideId !== undefined ? overrideId : (
+            t.ritual_id
+              ? rituals?.find(r => r.id === t.ritual_id)?.id
+              : rituals?.find(r => r.category === t.category)?.id
+          ) || undefined;
           return {
             journey_id: (entry as any).id,
             task_type: t.type,
             task_title: t.title,
-            ritual_id: linkedRitual?.id || t.ritual_id || undefined,
+            ritual_id: ritualId,
           };
         });
         await createTasks.mutateAsync(taskRows);
@@ -208,15 +228,24 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
         {tasks.map((t, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 p-3.5 bg-card rounded-2xl shadow-card animate-fade-up"
+            className="p-3.5 bg-card rounded-2xl shadow-card animate-fade-up"
             style={{ animationDelay: `${(i + 1) * 80}ms` }}
           >
-            <img src={getCategoryImage(t.category)} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0" />
-            <div className="flex-1 min-w-0">
-              <h4 className="font-display font-bold text-sm">{t.title}</h4>
-              <p className="text-[11px] text-muted-foreground">{getCategoryLabel(t.category)}</p>
+            <div className="flex items-center gap-3">
+              <img src={getCategoryImage(t.category)} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0" />
+              <div className="flex-1 min-w-0">
+                <h4 className="font-display font-bold text-sm">{t.title}</h4>
+                <p className="text-[11px] text-muted-foreground">{getCategoryLabel(t.category)}</p>
+              </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+            <div className="mt-2">
+              <RitualCombobox
+                value={taskRitualOverrides[i] ?? null}
+                onChange={(ritualId) => setTaskRitualOverrides(prev => ({ ...prev, [i]: ritualId }))}
+                filterCategory={t.category}
+                placeholder="Vincular reza/ritual..."
+              />
+            </div>
           </div>
         ))}
       </div>
