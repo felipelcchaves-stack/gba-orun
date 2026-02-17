@@ -1,76 +1,113 @@
 
-# Novos Blocos + Clonagem de Fluxos
 
-## 1. Novos Tipos de Bloco
+# Correcao: Auto-Save + Fluxos nao Refletindo na Jornada
 
-Tres novos blocos para enriquecer a jornada do aluno:
+## Problemas Identificados
 
-### Bloco Media (imagem/video)
-- Permite inserir uma imagem (URL) ou um video do YouTube entre etapas
-- Config: `media_url`, `media_type` (image/youtube), `caption`
-- No canvas: icone de imagem com preview da URL
-- Para o aluno: renderiza imagem com legenda ou embed responsivo do YouTube, com botao "Continuar" abaixo
+### Problema 1: Auto-save interfere nas edicoes
+O auto-save grava no localStorage a cada 1 segundo de inatividade e tenta salvar no banco a cada 60 segundos. Isso causa dois problemas:
+- O salvamento automatico no banco pode sobrescrever mudancas em andamento ou disparar durante operacoes delicadas
+- O snapshot "limpo" e capturado uma unica vez no load, mas apos o save manual os IDs dos nodes mudam (de `temp_xxx` para UUIDs reais), invalidando o snapshot e fazendo o sistema achar que tudo mudou de novo
 
-### Bloco Timer (reflexao/pausa)
-- Exibe uma mensagem e um contador regressivo (ex: "Respire fundo por 15 segundos")
-- Config: `duration_seconds` (padrao 10), `message`
-- No canvas: icone de relogio com a duracao
-- Para o aluno: circulo animado preenchendo + contador. Botao "Continuar" aparece somente apos o tempo expirar
+### Problema 2: Rascunho aparece mesmo apos salvar
+Quando o usuario clica "Salvar Fluxo", o `markClean()` remove o rascunho do localStorage. Porem, o debounce de 1 segundo continua rodando e pode regravar o rascunho imediatamente apos o `markClean()`, pois os IDs mudaram durante o save (temp -> UUID) e o snapshot fica desatualizado.
 
-### Bloco Condicional (desvio por variavel)
-- Permite criar caminhos diferentes baseados no valor de uma variavel anterior (ex: se `resultado_obi` = "alafia", vai para caminho A; se = "oyekun", vai para caminho B)
-- Config: `variable_name` (qual variavel avaliar), `conditions` (array de `{ value, handle_id }`)
-- No canvas: icone de setas divergentes com badges das condicoes
-- Para o aluno: invisivel — o sistema avanca automaticamente pelo caminho correto sem interacao
+### Problema 3: Fluxos salvos nao aparecem na jornada
+O `useCreateJourneyTasks` nao inclui `offering_id` no tipo TypeScript. Alem disso, o cache dos fluxos no lado do usuario tem `staleTime` de 30 minutos, entao mudancas feitas no admin demoram para aparecer. Tambem existem caminhos no fluxo que nao chegam ao no de Diagnostico (dead ends).
 
 ---
 
-## 2. Clonagem de Fluxos
+## Solucao
 
-Botao "Duplicar" ao lado de cada fluxo na lista, que cria uma copia completa (nodes + edges) com o nome "[Nome Original] (copia)".
+### 1. Desativar auto-save automatico no banco (maior impacto)
 
-### Logica
-- Buscar todos os nodes e edges do fluxo original
-- Criar novo fluxo via `useCreateFlow` com nome + " (copia)"
-- Inserir os nodes copiados (com novos IDs temporarios) e edges remapeados
-- Reutilizar `useSaveFlowCanvas` que ja faz o mapeamento de IDs
+Remover o intervalo de 60 segundos que salva automaticamente. Manter apenas:
+- Deteccao de "dirty" (indicador visual amarelo)
+- Protecao `beforeunload` (aviso ao fechar aba com mudancas)
+- Rascunho local como seguranca (mas com logica corrigida)
+
+O usuario continua no controle total: salva apenas quando clica "Salvar Fluxo".
+
+**Arquivo: `src/hooks/useFlowAutoSave.ts`**
+- Remover o `setInterval` de auto-save (linhas 103-115)
+- Corrigir o snapshot limpo: atualizar `cleanSnapshotRef` dentro do `markClean` usando os nodes/edges atuais (ja faz, mas precisa cancelar o debounce pendente)
+- No `markClean`, cancelar qualquer debounce pendente para evitar regravacao do rascunho
+- Aumentar debounce de 1s para 3s para reduzir escritas no localStorage
+
+### 2. Corrigir rascunho fantasma apos salvar
+
+**Arquivo: `src/hooks/useFlowAutoSave.ts`**
+- Adicionar ref para controlar "cooldown" apos markClean
+- Apos `markClean`, ignorar a proxima deteccao de dirty por 5 segundos (tempo para os IDs se estabilizarem)
+
+### 3. Corrigir `offering_id` no hook de tarefas
+
+**Arquivo: `src/hooks/useJourney.ts`**
+- Adicionar `offering_id?: string` ao tipo do parametro de `useCreateJourneyTasks`
+
+### 4. Invalidar cache de fluxos apos salvar no admin
+
+**Arquivo: `src/hooks/useOracleFlows.ts`**
+- No `onSuccess` do `useSaveFlowCanvas`, invalidar tambem `["oracle_flows"]`
+
+### 5. Validacao de dead ends antes de salvar
+
+**Arquivo: `src/components/admin/flow-builder/FlowBuilder.tsx`**
+- Antes de salvar, verificar se existem nos sem edges de saida (exceto `diagnosis`)
+- Mostrar toast de aviso listando nos desconectados
+- Permitir salvar mesmo assim, mas alertar o admin
 
 ---
 
 ## Detalhes tecnicos
 
-### Arquivos novos (3)
+### useFlowAutoSave.ts - Mudancas principais
 
-1. **`src/components/admin/flow-builder/nodes/MediaNode.tsx`** — Visual do no de midia no canvas (icone Image, mostra URL truncada)
-2. **`src/components/admin/flow-builder/nodes/TimerNode.tsx`** — Visual do no de timer no canvas (icone Clock, mostra duracao)
-3. **`src/components/admin/flow-builder/nodes/ConditionalNode.tsx`** — Visual do no condicional no canvas (icone GitBranch, mostra variavel avaliada + handles dinamicos por condicao)
+```text
+Antes:
+- Debounce 1s grava rascunho no localStorage
+- Intervalo 60s salva no banco automaticamente
+- markClean atualiza snapshot mas debounce pode regravar
 
-### Arquivos modificados (5)
+Depois:
+- Debounce 3s grava rascunho no localStorage
+- SEM auto-save no banco (removido)
+- markClean cancela debounce pendente + cooldown de 5s
+```
 
-4. **`src/components/admin/flow-builder/NodePalette.tsx`**
-   - Adicionar 3 itens: `media` (Image), `timer` (Clock), `conditional` (GitBranch)
+### useJourney.ts - Tipo corrigido
 
-5. **`src/components/admin/flow-builder/FlowBuilder.tsx`**
-   - Registrar `media`, `timer` e `conditional` em `nodeTypes`
-   - Adicionar prefixos de variavel para os novos tipos no `VARIABLE_PREFIXES`
+Adicionar `offering_id` ao array de tasks:
+```typescript
+tasks: Array<{
+  journey_id: string;
+  task_type: string;
+  task_title: string;
+  ritual_id?: string;
+  offering_id?: string;  // <-- novo
+  guidance_message?: string;
+  guidance_audio_url?: string | null;
+}>
+```
 
-6. **`src/components/admin/flow-builder/NodeConfigPanel.tsx`**
-   - Campos para `media`: URL, tipo (image/youtube), legenda
-   - Campos para `timer`: duracao em segundos, mensagem durante espera
-   - Campos para `conditional`: seletor de variavel, lista de condicoes (valor + handle)
+### FlowBuilder.tsx - Validacao de dead ends
 
-7. **`src/components/oracle/FlowStepRenderer.tsx`**
-   - `MediaStep`: renderiza imagem ou iframe do YouTube + legenda + botao continuar
-   - `TimerStep`: circulo SVG animado + contador + botao que aparece apos o tempo
-   - `ConditionalStep`: avanca automaticamente chamando `onNext` com o handle correto baseado na variavel
+Funcao `findDeadEndNodes()`:
+- Percorre todos os nodes
+- Para cada node que NAO e `diagnosis`, verifica se existe pelo menos uma edge com `source === node.id`
+- Retorna lista de nodes sem saida
+- Exibe toast amarelo: "Atencao: os nos [X, Y] nao tem conexao de saida"
 
-8. **`src/components/admin/AdminFlows.tsx`**
-   - Adicionar botao "Duplicar" (icone Copy) na lista de fluxos
-   - Funcao `handleCloneFlow(flowId)` que:
-     1. Busca nodes e edges do fluxo via Supabase
-     2. Cria novo fluxo com nome + " (copia)"
-     3. Salva nodes/edges copiados via `useSaveFlowCanvas`
-     4. Abre o editor do novo fluxo
+---
 
-### Total: 8 arquivos (3 novos, 5 modificados)
-### Sem mudancas no banco de dados (nodes e edges ja usam `config` JSONB flexivel)
+## Resumo de arquivos
+
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/hooks/useFlowAutoSave.ts` | Remover auto-save no banco, corrigir rascunho fantasma, aumentar debounce |
+| `src/hooks/useJourney.ts` | Adicionar `offering_id` ao tipo |
+| `src/hooks/useOracleFlows.ts` | Invalidar cache de fluxos apos salvar canvas |
+| `src/components/admin/flow-builder/FlowBuilder.tsx` | Validacao de dead ends antes de salvar |
+
+**Total: 4 arquivos modificados, 0 novos**
+
