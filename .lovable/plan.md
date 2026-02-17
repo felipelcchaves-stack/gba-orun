@@ -1,66 +1,86 @@
 
-# Auto-Save para o Flow Builder
+# Modo Offline para Assinantes
 
-## Problema
+## O que muda para o usuario
 
-Atualmente o fluxo so e salvo quando voce clica manualmente em "Salvar Fluxo". Se a pagina recarregar (refresh, queda de internet, fechar aba acidentalmente), todo o trabalho nao salvo se perde.
+Quando o assinante perder a conexao, em vez de ver erros ou tela em branco, ele continuara vendo:
+- Rituais e oferendas que ja acessou (texto completo + imagens)
+- O fluxo do oraculo padrao (se ja foi carregado antes)
+- Um banner sutil no topo: "Voce esta offline — mostrando conteudo salvo"
 
-## Solucao
+Quando a conexao voltar, o app atualiza automaticamente.
 
-Implementar um sistema de auto-save em duas camadas:
+## Abordagem tecnica
 
-### Camada 1: Rascunho local (localStorage)
+Usar o React Query como camada de cache principal (`gcTime` e `staleTime` longos) combinado com `localStorage` para persistir os dados entre sessoes. O Service Worker (ja configurado via PWA) cuida do cache de assets estaticos e imagens.
 
-A cada alteracao no canvas (mover no, adicionar no, conectar, editar config), o estado completo de nodes e edges e salvo automaticamente no `localStorage` do navegador com a chave `flow_draft_{flowId}`.
+---
 
-- **Quando salva localmente:** A cada mudanca, com debounce de 1 segundo (evita salvar a cada pixel de arraste)
-- **Quando carrega:** Ao abrir o FlowBuilder, verifica se existe rascunho local MAIS RECENTE que os dados do banco. Se sim, pergunta ao usuario: "Encontramos um rascunho nao salvo. Deseja restaurar?"
-- **Quando limpa:** Apos um save com sucesso no banco, o rascunho local e apagado
+## Mudancas
 
-### Camada 2: Auto-save no banco (periodico)
+### 1. Configurar persistencia do React Query
 
-A cada 60 segundos, se houver alteracoes pendentes, o sistema salva automaticamente no banco (usando o mesmo `useSaveFlowCanvas`). Um indicador visual mostra o status:
+Usar `persistQueryClient` do TanStack Query para salvar o cache em `localStorage`. Assim, quando o app abre offline, os dados da ultima sessao estao disponiveis imediatamente.
 
-- Circulo verde: "Salvo"
-- Circulo amarelo: "Alteracoes nao salvas"
-- Animacao de loading: "Salvando..."
+**Arquivo: `src/App.tsx`**
+- Trocar `new QueryClient()` por um com `gcTime` alto (24h) e `staleTime` de 5 minutos
+- Adicionar `PersistQueryClientProvider` com storage em `localStorage`
 
-### Camada 3: Protecao contra saida
+**Dependencia nova:** `@tanstack/query-sync-storage-persister` + `@tanstack/react-query-persist-client`
 
-Um `beforeunload` event listener avisa o usuario se ele tentar fechar a aba com alteracoes nao salvas.
+### 2. Hook de deteccao de rede
 
-## Detalhes tecnicos
+Criar um hook `useOnlineStatus` que monitora `navigator.onLine` e os eventos `online`/`offline`.
 
-### Arquivo 1: `src/hooks/useFlowAutoSave.ts` (novo)
+**Arquivo novo: `src/hooks/useOnlineStatus.ts`**
+- Retorna `{ isOnline: boolean }`
+- Usa `addEventListener('online')` e `addEventListener('offline')`
 
-Hook customizado que encapsula toda a logica:
+### 3. Banner de offline
 
-- Recebe `flowId`, `nodes`, `edges`, `loaded` (se ja carregou do banco)
-- **Debounced localStorage save:** Salva nodes/edges no localStorage 1s apos qualquer mudanca
-- **Draft detection:** Ao montar, verifica se existe draft e retorna `hasDraft: true` + funcao `restoreDraft()`
-- **Dirty tracking:** Compara estado atual com ultimo save para saber se ha alteracoes pendentes (`isDirty`)
-- **Auto-save periodico:** `setInterval` de 60s que chama `handleSave` se `isDirty`
-- **beforeunload:** Registra/remove listener quando `isDirty` muda
-- **clearDraft:** Limpa localStorage apos save bem-sucedido
+Componente visual sutil que aparece no topo quando offline.
 
-### Arquivo 2: `src/components/admin/flow-builder/FlowBuilder.tsx` (modificado)
+**Arquivo novo: `src/components/OfflineBanner.tsx`**
+- Usa `useOnlineStatus`
+- Renderiza um banner amarelo fixo no topo: "Voce esta offline — mostrando conteudo salvo"
+- Desaparece automaticamente quando reconectar
 
-- Importar e usar `useFlowAutoSave`
-- Adicionar indicador de status ao lado do botao "Salvar Fluxo" (circulo colorido + texto)
-- Mostrar dialog de restauracao de rascunho ao carregar (se houver draft)
-- Passar callbacks de `onNodesChange` e `onEdgesChange` para o hook marcar como dirty
-- Apos save com sucesso, chamar `clearDraft()` e `markClean()`
+**Arquivo: `src/App.tsx`**
+- Renderizar `<OfflineBanner />` acima das rotas
 
-### Arquivo 3: `src/components/admin/flow-builder/AutoSaveIndicator.tsx` (novo)
+### 4. Melhorar cache do Service Worker para APIs
 
-Componente visual pequeno que mostra:
-- "Salvo" (verde) quando nao ha alteracoes
-- "Alteracoes nao salvas" (amarelo) quando dirty
-- "Salvando..." (animacao) durante save
-- "Ultimo save: ha X min" com timestamp
+Aumentar o cache do Workbox para chamadas ao backend, especialmente para rituais e oferendas.
 
-### Arquivos modificados: 3
+**Arquivo: `vite.config.ts`**
+- Adicionar regras de runtimeCaching mais granulares:
+  - Rituais/oferendas: `CacheFirst` com fallback (cache valido por 24h)
+  - Auth/premium: `NetworkOnly` (sempre precisa de rede)
+- Aumentar `maxEntries` de 50 para 200
+- Aumentar `maxAgeSeconds` de 300 para 86400 (24h)
 
-1. `src/hooks/useFlowAutoSave.ts` - novo hook com logica de auto-save
-2. `src/components/admin/flow-builder/FlowBuilder.tsx` - integrar auto-save + indicador + dialog de restauracao
-3. `src/components/admin/flow-builder/AutoSaveIndicator.tsx` - novo componente visual de status
+### 5. Queries com `staleTime` adequado por tipo de dado
+
+Ajustar os hooks existentes para que dados de conteudo (rituais, oferendas, fluxos) tenham `staleTime` longo, enquanto dados sensíveis (premium, auth) mantenham `staleTime` curto.
+
+**Arquivos modificados:**
+- `src/hooks/useRituals.ts` — adicionar `staleTime: 1000 * 60 * 30` (30 min)
+- `src/hooks/useOfferings.ts` — idem
+- `src/hooks/useOracleFlows.ts` — idem para nodes/edges
+
+---
+
+## Resumo de arquivos
+
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/App.tsx` | QueryClient persistido + OfflineBanner |
+| `src/hooks/useOnlineStatus.ts` | Novo hook |
+| `src/components/OfflineBanner.tsx` | Novo componente |
+| `vite.config.ts` | Cache rules melhoradas |
+| `src/hooks/useRituals.ts` | staleTime longo |
+| `src/hooks/useOfferings.ts` | staleTime longo |
+| `src/hooks/useOracleFlows.ts` | staleTime longo para nodes/edges |
+
+**Total: 7 arquivos (2 novos, 5 modificados)**
+**1 dependencia nova** (`@tanstack/react-query-persist-client` + `@tanstack/query-sync-storage-persister`)
