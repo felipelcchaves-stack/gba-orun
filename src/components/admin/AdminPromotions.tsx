@@ -5,9 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+
+const KNOWLEDGE_OPTIONS = [
+  { key: "obi", label: "Obi" },
+  { key: "ebo", label: "Ebo" },
+  { key: "ori", label: "Ori" },
+  { key: "iyami", label: "Iyami" },
+  { key: "egbe_orun", label: "Egbe Orun" },
+];
 
 const EMPTY: Omit<Promotion, "id" | "created_at"> = {
   title: "",
@@ -17,6 +26,8 @@ const EMPTY: Omit<Promotion, "id" | "created_at"> = {
   is_active: true,
   display_order: 0,
   show_on_home: false,
+  target_knowledge_gaps: [],
+  force_show_all: false,
 };
 
 const AdminPromotions = () => {
@@ -33,7 +44,7 @@ const AdminPromotions = () => {
   const openNew = () => { setEditing(null); setForm(EMPTY); setShowForm(true); };
   const openEdit = (p: Promotion) => {
     setEditing(p);
-    setForm({ title: p.title, description: p.description || "", banner_url: p.banner_url || "", checkout_url: p.checkout_url, is_active: p.is_active, display_order: p.display_order, show_on_home: p.show_on_home });
+    setForm({ title: p.title, description: p.description || "", banner_url: p.banner_url || "", checkout_url: p.checkout_url, is_active: p.is_active, display_order: p.display_order, show_on_home: p.show_on_home, target_knowledge_gaps: p.target_knowledge_gaps || [], force_show_all: p.force_show_all || false });
     setShowForm(true);
   };
 
@@ -88,6 +99,33 @@ const AdminPromotions = () => {
               <Switch checked={form.show_on_home} onCheckedChange={v => setForm(f => ({ ...f, show_on_home: v }))} />
               <Label>Exibir na Home</Label>
             </div>
+            <div className="space-y-2 pt-2 border-t">
+              <Label className="text-sm font-semibold">Segmentação por Conhecimento</Label>
+              <p className="text-xs text-muted-foreground">Mostra só para quem NÃO sabe os tópicos marcados</p>
+              <div className="flex flex-wrap gap-4">
+                {KNOWLEDGE_OPTIONS.map(opt => (
+                  <div key={opt.key} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={form.target_knowledge_gaps.includes(opt.key)}
+                      disabled={form.force_show_all}
+                      onCheckedChange={(checked) => {
+                        setForm(f => ({
+                          ...f,
+                          target_knowledge_gaps: checked
+                            ? [...f.target_knowledge_gaps, opt.key]
+                            : f.target_knowledge_gaps.filter(g => g !== opt.key),
+                        }));
+                      }}
+                    />
+                    <Label className="text-sm">{opt.label}</Label>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <Switch checked={form.force_show_all} onCheckedChange={v => setForm(f => ({ ...f, force_show_all: v }))} />
+                <Label>Forçar para todos (ignora segmentação — ex: Black Friday)</Label>
+              </div>
+            </div>
             <div className="flex gap-2">
               <Button onClick={handleSave}>{editing ? "Salvar" : "Criar"}</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
@@ -102,6 +140,7 @@ const AdminPromotions = () => {
             <TableRow>
               <TableHead>Título</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Público</TableHead>
               <TableHead>Home</TableHead>
               <TableHead>Ordem</TableHead>
               <TableHead>Ações</TableHead>
@@ -115,6 +154,15 @@ const AdminPromotions = () => {
                   <button onClick={() => toggleActive(p)} className="flex items-center gap-1.5 text-xs">
                     {p.is_active ? <><Eye className="h-3.5 w-3.5 text-green-600" /> Ativa</> : <><EyeOff className="h-3.5 w-3.5 text-muted-foreground" /> Inativa</>}
                   </button>
+                </TableCell>
+                <TableCell>
+                  <span className="text-xs text-muted-foreground">
+                    {p.force_show_all
+                      ? "Todos (forçado)"
+                      : p.target_knowledge_gaps?.length
+                        ? `Não sabe: ${p.target_knowledge_gaps.map(g => KNOWLEDGE_OPTIONS.find(o => o.key === g)?.label || g).join(", ")}`
+                        : "Todos"}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <span className={`text-xs ${p.show_on_home ? "text-accent font-semibold" : "text-muted-foreground"}`}>
