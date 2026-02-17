@@ -9,7 +9,7 @@
     --background: 30 25% 95%;
     --foreground: 25 40% 12%;
 
-    --card: 33 30% 92%;
+    --card: 36 30% 96%;
     --card-foreground: 25 40% 12%;
 
     --popover: 30 25% 95%;
@@ -52,7 +52,7 @@
     --earth-foreground: 40 100% 97%;
     --leaf: 120 61% 34%;
     --leaf-foreground: 40 100% 97%;
-    --warm-bg: 30 30% 97%;
+    --warm-bg: 36 40% 98%;
     --dark-wood: 25 40% 12%;
   }
 
@@ -198,3 +198,18 @@
 .prose-ritual strong { @apply font-bold; }
 .prose-ritual em { @apply italic; }
 .prose-ritual hr { @apply my-6 border-border; }
+
+/* Card elevated */
+.card-elevated {
+  @apply bg-card rounded-3xl border border-border shadow-sm;
+}
+
+/* Confetti animation for achievements */
+@keyframes confetti-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.animate-confetti {
+  animation: confetti-fall 3s ease-out forwards;
+}

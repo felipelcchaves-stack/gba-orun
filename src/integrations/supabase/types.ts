@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       oracle_meanings: {
         Row: {
           action: string
@@ -67,6 +88,7 @@ export type Database = {
       }
       rituals: {
         Row: {
+          audio_url: string | null
           category: string
           content_full: string
           created_at: string
@@ -78,6 +100,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audio_url?: string | null
           category?: string
           content_full?: string
           created_at?: string
@@ -89,6 +112,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audio_url?: string | null
           category?: string
           content_full?: string
           created_at?: string
@@ -100,6 +124,65 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          achievement_key: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_key: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_key?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_journey: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          id: string
+          oracle_result: string
+          suggested_ritual_id: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          oracle_result: string
+          suggested_ritual_id?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          oracle_result?: string
+          suggested_ritual_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_journey_suggested_ritual_id_fkey"
+            columns: ["suggested_ritual_id"]
+            isOneToOne: false
+            referencedRelation: "rituals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -116,6 +199,39 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          created_at: string
+          id: string
+          last_active: string
+          oracle_throws: number
+          rituals_read: number
+          streak_days: number
+          user_id: string
+          xp_total: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_active?: string
+          oracle_throws?: number
+          rituals_read?: number
+          streak_days?: number
+          user_id: string
+          xp_total?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_active?: string
+          oracle_throws?: number
+          rituals_read?: number
+          streak_days?: number
+          user_id?: string
+          xp_total?: number
         }
         Relationships: []
       }
