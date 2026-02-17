@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle, ChevronRight, Loader2, Play, Pause, BookOpen } from "lucide-react";
+import { CheckCircle, ChevronRight, Loader2, Play, Pause, BookOpen, UtensilsCrossed } from "lucide-react";
 import { type OracleFlowNode } from "@/hooks/useOracleFlows";
 import { useOracleConfigs } from "@/hooks/useOracleConfig";
 import { useIreIbiTypes } from "@/hooks/useIreIbiTypes";
@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAddXP } from "@/hooks/useUserStats";
 import { useAddJourneyEntry, useCreateJourneyTasks } from "@/hooks/useJourney";
 import { useRituals, useRitual } from "@/hooks/useRituals";
+import { useOfferings } from "@/hooks/useOfferings";
 import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
 import { Progress } from "@/components/ui/progress";
 import AudioPlayer from "@/components/AudioPlayer";
@@ -118,6 +119,74 @@ const LinkedRitualButton = ({ ritualId }: { ritualId: string }) => {
   );
 };
 
+// Linked offering button
+const LinkedOfferingButton = ({ offeringId }: { offeringId: string }) => {
+  const { data: offerings } = useOfferings();
+  const [open, setOpen] = useState(false);
+
+  const offering = offerings?.find((o) => o.id === offeringId);
+  if (!offering) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent/15 text-accent-foreground text-xs font-medium hover:bg-accent/25 transition-colors"
+      >
+        <UtensilsCrossed className="h-3.5 w-3.5" />
+        <span>Ver Oferenda: {offering.title}</span>
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-0">
+          {offering.image_url && (
+            <div className="relative w-full h-36 sm:h-44 rounded-t-2xl overflow-hidden">
+              <img src={offering.image_url} alt={offering.title} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="absolute bottom-3 left-4 right-4">
+                <h2 className="text-white font-display font-bold text-lg leading-tight">{offering.title}</h2>
+                <span className="text-white/70 text-xs capitalize">{offering.category}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="p-3 sm:p-4">
+            {!offering.image_url && (
+              <DialogHeader className="mb-3">
+                <DialogTitle>{offering.title}</DialogTitle>
+              </DialogHeader>
+            )}
+
+            {offering.audio_url && (
+              <div className="mb-3">
+                <AudioPlayer url={offering.audio_url} />
+              </div>
+            )}
+
+            {offering.ingredients && (
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold mb-1">Ingredientes</h3>
+                <div className="prose-ritual text-sm">
+                  <ReactMarkdown remarkPlugins={[remarkBreaks]}>{offering.ingredients}</ReactMarkdown>
+                </div>
+              </div>
+            )}
+
+            {offering.instructions && (
+              <div>
+                <h3 className="text-sm font-semibold mb-1">Modo de Preparo</h3>
+                <div className="prose-ritual text-sm">
+                  <ReactMarkdown remarkPlugins={[remarkBreaks]}>{offering.instructions}</ReactMarkdown>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 // Interpolate {{variable_name}} in text with answers
 function interpolateVars(text: string, answers: Record<string, string>): string {
   if (!text) return text;
@@ -137,9 +206,12 @@ const StepHeader = ({ node, answers }: { node: OracleFlowNode; answers?: Record<
       )}
       {(() => {
         const ritualIds = config.ritual_ids || (config.ritual_id ? [config.ritual_id] : []);
-        return ritualIds.length > 0 ? (
+        const offeringId = config.offering_id as string | undefined;
+        const hasLinks = ritualIds.length > 0 || offeringId;
+        return hasLinks ? (
           <div className="mt-2 flex flex-wrap gap-2">
             {ritualIds.map((id: string) => <LinkedRitualButton key={id} ritualId={id} />)}
+            {offeringId && <LinkedOfferingButton offeringId={offeringId} />}
           </div>
         ) : null;
       })()}
