@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOracleFlows } from "@/hooks/useOracleFlows";
 import DynamicFlowRunner from "@/components/oracle/DynamicFlowRunner";
@@ -17,18 +17,13 @@ const OraclePage = () => {
     return (
       <div className="min-h-screen pb-24 bg-background">
         <div className="max-w-lg mx-auto pt-10 px-6">
+          <button
+            onClick={() => setSelectedFlowId(null)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" /> Voltar
+          </button>
           <DynamicFlowRunner flowId={selectedFlowId} />
-        </div>
-      </div>
-    );
-  }
-
-  // Auto-start if only 1 active flow
-  if (!isLoading && activeFlows.length === 1) {
-    return (
-      <div className="min-h-screen pb-24 bg-background">
-        <div className="max-w-lg mx-auto pt-10 px-6">
-          <DynamicFlowRunner flowId={activeFlows[0].id} />
         </div>
       </div>
     );

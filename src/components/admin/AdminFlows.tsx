@@ -18,6 +18,7 @@ const AdminFlows = () => {
   const [newDesc, setNewDesc] = useState("");
   const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
   const [creatingDefault, setCreatingDefault] = useState(false);
+  const [creatingOrientation, setCreatingOrientation] = useState(false);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -148,6 +149,72 @@ const AdminFlows = () => {
     }
   };
 
+  const handleCreateOrientationFlow = async () => {
+    setCreatingOrientation(true);
+    try {
+      const flow = await createFlow.mutateAsync({
+        name: "Quero uma Orientação",
+        description: "Consulta rápida para buscar orientação espiritual sem lançamento de Obi",
+      });
+
+      const tempNodes = [
+        { id: "n_start", type: "start", label: "Início", config: { description: "Ponto de partida" }, x: 250, y: 0 },
+        { id: "n_welcome", type: "message", label: "Acolhimento", config: { message: "O que está tirando sua paz? Vamos buscar uma orientação juntos.", description: "Mensagem de acolhimento" }, x: 250, y: 120 },
+        { id: "n_area", type: "multiple_choice", label: "Área de Atenção", config: { question: "Qual área da sua vida precisa de atenção?", options: [{ label: "Saúde", description: "Questões de saúde física ou mental" }, { label: "Financeiro", description: "Questões financeiras e de prosperidade" }, { label: "Relacionamento", description: "Questões afetivas e familiares" }, { label: "Espiritual", description: "Questões de fé e conexão espiritual" }, { label: "Trabalho", description: "Questões profissionais e de carreira" }] }, x: 250, y: 260 },
+        { id: "n_cuidado", type: "yes_no", label: "Cuidado Recente", config: { question: "Já fez algum cuidado espiritual recentemente?", yes_label: "Sim", no_label: "Não", guidance_message: "Saber se você já fez algum cuidado ajuda a direcionar a orientação." }, x: 250, y: 400 },
+        { id: "n_limpeza", type: "yes_no", label: "Limpeza", config: { question: "Sente necessidade de uma limpeza espiritual?", yes_label: "Sim", no_label: "Não", guidance_message: "A limpeza espiritual remove energias densas e abre caminhos." }, x: 250, y: 540 },
+        { id: "n_ori", type: "yes_no", label: "Orí", config: { question: "O Orí precisa de fortalecimento?", yes_label: "Sim", no_label: "Não", guidance_message: "O Orí é sua essência. Quando enfraquecido, tudo fica mais difícil." }, x: 250, y: 680 },
+        { id: "n_diagnosis", type: "diagnosis", label: "Orientação", config: {
+          description: "Sua orientação espiritual",
+          guidance_message: "Confira as tarefas sugeridas com base nas suas respostas.",
+          tasks: [
+            { task_title: "Ebó de Limpeza", task_type: "ebo", category: "ebo", condition: "answer_equals:n_limpeza:sim", guidance_message: "Realize um Ebó de limpeza para remover energias negativas." },
+            { task_title: "Ibori de Fortalecimento", task_type: "ibori", category: "ibori", condition: "answer_equals:n_ori:sim", guidance_message: "Alimente seu Orí com o Ibori para fortalecê-lo." },
+            { task_title: "Oração ao Orí", task_type: "oracao_ori", category: "oracao_ori", condition: "answer_equals:n_ori:sim", guidance_message: "Faça a oração ao seu Orí." },
+            { task_title: "Oração da Manhã", task_type: "oracao_manha", category: "oracao_manha", condition: "always", guidance_message: "Inicie seu dia com a oração sagrada." },
+          ],
+        }, x: 250, y: 820 },
+      ];
+
+      const nodesPayload = tempNodes.map(n => ({
+        flow_id: flow.id,
+        node_type: n.type,
+        label: n.label,
+        config: { ...n.config, _tempId: n.id },
+        position_x: n.x,
+        position_y: n.y,
+      }));
+
+      const edgesPayload = [
+        { source: "n_start", target: "n_welcome", handle: "default" },
+        { source: "n_welcome", target: "n_area", handle: "default" },
+        { source: "n_area", target: "n_cuidado", handle: "default" },
+        { source: "n_cuidado", target: "n_limpeza", handle: "sim" },
+        { source: "n_cuidado", target: "n_limpeza", handle: "nao" },
+        { source: "n_limpeza", target: "n_ori", handle: "sim" },
+        { source: "n_limpeza", target: "n_ori", handle: "nao" },
+        { source: "n_ori", target: "n_diagnosis", handle: "sim" },
+        { source: "n_ori", target: "n_diagnosis", handle: "nao" },
+      ].map(e => ({
+        flow_id: flow.id,
+        source_node_id: e.source,
+        target_node_id: e.target,
+        source_handle: e.handle,
+        label: "",
+      }));
+
+      await saveCanvas.mutateAsync({ flowId: flow.id, nodes: nodesPayload, edges: edgesPayload });
+      await updateFlow.mutateAsync({ id: flow.id, is_active: true });
+
+      toast.success("Fluxo 'Quero uma Orientação' criado com sucesso!");
+      setEditingFlowId(flow.id);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setCreatingOrientation(false);
+    }
+  };
+
   if (editingFlowId) {
     const flow = flows?.find((f) => f.id === editingFlowId);
     return (
@@ -183,16 +250,26 @@ const AdminFlows = () => {
       {(!flows || flows.length === 0) && !isLoading && (
         <div className="text-center py-12 space-y-4">
           <p className="text-muted-foreground">Nenhum fluxo criado ainda.</p>
-          <button
-            onClick={handleCreateDefaultFlow}
-            disabled={creatingDefault}
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl font-semibold text-sm shadow-lg"
-          >
-            <Wand2 className="h-4 w-4" />
-            {creatingDefault ? "Criando..." : "Criar Fluxo Padrão (Cuidado Semanal)"}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={handleCreateDefaultFlow}
+              disabled={creatingDefault}
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl font-semibold text-sm shadow-lg"
+            >
+              <Wand2 className="h-4 w-4" />
+              {creatingDefault ? "Criando..." : "Cuidado Espiritual Semanal"}
+            </button>
+            <button
+              onClick={handleCreateOrientationFlow}
+              disabled={creatingOrientation}
+              className="inline-flex items-center gap-2 bg-secondary text-secondary-foreground px-6 py-3 rounded-xl font-semibold text-sm shadow-lg"
+            >
+              <Wand2 className="h-4 w-4" />
+              {creatingOrientation ? "Criando..." : "Quero uma Orientação"}
+            </button>
+          </div>
           <p className="text-xs text-muted-foreground max-w-md mx-auto">
-            Cria automaticamente um fluxo completo com todas as etapas do Oráculo: Obi, Irê/Ibi, Ebó, Orí, Iyami, Egbe Orun e Diagnóstico.
+            Escolha um template para começar. Você pode personalizar depois no editor visual.
           </p>
         </div>
       )}
@@ -240,15 +317,24 @@ const AdminFlows = () => {
             </div>
           ))}
 
-          {/* Show create default button even when flows exist */}
-          <button
-            onClick={handleCreateDefaultFlow}
-            disabled={creatingDefault}
-            className="inline-flex items-center gap-2 text-xs text-primary hover:underline mt-2"
-          >
-            <Wand2 className="h-3 w-3" />
-            {creatingDefault ? "Criando..." : "Criar mais um fluxo padrão"}
-          </button>
+          <div className="flex gap-3 mt-2">
+            <button
+              onClick={handleCreateDefaultFlow}
+              disabled={creatingDefault}
+              className="inline-flex items-center gap-2 text-xs text-primary hover:underline"
+            >
+              <Wand2 className="h-3 w-3" />
+              {creatingDefault ? "Criando..." : "+ Cuidado Semanal"}
+            </button>
+            <button
+              onClick={handleCreateOrientationFlow}
+              disabled={creatingOrientation}
+              className="inline-flex items-center gap-2 text-xs text-primary hover:underline"
+            >
+              <Wand2 className="h-3 w-3" />
+              {creatingOrientation ? "Criando..." : "+ Quero uma Orientação"}
+            </button>
+          </div>
         </div>
       ) : null}
     </div>
