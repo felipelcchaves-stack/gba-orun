@@ -6,14 +6,14 @@ import { useAuth } from "@/hooks/useAuth";
 import OracleProgressBar from "@/components/oracle/OracleProgressBar";
 import StepIntention from "@/components/oracle/StepIntention";
 import StepObiResult from "@/components/oracle/StepObiResult";
+import StepIreIbi from "@/components/oracle/StepIreIbi";
 import StepEbo from "@/components/oracle/StepEbo";
 import StepOri from "@/components/oracle/StepOri";
 import StepIyamiEgbe from "@/components/oracle/StepIyamiEgbe";
 import StepDiagnosis, { type WizardState } from "@/components/oracle/StepDiagnosis";
 import { useOracleConfigs } from "@/hooks/useOracleConfig";
-import { OBI_RESULTS_FALLBACK } from "@/components/oracle/StepObiResult";
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 const OraclePage = () => {
   const { user } = useAuth();
@@ -59,10 +59,7 @@ const OraclePage = () => {
           {step === 2 && (
             <>
               <StepObiResult onSelect={(key) => {
-                const config = dbConfigs?.find(c => c.result_key === key);
-                const fallback = OBI_RESULTS_FALLBACK.find(r => r.key === key);
-                const ireOrIbi = (config?.default_ire_ibi || fallback?.default_ire_ibi || "ibi") === "ire" ? "ire" : "ibi";
-                setState(s => ({ ...s, result: key, ireOrIbi }));
+                setState(s => ({ ...s, result: key }));
                 setStep(3);
               }} />
               {!user && (
@@ -74,35 +71,45 @@ const OraclePage = () => {
           )}
 
           {step === 3 && (
-            <StepEbo
-              ireOrIbi={state.ireOrIbi!}
-              onAnswer={(apurado, tipo) => {
-                setState(s => ({ ...s, eboApurado: apurado, eboTipo: tipo }));
+            <StepIreIbi
+              obiResult={state.result!}
+              onSelect={(category, typeId, typeName) => {
+                setState(s => ({ ...s, ireOrIbi: category, ireIbiTypeId: typeId, ireIbiTypeName: typeName }));
                 setStep(4);
               }}
             />
           )}
 
           {step === 4 && (
-            <StepOri
+            <StepEbo
               ireOrIbi={state.ireOrIbi!}
-              onAnswer={(precisa, acao) => {
-                setState(s => ({ ...s, oriPrecisa: precisa, oriAcao: acao }));
+              onAnswer={(apurado, tipo) => {
+                setState(s => ({ ...s, eboApurado: apurado, eboTipo: tipo }));
                 setStep(5);
               }}
             />
           )}
 
           {step === 5 && (
-            <StepIyamiEgbe
-              onAnswer={(iyamiQuer, egbeOrunQuer) => {
-                setState(s => ({ ...s, iyamiQuer, egbeOrunQuer }));
+            <StepOri
+              ireOrIbi={state.ireOrIbi!}
+              onAnswer={(precisa, acao) => {
+                setState(s => ({ ...s, oriPrecisa: precisa, oriAcao: acao }));
                 setStep(6);
               }}
             />
           )}
 
           {step === 6 && (
+            <StepIyamiEgbe
+              onAnswer={(iyamiQuer, egbeOrunQuer) => {
+                setState(s => ({ ...s, iyamiQuer, egbeOrunQuer }));
+                setStep(7);
+              }}
+            />
+          )}
+
+          {step === 7 && (
             <StepDiagnosis state={state as WizardState} />
           )}
         </div>

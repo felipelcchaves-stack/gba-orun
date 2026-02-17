@@ -18,6 +18,8 @@ export interface WizardState {
   intention: "cuidado_semanal" | "orientacao";
   result: string;
   ireOrIbi: "ire" | "ibi";
+  ireIbiTypeId?: string;
+  ireIbiTypeName?: string;
   eboApurado: boolean;
   eboTipo?: string;
   oriPrecisa: boolean;
@@ -156,6 +158,8 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
       const contextJson = JSON.stringify({
         intention: state.intention,
         ireOrIbi: state.ireOrIbi,
+        ireIbiTypeId: state.ireIbiTypeId,
+        ireIbiTypeName: state.ireIbiTypeName,
         eboApurado: state.eboApurado,
         eboTipo: state.eboTipo,
         oriPrecisa: state.oriPrecisa,
@@ -224,7 +228,7 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
           <div>
             <h3 className="font-display font-bold text-lg">{obiName}</h3>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${state.ireOrIbi === "ire" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
-              {state.ireOrIbi === "ire" ? "Irê" : "Ibi"}
+              {state.ireIbiTypeName || (state.ireOrIbi === "ire" ? "Irê" : "Ibi")}
             </span>
           </div>
         </div>
