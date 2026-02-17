@@ -1,8 +1,33 @@
 import { useState, useEffect } from "react";
 import { Ritual } from "@/hooks/useRituals";
+import { X } from "lucide-react";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
+
+const TASK_TYPES = [
+  { key: "ebo", label: "Ebó" },
+  { key: "ibori", label: "Ibori" },
+  { key: "oracao_ori", label: "Oração de Ori" },
+  { key: "oracao_iyami", label: "Oração de Iyami" },
+  { key: "oracao_manha", label: "Oração da Manhã" },
+  { key: "oracao_noite", label: "Oração da Noite" },
+  { key: "cantiga", label: "Cantiga" },
+  { key: "egbe_orun", label: "Egbe Orun" },
+  { key: "oriki", label: "Oriki" },
+  { key: "iyami", label: "Iyami" },
+];
+
+function parseTaskTypes(trigger: string | null): string[] {
+  if (!trigger) return [];
+  return trigger.split(",").filter(s => s.startsWith("task:")).map(s => s.replace("task:", ""));
+}
+
+function buildTriggerOracle(baseTrigger: string, taskTypes: string[]): string {
+  const nonTaskParts = baseTrigger.split(",").filter(s => !s.startsWith("task:") && s.trim());
+  const taskParts = taskTypes.map(t => `task:${t}`);
+  return [...nonTaskParts, ...taskParts].join(",");
+}
 
 interface AdminRitualFormProps {
   editing: Ritual | null;
@@ -18,20 +43,27 @@ const AdminRitualForm = ({ editing, onSave, onCancel }: AdminRitualFormProps) =>
   const [imageUrl, setImageUrl] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [isPremium, setIsPremium] = useState(false);
+  const [selectedTaskTypes, setSelectedTaskTypes] = useState<string[]>([]);
 
   useEffect(() => {
     if (editing) {
       setTitle(editing.title);
       setCategory(editing.category);
       setContentFull(editing.content_full);
-      setTriggerOracle(editing.trigger_oracle || "");
+      const raw = editing.trigger_oracle || "";
+      setTriggerOracle(raw.split(",").filter(s => !s.startsWith("task:")).join(","));
+      setSelectedTaskTypes(parseTaskTypes(editing.trigger_oracle));
       setImageUrl(editing.image_url || "");
       setAudioUrl((editing as any).audio_url || "");
       setIsPremium(editing.is_premium ?? false);
     } else {
-      setTitle(""); setCategory("geral"); setContentFull(""); setTriggerOracle(""); setImageUrl(""); setAudioUrl(""); setIsPremium(false);
+      setTitle(""); setCategory("geral"); setContentFull(""); setTriggerOracle(""); setImageUrl(""); setAudioUrl(""); setIsPremium(false); setSelectedTaskTypes([]);
     }
   }, [editing]);
+
+  const toggleTaskType = (key: string) => {
+    setSelectedTaskTypes(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +71,7 @@ const AdminRitualForm = ({ editing, onSave, onCancel }: AdminRitualFormProps) =>
       title,
       category,
       content_full: contentFull,
-      trigger_oracle: triggerOracle || null,
+      trigger_oracle: buildTriggerOracle(triggerOracle, selectedTaskTypes) || null,
       image_url: imageUrl || null,
       audio_url: audioUrl || null,
       is_premium: isPremium,
@@ -69,6 +101,33 @@ const AdminRitualForm = ({ editing, onSave, onCancel }: AdminRitualFormProps) =>
               </label>
             </div>
           </div>
+
+          {/* Task Types multi-select chips */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">Tipos de Tarefa Associados</label>
+            <p className="text-xs text-muted-foreground mb-2">Selecione para quais tarefas do oráculo este ritual será sugerido automaticamente.</p>
+            <div className="flex flex-wrap gap-2">
+              {TASK_TYPES.map(tt => {
+                const isSelected = selectedTaskTypes.includes(tt.key);
+                return (
+                  <button
+                    key={tt.key}
+                    type="button"
+                    onClick={() => toggleTaskType(tt.key)}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-foreground border-border hover:bg-muted"
+                    }`}
+                  >
+                    {tt.label}
+                    {isSelected && <X className="h-3 w-3" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-semibold mb-1">Trigger Oráculo (opcional)</label>
             <input type="text" value={triggerOracle} onChange={e => setTriggerOracle(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:ring-2 focus:ring-primary outline-none" placeholder="Ex: Ejife, Alafia..." />
