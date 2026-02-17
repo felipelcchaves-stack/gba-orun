@@ -17,7 +17,6 @@ export interface Ritual {
 export const useRituals = (category?: string) => {
   return useQuery({
     queryKey: ["rituals", category],
-    staleTime: 1000 * 60 * 30,
     queryFn: async () => {
       let query = supabase.from("rituals").select("*").order("created_at", { ascending: false });
       if (category) query = query.eq("category", category);
@@ -50,7 +49,10 @@ export const useCreateRitual = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["rituals"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rituals"], refetchType: "all" });
+      qc.removeQueries({ queryKey: ["rituals"], type: "inactive" });
+    },
   });
 };
 
@@ -64,7 +66,11 @@ export const useUpdateRitual = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["rituals"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rituals"], refetchType: "all" });
+      qc.invalidateQueries({ queryKey: ["ritual"], refetchType: "all" });
+      qc.removeQueries({ queryKey: ["rituals"], type: "inactive" });
+    },
   });
 };
 
@@ -77,6 +83,9 @@ export const useDeleteRitual = () => {
       const { error } = await supabase.from("rituals").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["rituals"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rituals"], refetchType: "all" });
+      qc.removeQueries({ queryKey: ["rituals"], type: "inactive" });
+    },
   });
 };
