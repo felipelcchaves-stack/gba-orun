@@ -118,13 +118,20 @@ const LinkedRitualButton = ({ ritualId }: { ritualId: string }) => {
   );
 };
 
+// Interpolate {{variable_name}} in text with answers
+function interpolateVars(text: string, answers: Record<string, string>): string {
+  if (!text) return text;
+  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => answers[key] || `{{${key}}}`);
+}
+
 // Common header for all steps
-const StepHeader = ({ node }: { node: OracleFlowNode }) => {
+const StepHeader = ({ node, answers }: { node: OracleFlowNode; answers?: Record<string, string> }) => {
   const config = node.config || {};
+  const vars = answers || {};
   return (
     <>
-      {node.label && <h2 className="text-xl font-display font-bold text-foreground">{node.label}</h2>}
-      {config.description && <p className="text-muted-foreground text-sm">{config.description}</p>}
+      {node.label && <h2 className="text-xl font-display font-bold text-foreground">{interpolateVars(node.label, vars)}</h2>}
+      {config.description && <p className="text-muted-foreground text-sm">{interpolateVars(config.description as string, vars)}</p>}
       {config.guidance_message && (
         <InlineGuidance message={config.guidance_message} audioUrl={config.guidance_audio_url} />
       )}
@@ -148,7 +155,7 @@ const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowSte
   if (node.node_type === "start") {
     return (
       <div className="text-center space-y-6 animate-fade-up">
-        <StepHeader node={node} />
+        <StepHeader node={node} answers={answers} />
         <button onClick={() => onNext("default")} className="px-8 py-3 rounded-2xl bg-primary text-primary-foreground font-bold text-lg shadow-lg">
           Começar
         </button>
@@ -160,9 +167,9 @@ const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowSte
   if (node.node_type === "message") {
     return (
       <div className="space-y-4 animate-fade-up">
-        <StepHeader node={node} />
-        {config.message && <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{config.message}</p>}
-        {config.audio_url && <AudioPlayer url={config.audio_url} />}
+        <StepHeader node={node} answers={answers} />
+        {config.message && <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{interpolateVars(config.message as string, answers)}</p>}
+        {config.audio_url && <AudioPlayer url={config.audio_url as string} />}
         <button onClick={() => onNext("default")} className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-lg">
           Continuar
         </button>
@@ -181,7 +188,7 @@ const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowSte
       (config.options || []).map((o: any) => typeof o === "string" ? { label: o } : o);
     return (
       <div className="space-y-4 animate-fade-up">
-        <StepHeader node={{ ...node, label: config.question || node.label }} />
+        <StepHeader node={{ ...node, label: config.question || node.label } as OracleFlowNode} answers={answers} />
         <div className="space-y-3">
           {options.map((opt, i) => (
             <button
@@ -212,7 +219,7 @@ const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowSte
   if (node.node_type === "open_question") {
     return (
       <div className="space-y-4 animate-fade-up">
-        <StepHeader node={{ ...node, label: config.question || node.label }} />
+        <StepHeader node={{ ...node, label: config.question || node.label } as OracleFlowNode} answers={answers} />
         <textarea
           value={openAnswer}
           onChange={(e) => setOpenAnswer(e.target.value)}
@@ -284,7 +291,7 @@ const YesNoStep = ({ node, config, onNext }: { node: OracleFlowNode; config: Rec
 
   return (
     <div className="space-y-4 animate-fade-up">
-      <StepHeader node={{ ...node, label: config.question || node.label }} />
+      <StepHeader node={{ ...node, label: config.question || node.label } as OracleFlowNode} answers={{}} />
       <div className="grid grid-cols-2 gap-4">
         <button onClick={() => onNext("sim", "sim")} className="py-4 rounded-2xl bg-primary/90 text-primary-foreground font-bold text-lg shadow-md hover:bg-primary transition">
           <span className="block">{yesLabel}</span>
@@ -344,7 +351,7 @@ const ObiStep = ({ node, onNext }: { node: OracleFlowNode; onNext: (h: string, a
 
   return (
     <div className="space-y-4 animate-fade-up">
-      <StepHeader node={node} />
+      <StepHeader node={node} answers={{}} />
       <div className="space-y-3">
         {configs.map((r) => (
           <button
@@ -388,7 +395,7 @@ const IreIbiStep = ({ node, onNext, answers }: { node: OracleFlowNode; onNext: (
     // Fallback simple ire/ibi
     return (
       <div className="space-y-4 animate-fade-up">
-        <StepHeader node={node} />
+        <StepHeader node={node} answers={answers} />
         <div className="grid grid-cols-2 gap-4">
           <button onClick={() => onNext("ire", "ire")} className="py-4 rounded-2xl bg-primary/90 text-primary-foreground font-bold text-lg shadow-md">Irê (Bom)</button>
           <button onClick={() => onNext("ibi", "ibi")} className="py-4 rounded-2xl bg-destructive/80 text-destructive-foreground font-bold text-lg shadow-md">Ibi (Ruim)</button>
@@ -399,7 +406,7 @@ const IreIbiStep = ({ node, onNext, answers }: { node: OracleFlowNode; onNext: (
 
   return (
     <div className="space-y-4 animate-fade-up">
-      <StepHeader node={node} />
+      <StepHeader node={node} answers={answers} />
       <p className="text-xs font-semibold px-2 py-0.5 rounded-full inline-block mb-2" style={{ background: defaultCategory === "ire" ? "var(--primary-10, rgba(34,139,34,0.1))" : "var(--destructive-10, rgba(220,38,38,0.1))" }}>
         {defaultCategory === "ire" ? "✨ Irê" : "⚠️ Ibi"}
       </p>
@@ -529,17 +536,18 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
 
   return (
     <div className="animate-fade-up">
-      <StepHeader node={node} />
+      <StepHeader node={node} answers={answers} />
 
       {/* Summary of answers */}
       <div className="bg-card rounded-2xl p-5 shadow-card mb-6">
         <h3 className="font-display font-bold text-lg mb-3">Resumo da Consulta</h3>
         <div className="space-y-1.5 text-xs text-muted-foreground">
-          {Object.entries(answers).map(([nodeId, answer]) => {
-            const srcNode = allNodes.find(n => n.id === nodeId);
-            const label = srcNode?.label || srcNode?.config?.question || nodeId;
+          {Object.entries(answers).map(([key, answer]) => {
+            // key is now variable_name or nodeId; try to find a readable label
+            const srcNode = allNodes.find(n => n.id === key || (n.config as any)?.variable_name === key);
+            const label = srcNode?.label || srcNode?.config?.question || key;
             return (
-              <p key={nodeId}>📿 <strong>{label}:</strong> {answer}</p>
+              <p key={key}>📿 <strong>{interpolateVars(label as string, answers)}:</strong> {answer}</p>
             );
           })}
         </div>
@@ -558,12 +566,12 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
                 <div className="flex items-center gap-3">
                   <img src={getCategoryImage(t.category)} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-display font-bold text-sm">{t.task_title}</h4>
+                    <h4 className="font-display font-bold text-sm">{interpolateVars(t.task_title, answers)}</h4>
                     <p className="text-[11px] text-muted-foreground">{getCategoryLabel(t.category)}</p>
                   </div>
                 </div>
                 {t.guidance_message && (
-                  <TaskGuidanceBubble message={t.guidance_message} audioUrl={t.guidance_audio_url} className="mt-2" />
+                  <TaskGuidanceBubble message={interpolateVars(t.guidance_message, answers)} audioUrl={t.guidance_audio_url} className="mt-2" />
                 )}
                 {/* Show linked rituals as buttons */}
                 {(() => {

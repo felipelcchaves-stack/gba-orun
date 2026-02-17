@@ -49,7 +49,8 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
     if (!edges || !currentNodeId) return;
 
     if (answer && currentNode) {
-      setAnswers((prev) => ({ ...prev, [currentNodeId]: answer }));
+      const varName = (currentNode.config as any)?.variable_name || currentNodeId;
+      setAnswers((prev) => ({ ...prev, [varName]: answer }));
     }
 
     const edge = edges.find(

@@ -112,6 +112,13 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
               <label className="text-xs font-medium text-muted-foreground">Descrição</label>
               <Textarea value={localConfig.description || ""} onChange={(e) => updateField("description", e.target.value)} className="mt-1 min-h-[50px]" placeholder="Texto explicativo..." />
             </div>
+            {nodeType !== "start" && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Nome da variável (opcional)</label>
+                <Input value={localConfig.variable_name || ""} onChange={(e) => updateField("variable_name", e.target.value)} className="mt-1" placeholder="Ex: resultado_obi" />
+                <p className="text-[10px] text-muted-foreground mt-0.5">Use para referenciar esta resposta em outros passos com {"{{nome}}"}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
