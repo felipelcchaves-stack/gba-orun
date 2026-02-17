@@ -17,15 +17,14 @@ interface UseFlowAutoSaveOptions {
 }
 
 const DRAFT_KEY = (id: string) => `flow_draft_${id}`;
-const DEBOUNCE_MS = 1000;
-const AUTO_SAVE_INTERVAL_MS = 60_000;
+const DEBOUNCE_MS = 3000;
+const COOLDOWN_MS = 5000;
 
 export function useFlowAutoSave({
   flowId,
   nodes,
   edges,
   loaded,
-  onSave,
   isSaving,
 }: UseFlowAutoSaveOptions) {
   const [isDirty, setIsDirty] = useState(false);
@@ -36,13 +35,7 @@ export function useFlowAutoSave({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cleanSnapshotRef = useRef<string>("");
-  const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isDirtyRef = useRef(false);
-  const isSavingRef = useRef(false);
-
-  // Keep refs in sync
-  isDirtyRef.current = isDirty;
-  isSavingRef.current = isSaving;
+  const cooldownUntilRef = useRef<number>(0);
 
   // Update status derived from isDirty + isSaving
   useEffect(() => {
@@ -80,6 +73,9 @@ export function useFlowAutoSave({
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
+      // Skip dirty detection during cooldown (after markClean)
+      if (Date.now() < cooldownUntilRef.current) return;
+
       const current = JSON.stringify({ nodes, edges });
       const dirty = current !== cleanSnapshotRef.current;
       setIsDirty(dirty);
@@ -99,31 +95,16 @@ export function useFlowAutoSave({
     };
   }, [nodes, edges, loaded, flowId]);
 
-  // Auto-save to DB every 60s
-  useEffect(() => {
-    if (!loaded) return;
-
-    autoSaveRef.current = setInterval(() => {
-      if (isDirtyRef.current && !isSavingRef.current) {
-        onSave();
-      }
-    }, AUTO_SAVE_INTERVAL_MS);
-
-    return () => {
-      if (autoSaveRef.current) clearInterval(autoSaveRef.current);
-    };
-  }, [loaded, onSave]);
-
   // beforeunload protection
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (isDirtyRef.current) {
+      if (isDirty) {
         e.preventDefault();
       }
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, []);
+  }, [isDirty]);
 
   const restoreDraft = useCallback(() => {
     setHasDraft(false);
@@ -139,6 +120,15 @@ export function useFlowAutoSave({
   }, [flowId]);
 
   const markClean = useCallback(() => {
+    // Cancel any pending debounce to prevent phantom draft
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+
+    // Set cooldown so next debounce cycles are ignored while IDs stabilize
+    cooldownUntilRef.current = Date.now() + COOLDOWN_MS;
+
     cleanSnapshotRef.current = JSON.stringify({ nodes, edges });
     setIsDirty(false);
     setLastSavedAt(new Date());
