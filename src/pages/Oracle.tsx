@@ -12,12 +12,15 @@ import StepOri from "@/components/oracle/StepOri";
 import StepIyamiEgbe from "@/components/oracle/StepIyamiEgbe";
 import StepDiagnosis, { type WizardState } from "@/components/oracle/StepDiagnosis";
 import { useOracleConfigs } from "@/hooks/useOracleConfig";
+import { useDefaultOracleFlow } from "@/hooks/useOracleFlows";
+import DynamicFlowRunner from "@/components/oracle/DynamicFlowRunner";
 
 const TOTAL_STEPS = 7;
 
 const OraclePage = () => {
   const { user } = useAuth();
   const { data: dbConfigs } = useOracleConfigs();
+  const { data: defaultFlow } = useDefaultOracleFlow();
   const [step, setStep] = useState(1);
   const [state, setState] = useState<Partial<WizardState>>({});
 
@@ -30,6 +33,17 @@ const OraclePage = () => {
     if (step <= 1) return;
     setStep(s => s - 1);
   };
+
+  // If a dynamic flow is active, use it instead of the hardcoded wizard
+  if (defaultFlow) {
+    return (
+      <div className="min-h-screen pb-24 bg-background">
+        <div className="max-w-lg mx-auto pt-10 px-6">
+          <DynamicFlowRunner flowId={defaultFlow.id} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-24 bg-background">

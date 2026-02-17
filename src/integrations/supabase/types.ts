@@ -355,6 +355,123 @@ export type Database = {
         }
         Relationships: []
       }
+      oracle_flow_edges: {
+        Row: {
+          flow_id: string
+          id: string
+          label: string
+          source_handle: string
+          source_node_id: string
+          target_node_id: string
+        }
+        Insert: {
+          flow_id: string
+          id?: string
+          label?: string
+          source_handle?: string
+          source_node_id: string
+          target_node_id: string
+        }
+        Update: {
+          flow_id?: string
+          id?: string
+          label?: string
+          source_handle?: string
+          source_node_id?: string
+          target_node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oracle_flow_edges_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "oracle_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oracle_flow_edges_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "oracle_flow_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oracle_flow_edges_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "oracle_flow_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oracle_flow_nodes: {
+        Row: {
+          config: Json
+          flow_id: string
+          id: string
+          label: string
+          node_type: string
+          position_x: number
+          position_y: number
+        }
+        Insert: {
+          config?: Json
+          flow_id: string
+          id?: string
+          label?: string
+          node_type: string
+          position_x?: number
+          position_y?: number
+        }
+        Update: {
+          config?: Json
+          flow_id?: string
+          id?: string
+          label?: string
+          node_type?: string
+          position_x?: number
+          position_y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oracle_flow_nodes_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "oracle_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oracle_flows: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       oracle_meanings: {
         Row: {
           action: string

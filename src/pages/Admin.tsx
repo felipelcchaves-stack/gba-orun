@@ -21,6 +21,7 @@ import AdminGuidance from "@/components/admin/AdminGuidance";
 import AdminIreIbiTypes from "@/components/admin/AdminIreIbiTypes";
 import AdminOfferings from "@/components/admin/AdminOfferings";
 import AdminReviews from "@/components/admin/AdminReviews";
+import AdminFlows from "@/components/admin/AdminFlows";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -240,6 +241,8 @@ const AdminPage = () => {
             {oracleSubTab === "ire_ibi" && <AdminIreIbiTypes />}
           </div>
         )}
+
+        {activeSection === "flows" && <AdminFlows />}
 
         {activeSection === "links" && <AdminRitualLinks />}
 
