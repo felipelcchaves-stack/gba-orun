@@ -11,6 +11,8 @@ export interface Promotion {
   is_active: boolean;
   display_order: number;
   show_on_home: boolean;
+  target_knowledge_gaps: string[];
+  force_show_all: boolean;
   created_at: string;
 }
 
@@ -30,20 +32,85 @@ export const usePromotions = (activeOnly = false) => {
   });
 };
 
-export const useHomeBannerPromotion = () => {
+export const useTargetedPromotions = () => {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["promotions", "home-banner"],
+    queryKey: ["promotions", "targeted", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: promos, error } = await supabase
+        .from("promotions")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+
+      if (!user) {
+        return (promos as Promotion[])?.filter(p =>
+          p.force_show_all || !p.target_knowledge_gaps?.length
+        );
+      }
+
+      const { data: knowledge } = await supabase
+        .from("user_knowledge")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      return (promos as Promotion[])?.filter(p => {
+        if (p.force_show_all) return true;
+        if (!p.target_knowledge_gaps?.length) return true;
+        const knowledgeMap: Record<string, boolean | undefined> = {
+          obi: knowledge?.knows_obi,
+          ebo: knowledge?.knows_ebo,
+          ori: knowledge?.knows_ori,
+          iyami: knowledge?.knows_iyami,
+          egbe_orun: knowledge?.knows_egbe_orun,
+        };
+        return p.target_knowledge_gaps.some(gap => !knowledgeMap[gap]);
+      });
+    },
+  });
+};
+
+export const useHomeBannerPromotion = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["promotions", "home-banner", user?.id],
+    queryFn: async () => {
+      const { data: promos, error } = await supabase
         .from("promotions")
         .select("*")
         .eq("is_active", true)
         .eq("show_on_home", true)
-        .order("display_order", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+        .order("display_order", { ascending: true });
       if (error) throw error;
-      return data as Promotion | null;
+      if (!promos?.length) return null;
+
+      if (!user) {
+        return (promos as Promotion[]).find(p =>
+          p.force_show_all || !p.target_knowledge_gaps?.length
+        ) || null;
+      }
+
+      const { data: knowledge } = await supabase
+        .from("user_knowledge")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const knowledgeMap: Record<string, boolean | undefined> = {
+        obi: knowledge?.knows_obi,
+        ebo: knowledge?.knows_ebo,
+        ori: knowledge?.knows_ori,
+        iyami: knowledge?.knows_iyami,
+        egbe_orun: knowledge?.knows_egbe_orun,
+      };
+
+      return (promos as Promotion[]).find(p => {
+        if (p.force_show_all) return true;
+        if (!p.target_knowledge_gaps?.length) return true;
+        return p.target_knowledge_gaps.some(gap => !knowledgeMap[gap]);
+      }) || null;
     },
   });
 };

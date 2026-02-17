@@ -1,9 +1,9 @@
-import { usePromotions, useTrackClick } from "@/hooks/usePromotions";
+import { useTargetedPromotions, useTrackClick } from "@/hooks/usePromotions";
 import { ExternalLink, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const PromotionsPage = () => {
-  const { data: promotions, isLoading } = usePromotions(true);
+  const { data: promotions, isLoading } = useTargetedPromotions();
   const trackClick = useTrackClick();
 
   const handleClick = (promo: any) => {

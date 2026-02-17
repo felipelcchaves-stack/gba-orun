@@ -478,9 +478,11 @@ export type Database = {
           created_at: string
           description: string | null
           display_order: number
+          force_show_all: boolean
           id: string
           is_active: boolean
           show_on_home: boolean
+          target_knowledge_gaps: string[]
           title: string
         }
         Insert: {
@@ -489,9 +491,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
+          force_show_all?: boolean
           id?: string
           is_active?: boolean
           show_on_home?: boolean
+          target_knowledge_gaps?: string[]
           title: string
         }
         Update: {
@@ -500,9 +504,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
+          force_show_all?: boolean
           id?: string
           is_active?: boolean
           show_on_home?: boolean
+          target_knowledge_gaps?: string[]
           title?: string
         }
         Relationships: []
