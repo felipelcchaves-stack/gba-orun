@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Compass, BookOpen, Map, User, Shield, GraduationCap } from "lucide-react";
+import { Home, MessageCircle, Map, User, Shield, GraduationCap } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 
 const BottomNav = () => {
@@ -11,7 +11,7 @@ const BottomNav = () => {
 
   const links = [
     { to: "/", icon: Home, label: "Início" },
-    { to: "/oraculo", icon: Compass, label: "Oráculo" },
+    { to: "/comunidade", icon: MessageCircle, label: "Comunidade" },
     { to: "/jornada", icon: Map, label: "Jornada" },
     { to: "/aprender", icon: GraduationCap, label: "Aprender" },
     { to: "/perfil", icon: User, label: "Perfil" },

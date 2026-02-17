@@ -1,7 +1,7 @@
 import { useJourneyByMonth, useCompleteJourney, useCompleteTask } from "@/hooks/useJourney";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
-import { Compass, Plus } from "lucide-react";
+import { Compass, Sparkles } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -85,8 +85,8 @@ const JourneyPage = () => {
             <h1 className="text-3xl font-display font-bold">Plano de Vida</h1>
             <p className="text-muted-foreground text-xs mt-0.5">Sua rotina espiritual</p>
           </div>
-          <Link to="/oraculo" className="p-2.5 rounded-xl bg-card shadow-card hover:shadow-soft transition-all">
-            <Plus className="h-5 w-5" strokeWidth={1.5} />
+          <Link to="/oraculo" className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 shadow-card hover:shadow-soft transition-all">
+            <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" strokeWidth={1.5} />
           </Link>
         </div>
 

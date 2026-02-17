@@ -13,6 +13,7 @@ import Journey from "./pages/Journey";
 import Learn from "./pages/Learn";
 import Profile from "./pages/Profile";
 import Oferta from "./pages/Oferta";
+import Community from "./pages/Community";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -34,6 +35,7 @@ const AppContent = () => {
         <Route path="/rituais" element={<Rituals />} />
         <Route path="/rituais/:id" element={<RitualReader />} />
         <Route path="/jornada" element={<Journey />} />
+        <Route path="/comunidade" element={<Community />} />
         <Route path="/aprender" element={<Learn />} />
         <Route path="/perfil" element={<Profile />} />
         <Route path="/oferta" element={<Oferta />} />
