@@ -1,82 +1,63 @@
 
-# Recuperar alteracoes do fluxo e corrigir salvamento
+# Flow Builder Responsivo - Tela Cheia
 
-## Situacao atual
+## Problema atual
 
-**Seus dados antigos estao SEGUROS no banco.** O que aconteceu:
+O Flow Builder esta limitado a `h-[70vh]` fixo, com padding de `p-8` da area admin e o painel de configuracao com `max-h-[70vh]` e largura fixa `w-80`. Isso desperdiça espaco util, especialmente em telas menores onde a sidebar admin (w-60) consome area importante.
 
-1. Voce fez alteracoes no canvas (trocou "Tipo de Ebo" por "Ebo ou Akulebo", entre outras mudancas)
-2. Ao salvar, o sistema tentou deletar os nos antigos e inserir os novos
-3. A politica de seguranca (RLS) bloqueou AMBAS as operacoes silenciosamente
-4. O DELETE retornou "sucesso" mas nao deletou nada (comportamento do PostgREST quando RLS bloqueia)
-5. O INSERT falhou com o erro que voce viu
+## Mudancas propostas
 
-**Resultado:** Os dados originais continuam no banco, intactos. Suas alteracoes estao apenas no canvas do navegador (enquanto voce nao recarregar a pagina).
+### 1. FlowBuilder ocupa toda a altura disponivel
 
-## Causa raiz
+Trocar `h-[70vh]` por `h-full` e garantir que o container pai preencha o espaco restante da tela. O FlowBuilder usara `flex-1` para crescer e ocupar tudo.
 
-Sua sessao de administrador provavelmente expirou. As tabelas `oracle_flow_nodes` e `oracle_flow_edges` exigem role de admin para INSERT/UPDATE/DELETE, mas permitem SELECT publico. Por isso voce consegue VER o fluxo mas nao salvar.
+### 2. AdminFlows em modo edicao usa layout de tela cheia
 
-## Plano de acao
+Quando editando um fluxo, o container remove o padding extra e usa `flex flex-col h-full` para que o FlowBuilder ocupe todo o espaco vertical disponivel. O botao "Voltar" e titulo ficam compactos no topo.
 
-### Passo 1: Recuperar acesso de admin
+### 3. Admin page reduz padding no modo fluxos
 
-- Faca logout e login novamente no app para renovar sua sessao
-- Depois de logar, volte ao Flow Builder e suas alteracoes AINDA estarao no canvas (o React mantem o estado)
+A `<main>` do Admin passa de `p-8` para padding reduzido quando a secao ativa for "flows" e estiver editando, maximizando a area do canvas.
 
-### Passo 2: Corrigir o salvamento para ser seguro (codigo)
+### 4. NodeConfigPanel responsivo
 
-O bug critico e que o `useSaveFlowCanvas` faz DELETE antes do INSERT sem verificar se o DELETE realmente funcionou. Se o INSERT falhar depois, os dados se perdem.
+- Em desktop: mantem o painel lateral com `max-h-[calc(100vh-8rem)]` em vez de `70vh`
+- Em mobile: o painel se torna um overlay/sheet que desliza por cima do canvas, evitando esmagar o canvas
 
-**Arquivo: `src/hooks/useOracleFlows.ts`**
+### 5. NodePalette colapsavel em mobile
 
-Modificar `useSaveFlowCanvas` para:
-- Verificar o resultado do DELETE (checar se retornou erro)
-- Fazer INSERT primeiro em uma tabela temporaria ou validar permissoes antes de deletar
-- Alternativa mais simples e eficaz: **verificar se o usuario tem permissao ANTES de deletar**, fazendo um INSERT de teste ou checando a sessao
-
-A abordagem escolhida sera:
-1. Antes de qualquer operacao, verificar se ha sessao ativa (`supabase.auth.getSession()`)
-2. Se nao houver sessao, lancar erro claro ("Sessao expirada, faca login novamente")
-3. Verificar erros nos DELETEs (o PostgREST retorna erro quando RLS bloqueia com token valido mas sem permissao)
-4. Somente se os DELETEs confirmarem sucesso, prosseguir com os INSERTs
-
-### Passo 3: Salvar novamente
-
-Apos relogar e com a correcao aplicada, clique em "Salvar Fluxo" novamente.
+A paleta de blocos fica como um botao flutuante em telas pequenas, abrindo um popover ao clicar, liberando espaco horizontal para o canvas.
 
 ## Detalhes tecnicos
 
-### Mudanca em `useSaveFlowCanvas` (useOracleFlows.ts)
+### Arquivo 1: `src/pages/Admin.tsx`
 
-```text
-Antes:
-  await supabase.from("oracle_flow_edges").delete().eq("flow_id", flowId);
-  await supabase.from("oracle_flow_nodes").delete().eq("flow_id", flowId);
-  // INSERT sem verificar se DELETE funcionou
+- Quando `activeSection === "flows"`, a `<main>` usa padding menor (`p-4` em vez de `p-8`) e `flex flex-col` com `h-screen` para permitir que o conteudo interno cresca
 
-Depois:
-  // 1. Verificar sessao ativa
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error("Sessao expirada. Faca login novamente para salvar.");
+### Arquivo 2: `src/components/admin/AdminFlows.tsx`
 
-  // 2. DELETE com verificacao de erro
-  const { error: delEdgesErr } = await supabase.from("oracle_flow_edges").delete().eq("flow_id", flowId);
-  if (delEdgesErr) throw new Error("Erro ao limpar edges: " + delEdgesErr.message);
+- No modo edicao (`editingFlowId`), o container usa `flex flex-col flex-1 min-h-0` para que o FlowBuilder preencha o espaco
+- Header compacto com titulo + botao voltar em uma unica linha
 
-  const { error: delNodesErr } = await supabase.from("oracle_flow_nodes").delete().eq("flow_id", flowId);
-  if (delNodesErr) throw new Error("Erro ao limpar nodes: " + delNodesErr.message);
+### Arquivo 3: `src/components/admin/flow-builder/FlowBuilder.tsx`
 
-  // 3. INSERT (ja existente, sem mudanca)
-```
+- Trocar `h-[70vh]` por `flex-1 min-h-0` (cresce com o container pai)
+- Em mobile (usar `useIsMobile`): NodePalette renderiza como botao flutuante + Popover
+- NodeConfigPanel em mobile: renderiza dentro de um Sheet (drawer) em vez de coluna lateral
 
-### Arquivo modificado: 1
+### Arquivo 4: `src/components/admin/flow-builder/NodeConfigPanel.tsx`
 
-1. `src/hooks/useOracleFlows.ts` - adicionar verificacao de sessao e erros nos DELETEs
+- Trocar `max-h-[70vh]` por `max-h-[calc(100vh-6rem)]` para usar mais altura
+- Exportar tambem uma versao que pode ser usada dentro de um Sheet
 
-## Acao imediata recomendada
+### Arquivo 5: `src/components/admin/flow-builder/NodePalette.tsx`
 
-1. **NAO recarregue a pagina** - suas alteracoes estao no canvas
-2. Aprove este plano para eu aplicar a correcao
-3. Faca logout e login novamente
-4. Volte ao Flow Builder e salve
+- Aceitar prop `collapsed` para renderizar como botao flutuante + Popover em mobile
+
+### Arquivos modificados: 5
+
+1. `src/pages/Admin.tsx` - padding dinamico para fluxos
+2. `src/components/admin/AdminFlows.tsx` - layout flex para modo edicao
+3. `src/components/admin/flow-builder/FlowBuilder.tsx` - altura flexivel + mobile adaptations
+4. `src/components/admin/flow-builder/NodeConfigPanel.tsx` - altura dinamica
+5. `src/components/admin/flow-builder/NodePalette.tsx` - modo colapsavel
