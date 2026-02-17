@@ -11,6 +11,8 @@ export interface OracleConfig {
   description_ibi: string;
   color_type: string;
   default_ire_ibi: string;
+  guidance_message: string;
+  guidance_audio_url: string | null;
   display_order: number;
 }
 
