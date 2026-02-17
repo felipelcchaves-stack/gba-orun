@@ -208,6 +208,7 @@ export const useSaveFlowCanvas = () => {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["oracle_flow_nodes", vars.flowId] });
       qc.invalidateQueries({ queryKey: ["oracle_flow_edges", vars.flowId] });
+      qc.invalidateQueries({ queryKey: ["oracle_flows"] });
     },
   });
 };

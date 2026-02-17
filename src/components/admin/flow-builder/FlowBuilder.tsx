@@ -245,7 +245,23 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
     setSelectedNode(null);
   };
 
+  // Dead-end validation
+  const findDeadEndNodes = useCallback(() => {
+    return nodes.filter((n) => {
+      if (n.type === "diagnosis") return false;
+      const hasOutgoing = edges.some((e) => e.source === n.id);
+      return !hasOutgoing;
+    });
+  }, [nodes, edges]);
+
   const handleManualSave = async () => {
+    // Warn about dead-end nodes
+    const deadEnds = findDeadEndNodes();
+    if (deadEnds.length > 0) {
+      const names = deadEnds.map((n) => (n.data as any)?.label || n.type || n.id).join(", ");
+      toast.warning(`Atenção: os nós [${names}] não têm conexão de saída. Eles não serão alcançados no fluxo.`, { duration: 6000 });
+    }
+
     try {
       await handleSave();
       markClean();

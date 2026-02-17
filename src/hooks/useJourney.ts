@@ -89,6 +89,7 @@ export const useCreateJourneyTasks = () => {
       task_type: string;
       task_title: string;
       ritual_id?: string;
+      offering_id?: string;
       guidance_message?: string;
       guidance_audio_url?: string | null;
     }>) => {
@@ -97,6 +98,7 @@ export const useCreateJourneyTasks = () => {
         ...t,
         user_id: user.id,
         ritual_id: t.ritual_id || null,
+        offering_id: t.offering_id || null,
       }));
       const { error } = await supabase.from("journey_tasks" as any).insert(rows);
       if (error) throw error;
