@@ -1,101 +1,129 @@
 
 
-# Plano: Orientacao do Mestre em Todo o Fluxo do Oraculo
+# Plano: Controle de Inadimplencia e Protecao de Conteudo Premium
 
-## Resumo
+## Problema Atual
 
-Adicionar campos de orientacao (mensagem + audio) e links de ritual/oferenda em todos os pontos de decisao do oraculo, dando ao admin total flexibilidade para conduzir o aluno em cada escolha.
+Hoje o sistema depende exclusivamente do webhook da Guru para atualizar o status da assinatura. Se o webhook falhar ou atrasar, um aluno inadimplente pode continuar usando o conteudo premium indefinidamente. Alem disso, nao existe nenhum aviso visual para o aluno que esta com pagamento pendente.
 
-## O que muda
+## O que sera implementado
 
-### 1. Tipos de Ire/Ibi - Orientacao + Link
+### 1. Verificacao Automatica de Expiracao (Cron Job)
 
-Hoje os subtipos de Ire e Ibi (ex: Ire Aje, Ibi Iku) so tem nome e descricao. Vamos adicionar:
+Uma funcao que roda automaticamente a cada hora no servidor, verificando todos os usuarios com assinatura ativa cuja data de expiracao ja passou. Esses usuarios serao marcados como "inadimplentes" e terao o acesso premium bloqueado automaticamente.
 
-- `guidance_message` (texto de orientacao do mestre)
-- `guidance_audio_url` (audio opcional)
-- `ritual_id` (link para uma reza/ritual)
-- `offering_id` (link para uma oferenda)
+Isso garante que mesmo se o webhook da Guru falhar, ninguem fica consumindo conteudo sem pagar.
 
-**No app:** Quando o usuario selecionar um subtipo (ex: "Ire Aje"), antes de avancar, aparece o balao do mestre com a orientacao e os links para reza/oferenda sugerida -- mesmo padrao que ja funciona no resultado do Obi.
+### 2. Banner de Inadimplencia no App
 
-**No admin:** O formulario de Tipos de Ire/Ibi ganha os campos extras.
+Quando o aluno estiver com status "inadimplente" (overdue) ou "cancelado", aparecera um banner fixo no topo da tela inicial com uma mensagem amigavel pedindo que regularize o pagamento, com botao direto para a pagina de planos.
 
-### 2. Sub-etapas do Ebo - Orientacao
+### 3. Banner de Assinatura Prestes a Expirar
 
-Hoje ao selecionar "Sim, ja sei qual ebo" e escolher o tipo (Limpeza, Prosperidade, etc.), nao aparece nenhuma orientacao. Vamos adicionar um GuidanceBubble para cada sub-etapa:
+Quando faltarem 3 dias ou menos para a assinatura expirar, aparecera um banner amarelo de aviso: "Sua assinatura expira em X dias. Renove para nao perder acesso."
 
-- `oracle_step_ebo_types` (orientacao na tela de selecao de tipo de ebo)
+### 4. Bloqueio Reforçado no Frontend
 
-### 3. Sub-etapas do Ori - Orientacao
+O hook `usePremium` ja faz uma verificacao de expiracao no cliente, mas vamos reforcar:
+- Toda vez que `subscription_expires_at` estiver no passado, tratar como nao-premium independente do campo `is_premium`
+- Mostrar o modal de bloqueio premium automaticamente em conteudos restritos
 
-Mesmo caso: ao selecionar "Sim, precisa de cuidado" e escolher Ibori/Oracao/Ambos, nao aparece orientacao. Vamos adicionar:
+### 5. Tela de Status da Assinatura no Perfil
 
-- `oracle_step_ori_actions` (orientacao na tela de selecao de acao do Ori)
-
-### 4. Egbe Orun - Orientacao
-
-A tela do Egbe Orun nao tem GuidanceBubble. Vamos adicionar:
-
-- `oracle_step_egbe` (orientacao na tela do Egbe Orun)
+Na pagina de perfil do usuario, adicionar uma secao mostrando:
+- Status atual (Ativo, Inadimplente, Cancelado, Gratuito)
+- Data de expiracao
+- Botao para renovar/assinar
 
 ## Alteracoes por arquivo
 
 | Arquivo | Acao |
 |---|---|
-| Migration SQL | Adicionar `guidance_message`, `guidance_audio_url`, `ritual_id`, `offering_id` na tabela `ire_ibi_types` |
-| `src/hooks/useIreIbiTypes.ts` | Atualizar interface com novos campos |
-| `src/components/admin/AdminIreIbiTypes.tsx` | Adicionar campos de orientacao, ritual e oferenda no formulario |
-| `src/components/oracle/StepIreIbi.tsx` | Mostrar orientacao do mestre + links apos selecionar subtipo (mesmo padrao StepObiResult) |
-| `src/components/oracle/StepEbo.tsx` | Adicionar GuidanceBubble na sub-tela de tipos de ebo |
-| `src/components/oracle/StepOri.tsx` | Adicionar GuidanceBubble na sub-tela de acoes do Ori |
-| `src/components/oracle/StepIyamiEgbe.tsx` | Adicionar GuidanceBubble na sub-tela do Egbe Orun |
+| `supabase/functions/check-expired-subscriptions/index.ts` | Nova edge function que marca usuarios expirados como inadimplentes |
+| Migration SQL | Criar cron job que chama a edge function a cada hora |
+| `src/components/home/SubscriptionBanner.tsx` | Novo componente: banner de inadimplencia e aviso de expiracao |
+| `src/pages/Home.tsx` | Adicionar SubscriptionBanner no topo |
+| `src/hooks/usePremium.ts` | Reforcar verificacao de expiracao + exportar dias restantes |
+| `src/pages/Profile.tsx` | Adicionar secao de status da assinatura |
 
 ## Detalhes Tecnicos
 
-### Migration SQL
+### Edge Function: check-expired-subscriptions
 
 ```text
-ALTER TABLE public.ire_ibi_types
-  ADD COLUMN guidance_message text NOT NULL DEFAULT '',
-  ADD COLUMN guidance_audio_url text,
-  ADD COLUMN ritual_id uuid REFERENCES public.rituals(id) ON DELETE SET NULL,
-  ADD COLUMN offering_id uuid REFERENCES public.offerings(id) ON DELETE SET NULL;
+-- Logica:
+1. Buscar todos os profiles onde is_premium = true
+   E subscription_expires_at < now()
+2. Atualizar esses registros:
+   is_premium = false, subscription_status = 'overdue'
+3. Retornar quantidade de usuarios afetados
 ```
 
-### StepIreIbi - Fluxo com orientacao
+A funcao usa `SUPABASE_SERVICE_ROLE_KEY` para ter permissao de atualizar qualquer perfil.
 
-Mesmo padrao do StepObiResult:
-1. Usuario clica em um subtipo (ex: "Ire Aje")
-2. Se tiver `guidance_message`, mostra tela intermediaria com:
-   - Nome e descricao do subtipo
-   - Balao do mestre com orientacao
-   - Link para ritual vinculado (se houver)
-   - Link para oferenda vinculada (se houver)
-   - Botao "Continuar" para avancar
-3. Se nao tiver orientacao, avanca direto (comportamento atual)
+### Cron Job (pg_cron + pg_net)
 
-### AdminIreIbiTypes - Novos campos
+Agendamento para chamar a edge function a cada hora:
 
-No formulario de edicao, adicionar:
-- Textarea "Orientacao do Mestre" (guidance_message)
-- Input "URL do Audio" (guidance_audio_url)
-- RitualCombobox para vincular ritual
-- OfferingCombobox para vincular oferenda
+```text
+cron.schedule('check-expired-subs', '0 * * * *', ...)
+```
 
-### GuidanceBubble nas sub-etapas
+### SubscriptionBanner
 
-Adicionar o componente GuidanceBubble ja existente com point_keys novos:
-- `oracle_step_ebo_types` - tela de selecao do tipo de ebo
-- `oracle_step_ori_actions` - tela de selecao da acao do Ori
-- `oracle_step_egbe` - tela do Egbe Orun
+Componente que usa o hook `usePremium` para decidir o que mostrar:
 
-Esses point_keys podem ser configurados pelo admin na secao "Orientacao" do painel, sem necessidade de nova tabela.
+- **Status "overdue"**: Banner vermelho — "Seu acesso esta suspenso. Regularize seu pagamento para continuar usando o conteudo exclusivo." + Botao "Renovar Agora"
+- **Status "cancelled"**: Banner amarelo — "Sua assinatura foi cancelada. Assine novamente para recuperar o acesso." + Botao "Ver Planos"
+- **Expiracao proxima (3 dias ou menos)**: Banner amarelo suave — "Sua assinatura expira em X dia(s). Renove para nao perder acesso."
+- **Status "active" com mais de 3 dias**: Nao mostra nada
+
+### usePremium - Melhorias
+
+Adicionar ao retorno:
+- `daysRemaining`: numero de dias ate a expiracao (null se nao tem assinatura)
+- `isExpiringSoon`: true se faltam 3 dias ou menos
+- `isOverdue`: true se status e "overdue"
+
+### Perfil - Secao de Assinatura
+
+Cartao mostrando:
+- Icone e badge colorido com o status
+- "Expira em DD/MM/AAAA" ou "Expirou em DD/MM/AAAA"
+- Botao contextual: "Renovar" (se overdue/cancelled) ou "Gerenciar" (se ativo)
+
+## Fluxo Completo de Protecao
+
+```text
+Aluno paga na Guru
+       |
+       v
+Webhook atualiza: is_premium=true, expires_at=+30 dias
+       |
+       v
+Aluno usa o app normalmente
+       |
+       v
+Faltam 3 dias --> Banner amarelo de aviso
+       |
+       v
+Data expira sem renovacao
+       |
+       v
+Cron job (a cada hora) --> marca overdue, is_premium=false
+       |
+       v
+Aluno ve banner vermelho + conteudo bloqueado
+       |
+       v
+Aluno renova --> Webhook reativa --> Ciclo recomeça
+```
 
 ## Resultado Esperado
 
-1. O admin cadastra orientacao, reza e oferenda em cada subtipo de Ire/Ibi
-2. Em cada ponto de decisao do oraculo, o aluno ve a orientacao do mestre antes de avancar
-3. As sub-etapas (tipo de ebo, acao do ori, egbe orun) tambem mostram a orientacao contextual
-4. Total flexibilidade para o admin conduzir o aluno em todo o fluxo
+1. Nenhum aluno consegue consumir conteudo premium apos a data de expiracao
+2. O sistema se auto-corrige mesmo se o webhook falhar, gracas ao cron job
+3. O aluno recebe avisos visuais claros antes e depois da expiracao
+4. O admin pode ver o status de cada usuario no painel (ja existe)
+5. Protecao em duas camadas: servidor (cron) + cliente (hook usePremium)
 
