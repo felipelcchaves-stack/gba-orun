@@ -1,57 +1,156 @@
 
 
-# Plano: Corrigir redirecionamento e visibilidade do botao "Iniciar Rotina"
+# Plano: Cadastro de Oferendas com Link nas Tarefas do Oraculo
 
-## Problemas Identificados
+## O que e
 
-### 1. Redirecionamento incorreto
-Ao concluir o diagnostico do Oraculo e salvar a rotina, o app redireciona para `/jornada` (Plano de Vida) em vez de redirecionar para `/` (Home). O usuario espera voltar para a tela inicial.
+Criar um sistema completo de cadastro de **Oferendas** (ebo, ipese, oferendas ao Egbe Orun, Iyami, Ori, etc.) que pode ser vinculado as tarefas geradas pelo Oraculo. Hoje, as tarefas so mostram titulo e um ritual/reza opcional. Com oferendas cadastradas, o admin pode especificar exatamente qual oferenda fazer para cada tarefa.
 
-**Linha do problema:** `src/components/oracle/StepDiagnosis.tsx`, linha 207:
+## Estrutura
+
+### 1. Nova tabela `offerings`
+
+| Coluna | Tipo | Descricao |
+|---|---|---|
+| id | uuid | PK |
+| title | text | Nome da oferenda (ex: "Ebo de Limpeza com Ovo") |
+| description | text | Descricao curta |
+| ingredients | text | Lista de ingredientes em texto/markdown |
+| instructions | text | Modo de preparo/execucao em markdown |
+| category | text | Categoria (ebo, ibori, egbe_orun, iyami, oracao_ori, geral) |
+| is_premium | boolean | Se e conteudo premium |
+| audio_url | text (null) | Audio opcional com instrucoes |
+| image_url | text (null) | Foto da oferenda |
+| display_order | integer | Ordem de exibicao |
+| created_at | timestamptz | Data de criacao |
+
+RLS: Leitura publica, escrita apenas admin (mesmo padrao de `rituals`).
+
+### 2. Nova coluna em `oracle_task_templates`
+
+Adicionar `offering_id` (uuid, nullable) na tabela `oracle_task_templates` para vincular uma oferenda a cada tarefa sugerida.
+
+### 3. Nova coluna em `journey_tasks`
+
+Adicionar `offering_id` (uuid, nullable) na tabela `journey_tasks` para salvar qual oferenda foi vinculada quando o usuario salva a rotina.
+
+### 4. Admin - Nova secao "Oferendas"
+
+- Nova secao no sidebar do admin
+- CRUD completo: criar, editar, excluir oferendas
+- Campos: titulo, descricao, ingredientes (textarea markdown), instrucoes (textarea markdown), categoria, premium, audio, imagem, ordem
+- Listagem com filtro por categoria
+
+### 5. Admin - Tarefas do Oraculo
+
+- Adicionar campo "Oferenda vinculada" no formulario de tarefas (AdminOracleTaskTemplates), ao lado do "Ritual Linkado"
+- Select/combobox com as oferendas cadastradas
+
+### 6. Diagnostico (StepDiagnosis)
+
+- Mostrar a oferenda vinculada em cada tarefa (titulo + botao para expandir detalhes)
+- Permitir trocar a oferenda manualmente via combobox (mesmo padrao do RitualCombobox)
+- Salvar o `offering_id` junto com a tarefa no `journey_tasks`
+
+### 7. Jornada (Journey)
+
+- Exibir a oferenda vinculada em cada tarefa da jornada
+- Botao para ver detalhes da oferenda (ingredientes, instrucoes)
+
+## Alteracoes por arquivo
+
+| Arquivo | Acao |
+|---|---|
+| Migration SQL | Criar tabela `offerings`, adicionar `offering_id` em `oracle_task_templates` e `journey_tasks` |
+| `src/hooks/useOfferings.ts` | Novo hook: CRUD de oferendas |
+| `src/components/admin/AdminOfferings.tsx` | Novo componente: CRUD admin de oferendas |
+| `src/components/admin/AdminSidebar.tsx` | Adicionar secao "Oferendas" no menu |
+| `src/pages/Admin.tsx` | Renderizar AdminOfferings na secao correspondente |
+| `src/components/admin/AdminOracleTaskTemplates.tsx` | Adicionar campo "Oferenda vinculada" no form |
+| `src/components/OfferingCombobox.tsx` | Novo combobox para selecionar oferendas |
+| `src/components/oracle/StepDiagnosis.tsx` | Mostrar oferenda em cada tarefa + combobox + salvar offering_id |
+| `src/hooks/useJourney.ts` | Atualizar para incluir offering_id ao criar tasks |
+| `src/components/journey/JourneyEntryCard.tsx` | Exibir oferenda vinculada |
+
+## Detalhes Tecnicos
+
+### Migration SQL
+
 ```text
-setTimeout(() => navigate("/jornada"), 1200);
+-- Tabela de oferendas
+CREATE TABLE public.offerings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text NOT NULL DEFAULT '',
+  ingredients text NOT NULL DEFAULT '',
+  instructions text NOT NULL DEFAULT '',
+  category text NOT NULL DEFAULT 'geral',
+  is_premium boolean NOT NULL DEFAULT false,
+  audio_url text,
+  image_url text,
+  display_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.offerings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Offerings are publicly readable"
+  ON public.offerings FOR SELECT USING (true);
+
+CREATE POLICY "Admins can manage offerings"
+  ON public.offerings FOR ALL
+  USING (has_role(auth.uid(), 'admin'::app_role));
+
+-- Coluna em oracle_task_templates
+ALTER TABLE public.oracle_task_templates
+  ADD COLUMN offering_id uuid REFERENCES public.offerings(id) ON DELETE SET NULL;
+
+-- Coluna em journey_tasks
+ALTER TABLE public.journey_tasks
+  ADD COLUMN offering_id uuid REFERENCES public.offerings(id) ON DELETE SET NULL;
 ```
 
-### 2. Botao "Iniciar Rotina" escondido
-O botao "Iniciar Rotina" fica no final da pagina, depois de todas as tarefas geradas. Quando ha muitas tarefas, o usuario precisa rolar bastante e o botao fica praticamente invisivel. Ele precisa ficar fixo na parte inferior da tela, sempre visivel.
-
-**Causa:** O botao esta dentro do fluxo normal do conteudo (linha 279-297), sem posicionamento fixo.
-
-## Solucao
-
-### Arquivo: `src/components/oracle/StepDiagnosis.tsx`
-
-1. **Trocar redirecionamento** de `/jornada` para `/` (Home)
-
-2. **Tornar o botao fixo na parte inferior da tela**, usando o mesmo padrao ja usado no OnboardingWizard (posicao fixa com gradiente de fundo), garantindo que o botao fique sempre visivel independente do scroll
-
-3. **Adicionar espaco inferior** no conteudo (`mb-24` ou similar) para que o ultimo card de tarefa nao fique escondido atras do botao fixo
-
-### Detalhes das alteracoes
+### Hook useOfferings
 
 ```text
-// 1. Trocar redirecionamento (linha 207)
-- setTimeout(() => navigate("/jornada"), 1200);
-+ setTimeout(() => navigate("/"), 1200);
+// Padrao identico ao useRituals
+export interface Offering {
+  id: string;
+  title: string;
+  description: string;
+  ingredients: string;
+  instructions: string;
+  category: string;
+  is_premium: boolean;
+  audio_url: string | null;
+  image_url: string | null;
+  display_order: number;
+  created_at: string;
+}
 
-// 2. Adicionar padding inferior no container de tarefas (linha 250)
-- <div className="space-y-2.5 mb-6">
-+ <div className="space-y-2.5 mb-24">
-
-// 3. Tornar o botao fixo na parte inferior
-- Mover o bloco do botao (linhas 279-297) para fora do fluxo
-- Envolver em div com position fixed, padding, gradiente
-- Mesmo padrao do OnboardingWizard:
-  <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-10">
-    <div className="max-w-lg mx-auto">
-      {/* botao aqui */}
-    </div>
-  </div>
+export const useOfferings = () => useQuery(...)
+export const useCreateOffering = () => useMutation(...)
+export const useUpdateOffering = () => useMutation(...)
+export const useDeleteOffering = () => useMutation(...)
 ```
+
+### OfferingCombobox
+
+Mesmo padrao visual do RitualCombobox, mas busca da tabela `offerings`. Aceita prop `filterCategory` para filtrar por categoria.
+
+### StepDiagnosis - Exibicao da oferenda
+
+Cada card de tarefa mostra:
+- Titulo da tarefa (ja existe)
+- Oferenda vinculada (novo): nome + botao "Ver detalhes"
+- Ao clicar "Ver detalhes": expande mostrando ingredientes e instrucoes em markdown
+- Combobox para trocar a oferenda (mesmo padrao do ritual)
 
 ## Resultado Esperado
 
-- O botao "Iniciar Rotina" fica sempre visivel na parte inferior da tela, com um gradiente suave por cima do conteudo
-- Apos salvar, o usuario e redirecionado para a Home (/) em vez da pagina Jornada
-- O conteudo das tarefas nao fica escondido atras do botao fixo
+1. Admin cadastra oferendas com ingredientes e instrucoes detalhadas
+2. Admin vincula oferendas as tarefas do Oraculo (templates)
+3. Quando o usuario faz uma consulta, cada tarefa ja vem com a oferenda sugerida
+4. Usuario pode trocar a oferenda antes de salvar
+5. A oferenda fica salva na jornada para consulta futura
 
