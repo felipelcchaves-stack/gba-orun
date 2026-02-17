@@ -199,6 +199,7 @@ export type Database = {
           condition: string
           display_order: number
           id: string
+          intention: string | null
           ire_or_ibi: string | null
           oracle_result_key: string | null
           ritual_id: string | null
@@ -210,6 +211,7 @@ export type Database = {
           condition?: string
           display_order?: number
           id?: string
+          intention?: string | null
           ire_or_ibi?: string | null
           oracle_result_key?: string | null
           ritual_id?: string | null
@@ -221,6 +223,7 @@ export type Database = {
           condition?: string
           display_order?: number
           id?: string
+          intention?: string | null
           ire_or_ibi?: string | null
           oracle_result_key?: string | null
           ritual_id?: string | null

@@ -22,6 +22,12 @@ const CONDITIONS = [
   { value: "egbe_wants", label: "Egbe Orun quer algo" },
 ];
 
+const INTENTIONS = [
+  { value: "", label: "Todas" },
+  { value: "cuidado_semanal", label: "Cuidado Semanal" },
+  { value: "orientacao", label: "Orientação" },
+];
+
 const EMPTY: Partial<OracleTaskTemplate> = {
   oracle_result_key: null,
   ire_or_ibi: null,
@@ -31,6 +37,7 @@ const EMPTY: Partial<OracleTaskTemplate> = {
   category: "",
   ritual_id: null,
   display_order: 0,
+  intention: null,
 };
 
 const AdminOracleTaskTemplates = () => {
@@ -113,11 +120,19 @@ const AdminOracleTaskTemplates = () => {
           </select>
         </div>
       </div>
-      <div>
-        <label className="text-xs font-semibold text-muted-foreground mb-1 block">Condição</label>
-        <select value={form.condition || "always"} onChange={e => setForm(f => ({ ...f, condition: e.target.value }))} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-          {CONDITIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </select>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Condição</label>
+          <select value={form.condition || "always"} onChange={e => setForm(f => ({ ...f, condition: e.target.value }))} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+            {CONDITIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Intenção</label>
+          <select value={form.intention || ""} onChange={e => setForm(f => ({ ...f, intention: e.target.value || null }))} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+            {INTENTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -178,6 +193,7 @@ const AdminOracleTaskTemplates = () => {
                   {t.oracle_result_key ? configs?.find(c => c.result_key === t.oracle_result_key)?.name || t.oracle_result_key : "Todos"}
                   {" · "}{t.ire_or_ibi === "ire" ? "Irê" : t.ire_or_ibi === "ibi" ? "Ibi" : "Ambos"}
                   {" · "}{CONDITIONS.find(c => c.value === t.condition)?.label || t.condition}
+                  {(t as any).intention && ` · 🎯 ${INTENTIONS.find(i => i.value === (t as any).intention)?.label || (t as any).intention}`}
                   {t.ritual_id && " · 🔗 Ritual linkado"}
                 </p>
               </div>
