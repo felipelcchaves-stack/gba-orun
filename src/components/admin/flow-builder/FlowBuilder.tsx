@@ -24,8 +24,19 @@ import OpenQuestionNode from "./nodes/OpenQuestionNode";
 import DiagnosisNode from "./nodes/DiagnosisNode";
 import NodePalette from "./NodePalette";
 import NodeConfigPanel from "./NodeConfigPanel";
+import AutoSaveIndicator from "./AutoSaveIndicator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 import {
   useFlowNodes,
@@ -34,6 +45,7 @@ import {
   type OracleFlowNode,
   type OracleFlowEdge,
 } from "@/hooks/useOracleFlows";
+import { useFlowAutoSave } from "@/hooks/useFlowAutoSave";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 
@@ -64,18 +76,15 @@ const VARIABLE_PREFIXES: Record<string, string> = {
 function generateVariableName(type: string, existingNodes: Node[]): string {
   const prefix = VARIABLE_PREFIXES[type];
   if (!prefix) return "";
-  // Unique names like resultado_obi, resultado_obi_2, etc.
   const existingNames = existingNodes
     .map((n) => (n.data as any)?.config?.variable_name)
     .filter(Boolean);
   if (type === "obi" || type === "ire_ibi") {
-    // These are typically unique, but handle duplicates
     if (!existingNames.includes(prefix)) return prefix;
   }
   let counter = 1;
   let candidate = type === "obi" || type === "ire_ibi" ? `${prefix}_${counter + 1}` : `${prefix}_${counter}`;
   if (type === "obi" || type === "ire_ibi") {
-    // first one is just the prefix
     if (!existingNames.includes(prefix)) return prefix;
   } else {
     candidate = `${prefix}_${counter}`;
@@ -100,6 +109,58 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [loaded, setLoaded] = useState(false);
 
+  // --- Save handler (extracted for reuse by auto-save) ---
+  const handleSave = useCallback(async () => {
+    const nodesPayload: Omit<OracleFlowNode, "id">[] = nodes.map((n) => ({
+      flow_id: flowId,
+      node_type: n.type || "message",
+      label: (n.data as any)?.label || "",
+      config: { ...((n.data as any)?.config || {}), _tempId: n.id },
+      position_x: n.position.x,
+      position_y: n.position.y,
+    }));
+
+    const edgesPayload: Omit<OracleFlowEdge, "id">[] = edges.map((e) => ({
+      flow_id: flowId,
+      source_node_id: e.source,
+      target_node_id: e.target,
+      source_handle: e.sourceHandle || "default",
+      label: (e.label as string) || "",
+    }));
+
+    const { nodeIdMap } = await saveCanvas.mutateAsync({ flowId, nodes: nodesPayload, edges: edgesPayload });
+
+    setNodes((nds) =>
+      nds.map((n) => ({ ...n, id: nodeIdMap[n.id] || n.id }))
+    );
+    setEdges((eds) =>
+      eds.map((e) => ({
+        ...e,
+        source: nodeIdMap[e.source] || e.source,
+        target: nodeIdMap[e.target] || e.target,
+      }))
+    );
+  }, [nodes, edges, flowId, saveCanvas, setNodes, setEdges]);
+
+  // --- Auto-save hook ---
+  const {
+    isDirty,
+    hasDraft,
+    status: autoSaveStatus,
+    lastSavedAt,
+    restoreDraft,
+    dismissDraft,
+    markClean,
+  } = useFlowAutoSave({
+    flowId,
+    nodes,
+    edges,
+    loaded,
+    onSave: handleSave,
+    isSaving: saveCanvas.isPending,
+  });
+
+  // Load from DB
   useEffect(() => {
     if (dbNodes && dbEdges && !loaded) {
       const rfNodes: Node[] = dbNodes.map((n) => ({
@@ -155,7 +216,6 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
     [reactFlowInstance, setNodes]
   );
 
-  // Allow clicking ALL node types for configuration
   const onNodeClick = useCallback((_: any, node: Node) => {
     setSelectedNode(node);
   }, []);
@@ -177,47 +237,22 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
     setSelectedNode(null);
   };
 
-  const handleSave = async () => {
-    const nodesPayload: Omit<OracleFlowNode, "id">[] = nodes.map((n) => ({
-      flow_id: flowId,
-      node_type: n.type || "message",
-      label: (n.data as any)?.label || "",
-      config: { ...((n.data as any)?.config || {}), _tempId: n.id },
-      position_x: n.position.x,
-      position_y: n.position.y,
-    }));
-
-    const edgesPayload: Omit<OracleFlowEdge, "id">[] = edges.map((e) => ({
-      flow_id: flowId,
-      source_node_id: e.source,
-      target_node_id: e.target,
-      source_handle: e.sourceHandle || "default",
-      label: (e.label as string) || "",
-    }));
-
+  const handleManualSave = async () => {
     try {
-      const { nodeIdMap } = await saveCanvas.mutateAsync({ flowId, nodes: nodesPayload, edges: edgesPayload });
-
-      // Update local node IDs to match new DB IDs
-      setNodes((nds) =>
-        nds.map((n) => ({
-          ...n,
-          id: nodeIdMap[n.id] || n.id,
-        }))
-      );
-
-      // Update local edge source/target to match new DB IDs
-      setEdges((eds) =>
-        eds.map((e) => ({
-          ...e,
-          source: nodeIdMap[e.source] || e.source,
-          target: nodeIdMap[e.target] || e.target,
-        }))
-      );
-
+      await handleSave();
+      markClean();
       toast.success("Fluxo salvo com sucesso!");
     } catch (err: any) {
       toast.error(err.message);
+    }
+  };
+
+  // Restore draft handler
+  const handleRestoreDraft = () => {
+    const draft = restoreDraft();
+    if (draft) {
+      setNodes(draft.nodes);
+      setEdges(draft.edges);
     }
   };
 
@@ -240,46 +275,69 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
   ) : null;
 
   return (
-    <div className="flex gap-2 sm:gap-4 flex-1 min-h-0">
-      {!isMobile && <NodePalette />}
-      <div className="flex-1 rounded-xl border border-border overflow-hidden relative" ref={reactFlowWrapper}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onInit={setReactFlowInstance}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onNodeClick={onNodeClick}
-          nodeTypes={nodeTypes}
-          fitView
-          deleteKeyCode={["Backspace", "Delete"]}
-        >
-          <Controls />
-          <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
-        </ReactFlow>
-        {isMobile && <NodePalette floating />}
-        <button
-          onClick={handleSave}
-          disabled={saveCanvas.isPending}
-          className="absolute top-3 right-3 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" />
-          {saveCanvas.isPending ? "Salvando..." : "Salvar Fluxo"}
-        </button>
+    <>
+      {/* Draft restoration dialog */}
+      <AlertDialog open={hasDraft && loaded}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rascunho encontrado</AlertDialogTitle>
+            <AlertDialogDescription>
+              Encontramos um rascunho não salvo deste fluxo. Deseja restaurá-lo?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={dismissDraft}>Descartar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRestoreDraft}>Restaurar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="flex gap-2 sm:gap-4 flex-1 min-h-0">
+        {!isMobile && <NodePalette />}
+        <div className="flex-1 rounded-xl border border-border overflow-hidden relative" ref={reactFlowWrapper}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onInit={setReactFlowInstance}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onNodeClick={onNodeClick}
+            nodeTypes={nodeTypes}
+            fitView
+            deleteKeyCode={["Backspace", "Delete"]}
+          >
+            <Controls />
+            <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+          </ReactFlow>
+          {isMobile && <NodePalette floating />}
+
+          {/* Top-right controls: indicator + save button */}
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-3">
+            <AutoSaveIndicator status={autoSaveStatus} lastSavedAt={lastSavedAt} />
+            <button
+              onClick={handleManualSave}
+              disabled={saveCanvas.isPending}
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              {saveCanvas.isPending ? "Salvando..." : "Salvar Fluxo"}
+            </button>
+          </div>
+        </div>
+        {isMobile ? (
+          <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
+            <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto p-4">
+              {configPanelContent}
+            </SheetContent>
+          </Sheet>
+        ) : (
+          configPanelContent
+        )}
       </div>
-      {isMobile ? (
-        <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-          <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto p-4">
-            {configPanelContent}
-          </SheetContent>
-        </Sheet>
-      ) : (
-        configPanelContent
-      )}
-    </div>
+    </>
   );
 };
 
