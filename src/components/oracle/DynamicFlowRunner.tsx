@@ -6,9 +6,10 @@ import OracleProgressBar from "./OracleProgressBar";
 
 interface DynamicFlowRunnerProps {
   flowId: string;
+  onExit?: () => void;
 }
 
-const DynamicFlowRunner = ({ flowId }: DynamicFlowRunnerProps) => {
+const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
   const { data: nodes } = useFlowNodes(flowId);
   const { data: edges } = useFlowEdges(flowId);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
@@ -88,8 +89,11 @@ const DynamicFlowRunner = ({ flowId }: DynamicFlowRunnerProps) => {
 
   return (
     <div>
-      {history.length > 0 && !isDiagnosis && (
-        <button onClick={goBack} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
+      {!isDiagnosis && (
+        <button
+          onClick={history.length > 0 ? goBack : onExit}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+        >
           <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Voltar
         </button>
       )}
@@ -99,7 +103,7 @@ const DynamicFlowRunner = ({ flowId }: DynamicFlowRunnerProps) => {
         </button>
       )}
 
-      {!isDiagnosis && history.length > 0 && (
+      {!isDiagnosis && (
         <OracleProgressBar currentStep={visitedCount} totalSteps={totalNodes} />
       )}
 
