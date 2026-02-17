@@ -8,6 +8,7 @@ export interface UserKnowledge {
   knows_ori: boolean;
   knows_iyami: boolean;
   knows_egbe_orun: boolean;
+  ifa_status: string | null;
 }
 
 export const useOnboardingStatus = () => {
@@ -50,6 +51,7 @@ export const useSaveOnboarding = () => {
           knows_ori: params.knowledge.knows_ori,
           knows_iyami: params.knowledge.knows_iyami,
           knows_egbe_orun: params.knowledge.knows_egbe_orun,
+          ifa_status: params.knowledge.ifa_status,
           onboarding_completed: true,
         } as any, { onConflict: "user_id" });
       if (knowledgeError) throw knowledgeError;
@@ -59,6 +61,7 @@ export const useSaveOnboarding = () => {
       if (params.display_name) profileUpdates.display_name = params.display_name;
       if (params.religion) profileUpdates.religion = params.religion;
       if (params.gender) profileUpdates.gender = params.gender;
+      profileUpdates.ifa_status = params.knowledge.ifa_status;
 
       const { error: profileError } = await supabase
         .from("profiles")

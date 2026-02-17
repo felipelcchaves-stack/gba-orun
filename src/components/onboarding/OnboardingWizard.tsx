@@ -29,8 +29,9 @@ const OnboardingWizard = () => {
   const [displayName, setDisplayName] = useState(profile?.display_name || "");
   const [religion, setReligion] = useState(profile?.religion || "");
   const [gender, setGender] = useState(profile?.gender || "");
+  const [ifaStatus, setIfaStatus] = useState("");
   const [knowledge, setKnowledge] = useState<UserKnowledge>({
-    knows_obi: false, knows_ebo: false, knows_ori: false, knows_iyami: false, knows_egbe_orun: false,
+    knows_obi: false, knows_ebo: false, knows_ori: false, knows_iyami: false, knows_egbe_orun: false, ifa_status: null,
   });
 
   const totalSteps = 3;
@@ -42,13 +43,16 @@ const OnboardingWizard = () => {
 
   const lacunas = Object.values(knowledge).filter(v => !v).length;
 
+  const showIfaQuestion = ["candomble", "ifa", "umbanda"].includes(religion);
+
   const handleFinish = async () => {
     try {
+      const finalKnowledge = { ...knowledge, ifa_status: showIfaQuestion ? (ifaStatus || "nao") : null };
       await saveOnboarding.mutateAsync({
         display_name: displayName || undefined,
         religion: religion || undefined,
         gender: gender || undefined,
-        knowledge,
+        knowledge: finalKnowledge,
       });
       await queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
       await queryClient.refetchQueries({ queryKey: ["onboarding-status"] });
@@ -103,6 +107,20 @@ const OnboardingWizard = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                {showIfaQuestion && (
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Status em Ifá</label>
+                    <Select value={ifaStatus} onValueChange={setIfaStatus}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="babalawo">Babalawo</SelectItem>
+                        <SelectItem value="iyanifa">Iyanifa</SelectItem>
+                        <SelectItem value="omo_ifa">Omo Ifá (Isefá)</SelectItem>
+                        <SelectItem value="nao">Não tenho Ifá</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <Button onClick={() => setStep(1)} className="w-full bg-primary text-primary-foreground font-semibold rounded-xl h-12">
