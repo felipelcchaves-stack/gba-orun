@@ -34,7 +34,15 @@ const RitualHelpButton = ({ point, className = "" }: Props) => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="font-display">{ritual.title}</DialogTitle>
+            <div className="flex items-center gap-3">
+              {ritual.image_url && (
+                <img src={(ritual as any).image_url} alt={ritual.title} className="w-12 h-12 rounded-full object-cover shrink-0" />
+              )}
+              <div>
+                <DialogTitle className="font-display">{ritual.title}</DialogTitle>
+                <span className="text-xs text-muted-foreground capitalize">{(ritual as any).category}</span>
+              </div>
+            </div>
           </DialogHeader>
 
           {(ritual as any).audio_url && (
