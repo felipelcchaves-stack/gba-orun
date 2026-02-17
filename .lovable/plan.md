@@ -1,94 +1,172 @@
 
-# Plano: Corrigir Looping do Onboarding + Melhorar UX dos Botoes
 
-## Problemas Identificados
+# Plano: Cadastro de Ire/Ibi + Novo Step no Oraculo
 
-### 1. Looping apos completar o onboarding
-**Causa raiz confirmada:** Os dados estao salvando corretamente no banco (verifiquei: `onboarding_completed = true`). Porem, quando o usuario clica "Comecar Jornada", o `navigate("/")` executa antes do `invalidateQueries` atualizar o cache. O `ProtectedRoute` da Home ainda le o valor antigo (`false`) do cache e redireciona de volta para `/onboarding`.
+## Problema Atual
 
-**Solucao:** Aguardar a invalidacao do cache completar antes de navegar. Usar `await queryClient.invalidateQueries()` dentro do `handleFinish`, e somente depois chamar `navigate("/")`.
+Hoje, quando o usuario seleciona o resultado do Obi (ex: Ejife), o sistema pula direto pro Ebo usando um campo `default_ire_ibi` fixo da tabela `oracle_configs`. O usuario nunca escolhe se veio em Ire ou Ibi, e nao ve descricoes sobre os tipos de Ire/Ibi. Ja existe um componente `StepIreIbi.tsx` basico, mas ele nao esta no fluxo e nao tem dados cadastraveis.
 
-### 2. Botao "Continuar" muito pra baixo (Step 2 - Perguntas)
-**Causa raiz:** No passo das 5 perguntas de conhecimento, sao 5 cards empilhados verticalmente + o botao. Em telas menores, o conteudo ultrapassa a tela e o botao fica escondido la embaixo, exigindo scroll.
+## O que sera construido
 
-**Solucao:** Tornar a tela scrollavel com o botao "Continuar" fixo na parte inferior da tela (sticky bottom), sempre visivel independente da quantidade de conteudo.
+### 1. Tabela `ire_ibi_types` no banco de dados
 
----
+Armazena os tipos de Ire e Ibi com descricoes que o admin cadastra.
 
-## Alteracoes Planejadas
+```text
+CREATE TABLE public.ire_ibi_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category TEXT NOT NULL CHECK (category IN ('ire', 'ibi')),
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
-### Arquivo 1: `src/hooks/useOnboarding.ts`
+-- Dados iniciais de exemplo:
+-- Ire: Ire Aiku (saude), Ire Aje (prosperidade), Ire Omo (filhos), Ire Aya/Oko (casamento)
+-- Ibi: Ibi Iku (morte), Ibi Arun (doenca), Ibi Ofo (perda), Ibi Ejo (demanda)
+```
 
-- No `useSaveOnboarding`, mover a logica de invalidacao para o `mutationFn` (retornando os dados) e garantir que o `onSuccess` faca `await` no `invalidateQueries`
-- Alternativa mais simples: retornar o `queryClient` para que o `handleFinish` possa aguardar a invalidacao
+RLS: leitura publica, gerenciamento apenas para admins.
 
-### Arquivo 2: `src/components/onboarding/OnboardingWizard.tsx`
+### 2. Inserir o Step Ire/Ibi no fluxo do Oraculo
 
-**Correcao do looping:**
-- Importar `useQueryClient` do React Query
-- No `handleFinish`, apos `saveOnboarding.mutateAsync()`, fazer `await queryClient.invalidateQueries({ queryKey: ["onboarding-status"] })` e `await queryClient.refetchQueries({ queryKey: ["onboarding-status"] })` ANTES de chamar `navigate("/")`
+O fluxo atual de 6 passos passa para 7:
 
-**Correcao da UX:**
-- Mudar o layout geral de `flex items-center justify-center` para um layout com scroll vertical
-- No step 1 (perguntas), usar `overflow-y-auto` no container principal e colocar o botao "Continuar" com `sticky bottom-0` e fundo gradiente para indicar que ha conteudo abaixo
-- Aplicar `pb-20` no container de perguntas para dar espaco ao botao fixo
-- Manter padding seguro para a area inferior em dispositivos moveis
+```text
+ANTES:  Intencao > Obi > Ebo > Ori > Iyami/Egbe > Diagnostico
+DEPOIS: Intencao > Obi > Ire/Ibi > Ebo > Ori > Iyami/Egbe > Diagnostico
+```
+
+### 3. Reformular o componente StepIreIbi
+
+O componente `StepIreIbi.tsx` sera reescrito para:
+
+- Primeira tela: dois botoes grandes "Ire" e "Ibi" (como ja existe)
+- Segunda tela: lista dos tipos cadastrados (vindos do banco) com nome e descricao
+- O usuario seleciona o tipo especifico (ex: "Ire Aje - Prosperidade")
+- O tipo selecionado e armazenado no estado do wizard
+
+### 4. Atualizar Oracle.tsx
+
+- TOTAL_STEPS muda de 6 para 7
+- Step 3 passa a ser StepIreIbi (com selecao de tipo)
+- Steps 4-7 se ajustam (Ebo, Ori, Iyami/Egbe, Diagnostico)
+- O estado do wizard ganha um campo `ireIbiType` com o id/nome do tipo selecionado
+
+### 5. Atualizar StepDiagnosis (WizardState)
+
+- Adicionar `ireIbiType?: string` ao WizardState
+- Exibir o tipo de Ire/Ibi no card de resumo do diagnostico
+- Incluir no JSON de contexto salvo na jornada
+
+### 6. Painel Admin para gerenciar Ire/Ibi
+
+Novo componente `AdminIreIbiTypes.tsx` acessivel pelo painel admin, permitindo:
+
+- Listar todos os tipos de Ire e Ibi cadastrados
+- Criar novos tipos (nome + descricao + categoria ire/ibi)
+- Editar e desativar tipos existentes
+- Reordenar por `display_order`
+
+### 7. Hook useIreIbiTypes
+
+Novo hook em `src/hooks/useIreIbiTypes.ts` com:
+
+- `useIreIbiTypes()` - busca todos os tipos ativos ordenados
+- `useCreateIreIbiType()` - mutation para criar
+- `useUpdateIreIbiType()` - mutation para editar
+- `useDeleteIreIbiType()` - mutation para remover
 
 ---
 
 ## Detalhes Tecnicos
 
-### Correcao do looping (OnboardingWizard.tsx)
+### Migracao SQL
 
 ```text
-// Antes (problematico):
-await saveOnboarding.mutateAsync({...});
-toast.success("...");
-navigate("/", { replace: true });  // cache ainda tem false
+CREATE TABLE public.ire_ibi_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
-// Depois (correto):
-await saveOnboarding.mutateAsync({...});
-await queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
-await queryClient.refetchQueries({ queryKey: ["onboarding-status"] });
-toast.success("...");
-navigate("/", { replace: true });  // agora o cache tem true
+ALTER TABLE public.ire_ibi_types ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Ire/Ibi types are publicly readable"
+  ON public.ire_ibi_types FOR SELECT USING (true);
+
+CREATE POLICY "Admins can manage ire/ibi types"
+  ON public.ire_ibi_types FOR ALL
+  USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- Dados iniciais
+INSERT INTO public.ire_ibi_types (category, name, description, display_order) VALUES
+  ('ire', 'Ire Aiku', 'Ire de saude e longevidade', 1),
+  ('ire', 'Ire Aje', 'Ire de prosperidade e riqueza', 2),
+  ('ire', 'Ire Omo', 'Ire de filhos e fertilidade', 3),
+  ('ire', 'Ire Aya/Oko', 'Ire de casamento e uniao', 4),
+  ('ibi', 'Ibi Iku', 'Ibi de morte ou perigo grave', 1),
+  ('ibi', 'Ibi Arun', 'Ibi de doenca', 2),
+  ('ibi', 'Ibi Ofo', 'Ibi de perda material ou emocional', 3),
+  ('ibi', 'Ibi Ejo', 'Ibi de demanda, confusao ou justica', 4);
 ```
 
-### Correcao da UX (OnboardingWizard.tsx)
+### Fluxo do StepIreIbi reformulado
 
-O container principal muda de:
 ```text
-<div className="min-h-screen bg-background flex items-center justify-center p-4">
-  <div className="w-full max-w-md space-y-6">
+1. Usuario ve dois botoes: Ire (sol) ou Ibi (alerta)
+2. Ao clicar em um, aparece a lista de subtipos daquela categoria
+3. Cada subtipo mostra nome e descricao curta
+4. Ao selecionar o subtipo, avanca para o proximo step (Ebo)
 ```
 
-Para:
+### WizardState atualizado
+
 ```text
-<div className="min-h-screen bg-background flex flex-col items-center p-4 pt-8 pb-24 overflow-y-auto">
-  <div className="w-full max-w-md space-y-6">
+interface WizardState {
+  intention: "cuidado_semanal" | "orientacao";
+  result: string;
+  ireOrIbi: "ire" | "ibi";
+  ireIbiTypeId?: string;    // NOVO - id do tipo selecionado
+  ireIbiTypeName?: string;  // NOVO - nome para exibicao
+  eboApurado: boolean;
+  eboTipo?: string;
+  oriPrecisa: boolean;
+  oriAcao?: string;
+  iyamiQuer: boolean;
+  egbeOrunQuer: boolean;
+}
 ```
 
-E no step 1 (perguntas), o botao "Continuar" ganha posicao fixa:
+### Oracle.tsx - Numeracao dos steps
+
 ```text
-<div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent">
-  <div className="max-w-md mx-auto">
-    <Button ...>Continuar</Button>
-  </div>
-</div>
+Step 1: StepIntention
+Step 2: StepObiResult
+Step 3: StepIreIbi (NOVO no fluxo)
+Step 4: StepEbo
+Step 5: StepOri
+Step 6: StepIyamiEgbe
+Step 7: StepDiagnosis
 ```
-
-O mesmo padrao de botao fixo se aplica ao step final ("Comecar Jornada").
 
 ---
 
 ## Resumo de Arquivos
 
-| Arquivo | Alteracao |
+| Arquivo | Acao |
 |---|---|
-| `src/components/onboarding/OnboardingWizard.tsx` | Aguardar invalidacao do cache antes de navegar; botao fixo no rodape |
-| `src/hooks/useOnboarding.ts` | Nenhuma alteracao necessaria (a logica de invalidacao sera feita no componente) |
+| Migration SQL | Criar tabela `ire_ibi_types` com RLS e dados iniciais |
+| `src/hooks/useIreIbiTypes.ts` | NOVO - Hook CRUD para tipos de Ire/Ibi |
+| `src/components/oracle/StepIreIbi.tsx` | REESCREVER - Selecao de Ire/Ibi com subtipos do banco |
+| `src/pages/Oracle.tsx` | Inserir Step 3 (Ire/Ibi), ajustar TOTAL_STEPS para 7 |
+| `src/components/oracle/StepDiagnosis.tsx` | Adicionar `ireIbiTypeId`/`ireIbiTypeName` ao WizardState e resumo |
+| `src/components/admin/AdminIreIbiTypes.tsx` | NOVO - Painel admin para gerenciar tipos |
+| `src/pages/Admin.tsx` | Adicionar aba/secao para Ire/Ibi Types |
 
-## Resultado Esperado
-
-1. Apos completar o onboarding, o usuario vai direto para a Home sem looping
-2. O botao "Continuar" e "Comecar Jornada" ficam sempre visiveis na parte inferior da tela, faceis de clicar em qualquer dispositivo
