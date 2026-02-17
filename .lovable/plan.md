@@ -1,57 +1,48 @@
 
-
-# Corrigir logout ao fazer upload de foto
+# Corrigir imagem do orientador que nao aparece
 
 ## Problema
 
-Ao fazer upload da foto de perfil, o usuario e deslogado. Isso acontece porque o hook `useAuth` tem uma condicao de corrida: o `onAuthStateChange` pode disparar durante o upload (por refresh de token ou evento interno do Supabase), e a forma como o estado e gerenciado causa perda da sessao.
-
-O problema esta no `useAuth.ts` -- o listener `onAuthStateChange` e registrado DEPOIS do `getSession`, mas o listener pode disparar antes do `getSession` resolver, causando estados inconsistentes. Alem disso, o `useAdmin` faz uma query separada que tambem pode sofrer com timing.
+A imagem do orientador aparece como icone (emoji) porque a configuracao `guidance_avatar_url` nao existe na tabela `app_settings`. Isso aconteceu porque o admin tentou salvar antes, mas foi deslogado pelo bug de autenticacao (ja corrigido).
 
 ## Solucao
 
-Reorganizar o `useAuth.ts` seguindo o padrao recomendado:
+O problema principal ja foi resolvido (bug de logout). Agora so falta garantir que o fluxo funcione sem friccao. Vou fazer duas coisas:
 
-1. Registrar o `onAuthStateChange` ANTES de chamar `getSession`
-2. Garantir que o `loading` so vira `false` depois que tudo estiver estavel
-3. Evitar que eventos intermediarios (como `TOKEN_REFRESHED`) causem flickering
+### 1. Salvar automaticamente ao clicar "Usar minha foto"
 
-## Arquivo modificado
+Atualmente o admin precisa clicar "Usar minha foto" e depois "Salvar" separadamente. Vou unificar: ao clicar "Usar minha foto", o sistema ja salva direto no banco, eliminando um passo e evitando esquecimento.
 
-| Arquivo | Alteracao |
-|---|---|
-| `src/hooks/useAuth.ts` | Reorganizar: registrar listener antes de getSession, tratar eventos de forma mais robusta |
+### 2. Tratar caso de URL nula no GuidanceBubble
+
+O componente `GuidanceBubble` ja trata o caso sem avatar (mostra emoji), mas vou garantir que mesmo com string vazia funcione bem.
 
 ## Detalhe tecnico
 
+| Arquivo | Alteracao |
+|---|---|
+| `src/components/admin/AdminGuidance.tsx` | No onClick de "Usar minha foto": alem de preencher o campo, chamar `saveAvatar()` automaticamente com a URL do perfil. Mostrar toast de sucesso. |
+
+### Codigo
+
+No botao "Usar minha foto", alterar o onClick para:
+
 ```tsx
-// useAuth.ts corrigido
-useEffect(() => {
-  let isMounted = true;
-
-  // 1. Registrar listener PRIMEIRO (evita perder eventos)
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    (_event, session) => {
-      if (isMounted) {
-        setUser(session?.user ?? null);
-      }
+onClick={async () => {
+  if (profile?.avatar_url) {
+    setAvatarUrl(profile.avatar_url);
+    // Salvar direto no banco
+    const { error } = await supabase
+      .from("app_settings")
+      .upsert({ key: "guidance_avatar_url", value: profile.avatar_url, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    if (!error) {
+      qc.invalidateQueries({ queryKey: ["app_settings"] });
+      toast.success("Foto do orientador salva!");
     }
-  );
-
-  // 2. Buscar sessao inicial DEPOIS
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (isMounted) {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    }
-  });
-
-  return () => {
-    isMounted = false;
-    subscription.unsubscribe();
-  };
-}, []);
+  } else {
+    toast.info("Voce ainda nao tem foto de perfil. Va em Meu Perfil para enviar uma.");
+  }
+}}
 ```
 
-A mudanca principal e a ordem: listener primeiro, getSession depois. Isso garante que nenhum evento de auth e perdido durante a inicializacao. O flag `isMounted` previne updates em componentes desmontados.
-
+Nenhuma alteracao de banco de dados necessaria. O `upsert` ja lida com criacao e atualizacao.
