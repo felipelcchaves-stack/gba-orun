@@ -20,6 +20,7 @@ import AdminPromotions from "@/components/admin/AdminPromotions";
 import AdminGuidance from "@/components/admin/AdminGuidance";
 import AdminIreIbiTypes from "@/components/admin/AdminIreIbiTypes";
 import AdminOfferings from "@/components/admin/AdminOfferings";
+import AdminReviews from "@/components/admin/AdminReviews";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -247,6 +248,8 @@ const AdminPage = () => {
         {activeSection === "promotions" && <AdminPromotions />}
 
         {activeSection === "guidance" && <AdminGuidance />}
+
+        {activeSection === "reviews" && <AdminReviews />}
 
         {activeSection === "settings" && (
           <div className="space-y-6">

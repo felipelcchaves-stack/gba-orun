@@ -1,8 +1,8 @@
-import { LayoutDashboard, Users, BookOpen, Sparkles, Settings, FileJson, LogOut, Link2, ArrowLeft, MessageCircle, CreditCard, Tag, UtensilsCrossed } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, Sparkles, Settings, FileJson, LogOut, Link2, ArrowLeft, MessageCircle, CreditCard, Tag, UtensilsCrossed, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
-export type AdminSection = "dashboard" | "users" | "plans" | "rituals" | "offerings" | "oracle" | "links" | "community" | "promotions" | "guidance" | "settings" | "import";
+export type AdminSection = "dashboard" | "users" | "plans" | "rituals" | "offerings" | "oracle" | "links" | "community" | "promotions" | "guidance" | "reviews" | "settings" | "import";
 
 interface AdminSidebarProps {
   active: AdminSection;
@@ -21,6 +21,7 @@ const NAV_ITEMS: { key: AdminSection; label: string; icon: React.ElementType }[]
   { key: "community", label: "Comunidade", icon: MessageCircle },
   { key: "promotions", label: "Promoções", icon: Tag },
   { key: "guidance", label: "Orientações", icon: MessageCircle },
+  { key: "reviews", label: "Avaliações", icon: Star },
   { key: "settings", label: "Configurações", icon: Settings },
   { key: "import", label: "Importar", icon: FileJson },
 ];

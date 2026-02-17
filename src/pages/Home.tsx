@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Flame, Bookmark, Sunrise, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +13,8 @@ import SpiritualEvolutionChart from "@/components/home/SpiritualEvolutionChart";
 import PromoBanner from "@/components/home/PromoBanner";
 import SubscriptionBanner from "@/components/home/SubscriptionBanner";
 import { useCareReminder } from "@/hooks/useCareReminder";
+import { useReviewPrompt } from "@/hooks/useReviewPrompt";
+import ReviewModal from "@/components/ReviewModal";
 
 import heroBanner from "@/assets/hero-banner.jpg";
 
@@ -34,6 +37,8 @@ const HomePage = () => {
 
   // Fire care reminder on home load
   useCareReminder();
+  const { shouldShow: showReview, dismiss: dismissReview } = useReviewPrompt();
+  const [reviewOpen, setReviewOpen] = useState(showReview);
 
   const displayName = profile?.display_name || user?.user_metadata?.display_name || "";
   const featured = rituals?.slice(0, 6) ?? [];
@@ -209,6 +214,12 @@ const HomePage = () => {
           </div>
         </div>
       )}
+
+      <ReviewModal
+        open={reviewOpen || showReview}
+        onClose={() => setReviewOpen(false)}
+        onDismiss={dismissReview}
+      />
     </div>
   );
 };
