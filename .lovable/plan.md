@@ -1,137 +1,223 @@
 
 
-# Construtor Visual de Fluxos do Oraculo (Flow Builder)
+# Flow Builder como Unica Fonte de Verdade -- Plano Completo e Definitivo
 
 ## Resumo
 
-Criar um editor visual de arrasta-e-solta no painel admin onde voce pode montar fluxos completos do oraculo como um mind map. Cada etapa (pergunta, mensagem, lancamento de obi, selecao, etc.) sera um "no" no mapa, e as conexoes entre eles definem o caminho que o aluno vai percorrer. O fluxo inteiro fica salvo no banco de dados, e o app do aluno interpreta esse fluxo dinamicamente -- sem precisar mexer em codigo nunca mais.
+Tornar o Flow Builder o **unico** lugar onde voce configura absolutamente tudo sobre a consulta do Oraculo: nomes dos fluxos (que aparecem como opcoes na tela "Como posso te ajudar hoje?"), descricoes, titulos de cada etapa, mensagens de orientacao do mestre com audio, vinculacao de rituais, oracoes e oferendas, e a logica de diagnostico com geracao de tarefas. Remover todo codigo hardcoded e todas as secoes duplicadas do admin.
 
-## Como Funciona para Voce (Admin)
+---
 
-1. Acessa o painel admin na secao "Fluxos"
-2. Cria um novo fluxo (ex: "Consulta Padrao", "Consulta Simplificada")
-3. Arrasta blocos para a tela:
-   - **Mensagem**: texto do mestre com audio opcional (acolhimento, orientacao)
-   - **Pergunta Sim/Nao**: ex: "Ja apurou o Ebo?"
-   - **Escolha Multipla**: ex: "Que tipo de Ebo?" com N opcoes
-   - **Lancamento de Obi**: os 5 resultados (Oyekun, Okaran, etc.)
-   - **Selecao Ire/Ibi**: com subtipos do banco
-   - **Diagnostico Final**: gera o checklist de tarefas
-4. Conecta os blocos com setas -- cada seta pode ter uma condicao (ex: "Se Sim", "Se Ire", "Se Oyekun")
-5. Salva e ativa o fluxo
-6. O aluno abre o oraculo e percorre exatamente o caminho que voce desenhou
+## 1. O Fluxo Controla Tudo -- Inclusive a Tela Inicial
 
-## Tipos de Blocos (Nos)
+### Hoje
+A tela "Como posso te ajudar hoje?" tem duas opcoes hardcoded: "Cuidado Espiritual Semanal" e "Quero uma Orientacao". Isso e rigido.
 
-| Bloco | Funcao | Saidas |
+### Depois
+- A tela inicial do Oraculo lista todos os **fluxos ativos** do banco de dados
+- O **nome** do fluxo vira o titulo da opcao (ex: "Cuidado Espiritual Semanal")
+- A **descricao** do fluxo vira o subtexto (ex: "Rotina de manutencao e protecao")
+- Um novo campo **icone** (config.icon) define o icone visual
+- Ao clicar, o usuario entra naquele fluxo especifico
+- Se houver apenas 1 fluxo ativo, ele inicia direto (sem tela de selecao)
+
+### Alteracao no banco
+Nenhuma nova tabela. O campo `description` de `oracle_flows` ja existe e sera usado. Um campo `icon` opcional sera armazenado no fluxo (ou no config do Start node).
+
+---
+
+## 2. Campos Universais em TODOS os Blocos
+
+Todo bloco do Flow Builder tera estes campos configuráveis no NodeConfigPanel:
+
+| Campo | Descricao | Onde aparece para o usuario |
 |---|---|---|
-| Inicio | Ponto de entrada do fluxo | 1 saida |
-| Mensagem | Texto + audio do mestre | 1 saida (botao "Continuar") |
-| Pergunta Sim/Nao | Pergunta binaria | 2 saidas (Sim / Nao) |
-| Escolha Multipla | Lista de opcoes configuráveis | N saidas (uma por opcao) |
-| Lancamento de Obi | Selecao do resultado do Obi | 5 saidas (uma por resultado) |
-| Selecao Ire/Ibi | Escolha Ire ou Ibi + subtipo | 2 saidas (Ire / Ibi) |
-| Pergunta Aberta | Campo de texto livre | 1 saida |
-| Diagnostico | Gera checklist final | Fim do fluxo |
+| **Titulo** (label) | Titulo da etapa | Titulo principal na tela |
+| **Descricao** (config.description) | Texto explicativo | Subtitulo abaixo do titulo |
+| **Mensagem do Mestre** (config.guidance_message) | Orientacao personalizada | Balao do mestre (GuidanceBubble) |
+| **Audio do Mestre** (config.guidance_audio_url) | Audio do mestre | Botao de play no balao |
+| **Ritual vinculado** (config.ritual_id) | Ritual/oracao sugerido | Botao "Ver Ritual" ou link de ajuda |
+| **Oferenda vinculada** (config.offering_id) | Oferenda sugerida | Botao "Ver Oferenda" |
 
-## Tecnologia
+### Blocos especificos tem campos adicionais
 
-A biblioteca **React Flow** (@xyflow/react) sera usada para o editor visual. Ela e a referencia do mercado para editores de nos em React, com suporte completo a arrasta-e-solta, zoom, conexoes visuais e nos customizados.
+**Mensagem**: texto da mensagem (config.message), audio da mensagem (config.audio_url)
 
-## Estrutura do Banco de Dados
+**Sim/Nao**: pergunta (config.question), textos dos botoes personalizaveis (config.yes_label, config.no_label, config.yes_description, config.no_description)
 
-Duas novas tabelas:
+**Escolha Multipla**: pergunta (config.question), lista de opcoes com label + descricao (config.options como array de objetos {label, description, ritual_id?, offering_id?})
 
-**oracle_flows** -- armazena cada fluxo criado
+**Obi**: usa dados da tabela `oracle_configs` como referencia, mostrando nomes e significados. Campo config.use_db_configs = true por padrao
 
-| Coluna | Tipo | Descricao |
-|---|---|---|
-| id | uuid | Chave primaria |
-| name | text | Nome do fluxo (ex: "Consulta Padrao") |
-| description | text | Descricao opcional |
-| is_active | boolean | Se esta ativo para os usuarios |
-| is_default | boolean | Se e o fluxo padrao (apenas 1) |
-| created_at | timestamptz | Data de criacao |
-| updated_at | timestamptz | Data de atualizacao |
+**Ire/Ibi**: usa dados da tabela `ire_ibi_types` como referencia. Campo config.use_db_types = true por padrao
 
-**oracle_flow_nodes** -- armazena cada bloco/no do fluxo
+**Diagnostico**: campos para definir as tarefas que serao geradas (ver secao 3)
 
-| Coluna | Tipo | Descricao |
-|---|---|---|
-| id | uuid | Chave primaria |
-| flow_id | uuid | FK para oracle_flows |
-| node_type | text | Tipo do no (message, yes_no, multiple_choice, obi, ire_ibi, diagnosis, start) |
-| label | text | Titulo exibido no no |
-| config | jsonb | Configuracao especifica (texto da mensagem, opcoes, audio_url, guidance, etc.) |
-| position_x | float | Posicao X no editor |
-| position_y | float | Posicao Y no editor |
+---
 
-**oracle_flow_edges** -- armazena as conexoes entre nos
+## 3. Bloco Diagnostico -- Geracao de Tarefas pelo Fluxo
 
-| Coluna | Tipo | Descricao |
-|---|---|---|
-| id | uuid | Chave primaria |
-| flow_id | uuid | FK para oracle_flows |
-| source_node_id | uuid | No de origem |
-| target_node_id | uuid | No de destino |
-| source_handle | text | Identificador da saida (ex: "sim", "nao", "alafia", "ire") |
-| label | text | Texto exibido na seta (opcional) |
+O bloco de diagnostico precisa gerar o checklist de tarefas. Hoje isso e feito pela tabela `oracle_task_templates` com condicoes hardcoded (ebo_not_done, ori_needs, etc.).
 
-## Alteracoes no Codigo
+### Nova abordagem: Tarefas inline no fluxo
 
-### Novos Arquivos
+Cada bloco de Diagnostico tera uma lista de **tarefas configuráveis** (config.tasks) com:
 
-| Arquivo | Funcao |
+| Campo | Descricao |
 |---|---|
-| `src/components/admin/flow-builder/FlowBuilder.tsx` | Componente principal do editor com React Flow |
-| `src/components/admin/flow-builder/nodes/MessageNode.tsx` | No visual de mensagem |
-| `src/components/admin/flow-builder/nodes/YesNoNode.tsx` | No visual de pergunta sim/nao |
-| `src/components/admin/flow-builder/nodes/MultipleChoiceNode.tsx` | No visual de escolha multipla |
-| `src/components/admin/flow-builder/nodes/ObiNode.tsx` | No visual de lancamento de Obi |
-| `src/components/admin/flow-builder/nodes/IreIbiNode.tsx` | No visual de selecao Ire/Ibi |
-| `src/components/admin/flow-builder/nodes/DiagnosisNode.tsx` | No visual de diagnostico final |
-| `src/components/admin/flow-builder/nodes/StartNode.tsx` | No visual de inicio |
-| `src/components/admin/flow-builder/NodeConfigPanel.tsx` | Painel lateral para editar configuracao de cada no |
-| `src/components/admin/flow-builder/NodePalette.tsx` | Paleta de blocos arrastáveis |
-| `src/components/admin/AdminFlows.tsx` | Lista de fluxos no admin |
-| `src/hooks/useOracleFlows.ts` | Hook para CRUD de fluxos, nos e edges |
-| `src/components/oracle/DynamicFlowRunner.tsx` | Motor que interpreta o fluxo e conduz o usuario |
-| `src/components/oracle/FlowStepRenderer.tsx` | Renderiza cada tipo de no para o usuario final |
+| task_title | Titulo da tarefa (ex: "Fazer Ebo de Limpeza") |
+| task_type | Tipo (ebo, ibori, oracao_ori, etc.) |
+| category | Categoria para imagem/label |
+| ritual_id | Ritual vinculado (opcional) |
+| offering_id | Oferenda vinculada (opcional) |
+| guidance_message | Orientacao do mestre para esta tarefa |
+| guidance_audio_url | Audio do mestre para esta tarefa |
+| condition | Condicao baseada nas respostas do fluxo (ver abaixo) |
 
-### Arquivos Modificados
+### Condicoes inteligentes baseadas em respostas
+
+O diagnostico recebe TODAS as respostas acumuladas ao longo do fluxo (o `answers` do DynamicFlowRunner). Cada tarefa pode ter uma condicao:
+
+- **always**: sempre mostra
+- **answer_equals:NODE_ID:valor**: mostra se o no X teve resposta = valor
+- **answer_not_equals:NODE_ID:valor**: mostra se o no X teve resposta diferente de valor
+
+Isso substitui completamente as condicoes hardcoded (ebo_not_done, ori_needs, etc.) por algo generico que funciona com qualquer pergunta do fluxo.
+
+### Compatibilidade
+
+O `DynamicFlowRunner` passara `answers` + `nodes` para o FlowStepRenderer no diagnostico. O FlowStepRenderer tera toda a logica de filtragem, salvamento no `user_journey` e `journey_tasks`, vinculacao de rituais/oferendas com combobox (exatamente como o StepDiagnosis atual faz).
+
+---
+
+## 4. NodeConfigPanel -- Redesenho Completo
+
+O painel de configuracao sera reorganizado em secoes colapsaveis:
+
+```text
++-- Informacoes Basicas --------+
+| Titulo: [____________]        |
+| Descricao: [____________]     |
++-------------------------------+
+
++-- Orientacao do Mestre -------+
+| Mensagem: [textarea]         |
+| Audio URL: [____________]    |
++-------------------------------+
+
++-- Vinculos --------------------+
+| Ritual: [combobox busca]      |
+| Oferenda: [combobox busca]    |
++-------------------------------+
+
++-- Configuracao Especifica -----+
+| (campos do tipo de bloco)     |
++-------------------------------+
+```
+
+Todos os tipos de bloco (inclusive Start, Obi, Ire/Ibi, Diagnostico) serao editáveis ao clicar.
+
+---
+
+## 5. Fluxo de Exemplo Pre-populado
+
+Botao "Criar Fluxo Padrao" no AdminFlows que insere automaticamente um fluxo completo com os dados reais atuais do banco:
+
+**Fluxo "Cuidado Espiritual Semanal"** com ~14 nos:
+- Inicio -> Mensagem de acolhimento -> Lancamento de Obi -> Ire/Ibi -> Mensagem pos-obi
+- Sim/Nao "Ja apurou o Ebo?" -> (Se Sim) Escolha Multipla tipo de Ebo -> continua
+- Sim/Nao "O Ori precisa de algo?" -> (Se Sim) Escolha Multipla Ibori/Oracao/Ambos
+- Sim/Nao "As Iyami querem algo?" -> Sim/Nao "O Egbe Orun quer algo?"
+- Diagnostico Final
+
+Todos os titulos, descricoes e orientacoes serao preenchidos com os textos que ja existem nas tabelas `oracle_step_texts`, `oracle_configs` e `ire_ibi_types`.
+
+Um segundo fluxo "Quero uma Orientacao" tambem sera criado como exemplo mais simples.
+
+---
+
+## 6. Oracle.tsx -- Tela de Selecao de Fluxos
+
+A pagina do Oraculo sera completamente reescrita:
+
+1. Busca todos os fluxos ativos (`is_active = true`)
+2. Se houver 1 fluxo: inicia direto
+3. Se houver 2+: mostra tela de selecao com cards (nome + descricao do fluxo)
+4. Se houver 0: mensagem "Nenhum fluxo configurado"
+5. Ao selecionar, renderiza o DynamicFlowRunner com o flowId escolhido
+
+---
+
+## 7. Limpeza Completa -- Remocoes
+
+### Secoes do Admin removidas
+
+| Secao | Motivo |
+|---|---|
+| "Oraculo" (com sub-abas: Resultados do Obi, Tarefas Sugeridas, Textos das Etapas, Tipos de Ire/Ibi) | Tudo agora e configurado via blocos do Flow Builder |
+| "Orientacoes" (guidance_bubbles do oraculo) | As orientacoes agora vivem dentro de cada bloco |
+
+### Arquivos removidos
+
+| Arquivo | Motivo |
+|---|---|
+| `src/components/oracle/StepIntention.tsx` | Substituido pela tela de selecao de fluxos |
+| `src/components/oracle/StepObiResult.tsx` | Substituido pelo bloco "Obi" do fluxo |
+| `src/components/oracle/StepIreIbi.tsx` | Substituido pelo bloco "Ire/Ibi" do fluxo |
+| `src/components/oracle/StepEbo.tsx` | Substituido por blocos "Sim/Nao" + "Escolha Multipla" |
+| `src/components/oracle/StepOri.tsx` | Substituido por blocos "Sim/Nao" + "Escolha Multipla" |
+| `src/components/oracle/StepIyamiEgbe.tsx` | Substituido por blocos "Sim/Nao" |
+| `src/components/oracle/StepDiagnosis.tsx` | Logica movida para o bloco "Diagnostico" do FlowStepRenderer |
+| `src/components/admin/AdminOracleStepTexts.tsx` | Textos agora vivem nos blocos |
+| `src/components/admin/AdminOracleConfigs.tsx` | Tabela continua existindo como referencia, mas sem UI dedicada |
+| `src/components/admin/AdminOracleTaskTemplates.tsx` | Tarefas agora sao definidas dentro do bloco Diagnostico |
+| `src/components/admin/AdminIreIbiTypes.tsx` | Tabela continua existindo como referencia, mas sem UI dedicada |
+
+### AdminSidebar
+
+- Remover item "Oraculo" do menu
+- "Fluxos" e o unico ponto de acesso para tudo do oraculo
+
+### Hooks mantidos (dados de referencia)
+
+- `useOracleConfigs` -- bloco Obi do FlowStepRenderer busca nomes/significados
+- `useIreIbiTypes` -- bloco Ire/Ibi do FlowStepRenderer busca subtipos
+- Hooks de `oracle_step_texts` e `oracle_task_templates` nao serao mais usados pelo fluxo dinamico
+
+---
+
+## 8. FlowBuilder -- Melhorias
+
+- Permitir clicar em **todos** os tipos de no (inclusive Start, Obi, Ire/Ibi, Diagnostico) para configurar
+- No Diagnostico: editor inline de tarefas com campos de titulo, tipo, categoria, ritual, oferenda, orientacao e condicao
+- Nos de Escolha Multipla: cada opcao tera label + descricao + ritual_id + offering_id opcionais
+- Adicionar botao de **deletar no** no NodeConfigPanel
+
+---
+
+## 9. Detalhes Tecnicos -- Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/pages/Oracle.tsx` | Verificar se existe fluxo ativo; se sim, usa DynamicFlowRunner ao inves do wizard hardcoded |
-| `src/pages/Admin.tsx` | Adicionar secao "flows" no menu lateral |
-| `src/components/admin/AdminSidebar.tsx` | Adicionar item "Fluxos" no menu |
+| `src/components/admin/flow-builder/NodeConfigPanel.tsx` | Redesenho completo com campos universais + campos especificos por tipo + editor de tarefas para diagnostico |
+| `src/components/admin/flow-builder/FlowBuilder.tsx` | Permitir clicar em todos os tipos de no |
+| `src/components/admin/AdminFlows.tsx` | Adicionar botao "Criar Fluxo Padrao" + campo descricao ao criar fluxo |
+| `src/components/oracle/FlowStepRenderer.tsx` | Todos os blocos mostram titulo, descricao e GuidanceBubble inline; bloco Diagnostico com logica completa de tarefas, salvamento e vinculacao |
+| `src/components/oracle/DynamicFlowRunner.tsx` | Passar answers + nodes para FlowStepRenderer |
+| `src/pages/Oracle.tsx` | Tela de selecao de fluxos ativos + remover wizard hardcoded |
+| `src/pages/Admin.tsx` | Remover secao "oracle", remover imports desnecessarios |
+| `src/components/admin/AdminSidebar.tsx` | Remover item "Oraculo" |
 
-### Nova Dependencia
+---
 
-- `@xyflow/react` -- biblioteca do editor visual de nos
+## 10. Ordem de Execucao
 
-## Como o Motor do Fluxo Funciona (Usuario Final)
-
-1. O app carrega o fluxo ativo (is_default = true) com seus nos e edges
-2. Comeca pelo no do tipo "start"
-3. Renderiza o no atual de acordo com o tipo (mensagem, pergunta, etc.)
-4. Quando o usuario interage (clica em "Continuar", escolhe "Sim", seleciona um resultado), o motor procura o edge correspondente (pelo source_handle)
-5. Navega para o no de destino desse edge
-6. Repete ate chegar no no de "diagnosis"
-7. No diagnostico, coleta todas as respostas acumuladas ao longo do fluxo e gera o checklist
-
-## Compatibilidade
-
-- O wizard hardcoded atual continua funcionando como fallback se nenhum fluxo estiver ativo
-- Os fluxos podem ser duplicados, editados e desativados sem risco
-- Toda a configuracao existente (oracle_configs, ire_ibi_types, oracle_task_templates) continua valida e pode ser referenciada dentro dos nos do fluxo
-
-## Ordem de Implementacao
-
-1. Criar tabelas no banco (oracle_flows, oracle_flow_nodes, oracle_flow_edges)
-2. Criar hook useOracleFlows com CRUD completo
-3. Instalar @xyflow/react e criar o editor visual (FlowBuilder + nos customizados)
-4. Criar a secao "Fluxos" no admin com lista + editor
-5. Criar o DynamicFlowRunner para o usuario final
-6. Integrar no Oracle.tsx (fluxo ativo substitui wizard hardcoded)
+1. Melhorar NodeConfigPanel com todos os campos universais + especificos + editor de tarefas do diagnostico
+2. Atualizar FlowBuilder para permitir editar todos os tipos de no
+3. Melhorar FlowStepRenderer com GuidanceBubble inline, rituais, oferendas e diagnostico completo
+4. Atualizar DynamicFlowRunner para passar answers/nodes ao diagnostico
+5. Criar botao "Fluxo Padrao" no AdminFlows com dados reais pre-populados
+6. Reescrever Oracle.tsx com tela de selecao de fluxos
+7. Limpar Admin.tsx e AdminSidebar (remover secao "Oraculo")
+8. Remover arquivos Step*.tsx e Admin*Oracle*.tsx
 
