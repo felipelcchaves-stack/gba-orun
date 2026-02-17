@@ -151,29 +151,32 @@ export const useSaveFlowCanvas = () => {
       flowId: string;
       nodes: Omit<OracleFlowNode, "id">[];
       edges: Omit<OracleFlowEdge, "id">[];
-    }) => {
-      // Delete existing nodes/edges (cascade will handle edges via FK)
+    }): Promise<{ nodeIdMap: Record<string, string> }> => {
+      // Delete existing nodes/edges
       await supabase.from("oracle_flow_edges").delete().eq("flow_id", flowId);
       await supabase.from("oracle_flow_nodes").delete().eq("flow_id", flowId);
 
-      // Insert nodes
+      const nodeIdMap: Record<string, string> = {};
+
       if (nodes.length > 0) {
+        // Strip _tempId from config before saving, but keep the mapping
+        const cleanNodes = nodes.map((n) => {
+          const { _tempId, ...cleanConfig } = (n.config as any) || {};
+          return { ...n, config: cleanConfig, _originalTempId: _tempId };
+        });
+
+        const toInsert = cleanNodes.map(({ _originalTempId, ...rest }) => rest);
+
         const { data: insertedNodes, error: nErr } = await supabase
           .from("oracle_flow_nodes")
-          .insert(nodes)
+          .insert(toInsert)
           .select();
         if (nErr) throw nErr;
 
-        // Build id map: old temp id -> new db id
-        // We use position as key since temp ids won't match
-        const nodeIdMap = new Map<string, string>();
-        // nodes array order matches insertedNodes order
-        nodes.forEach((n, i) => {
-          // We need a way to map edges' source/target to new ids
-          // We'll use a special _tempId in config
-          const tempId = (n.config as any)?._tempId;
-          if (tempId && insertedNodes?.[i]) {
-            nodeIdMap.set(tempId, insertedNodes[i].id);
+        // Build temp -> db id map
+        cleanNodes.forEach((n, i) => {
+          if (n._originalTempId && insertedNodes?.[i]) {
+            nodeIdMap[n._originalTempId] = insertedNodes[i].id;
           }
         });
 
@@ -181,8 +184,8 @@ export const useSaveFlowCanvas = () => {
         if (edges.length > 0 && insertedNodes) {
           const mappedEdges = edges.map((e) => ({
             flow_id: flowId,
-            source_node_id: nodeIdMap.get(e.source_node_id) || e.source_node_id,
-            target_node_id: nodeIdMap.get(e.target_node_id) || e.target_node_id,
+            source_node_id: nodeIdMap[e.source_node_id] || e.source_node_id,
+            target_node_id: nodeIdMap[e.target_node_id] || e.target_node_id,
             source_handle: e.source_handle,
             label: e.label,
           }));
@@ -190,6 +193,8 @@ export const useSaveFlowCanvas = () => {
           if (eErr) throw eErr;
         }
       }
+
+      return { nodeIdMap };
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["oracle_flow_nodes", vars.flowId] });
