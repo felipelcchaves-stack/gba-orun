@@ -5,19 +5,38 @@ import { useQuery } from "@tanstack/react-query";
 export const usePremium = () => {
   const { user } = useAuth();
 
-  const { data: isPremium, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["premium", user?.id],
     queryFn: async () => {
-      if (!user) return false;
+      if (!user) return { isPremium: false, status: "free" as string, expiresAt: null as string | null };
       const { data } = await supabase
         .from("profiles")
-        .select("is_premium")
+        .select("is_premium, subscription_status, subscription_expires_at")
         .eq("user_id", user.id)
         .maybeSingle();
-      return data?.is_premium ?? false;
+      
+      let isPremium = data?.is_premium ?? false;
+      const expiresAt = (data as any)?.subscription_expires_at as string | null;
+      
+      // Double-check: if expires_at is in the past, treat as not premium
+      if (isPremium && expiresAt && new Date(expiresAt) < new Date()) {
+        isPremium = false;
+      }
+      
+      return {
+        isPremium,
+        status: (data as any)?.subscription_status ?? "free",
+        expiresAt,
+      };
     },
     enabled: !!user,
   });
 
-  return { isPremium: isPremium ?? false, loading: isLoading, isLoggedIn: !!user };
+  return {
+    isPremium: data?.isPremium ?? false,
+    subscriptionStatus: data?.status ?? "free",
+    expiresAt: data?.expiresAt ?? null,
+    loading: isLoading,
+    isLoggedIn: !!user,
+  };
 };

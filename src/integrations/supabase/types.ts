@@ -302,9 +302,14 @@ export type Database = {
           display_name: string | null
           gender: string | null
           guru_id: string | null
+          guru_subscription_id: string | null
           id: string
           is_premium: boolean
           religion: string | null
+          subscription_expires_at: string | null
+          subscription_plan_id: string | null
+          subscription_started_at: string | null
+          subscription_status: string
           user_id: string
         }
         Insert: {
@@ -315,9 +320,14 @@ export type Database = {
           display_name?: string | null
           gender?: string | null
           guru_id?: string | null
+          guru_subscription_id?: string | null
           id?: string
           is_premium?: boolean
           religion?: string | null
+          subscription_expires_at?: string | null
+          subscription_plan_id?: string | null
+          subscription_started_at?: string | null
+          subscription_status?: string
           user_id: string
         }
         Update: {
@@ -328,12 +338,25 @@ export type Database = {
           display_name?: string | null
           gender?: string | null
           guru_id?: string | null
+          guru_subscription_id?: string | null
           id?: string
           is_premium?: boolean
           religion?: string | null
+          subscription_expires_at?: string | null
+          subscription_plan_id?: string | null
+          subscription_started_at?: string | null
+          subscription_status?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_subscription_plan_id_fkey"
+            columns: ["subscription_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rituals: {
         Row: {
@@ -371,6 +394,42 @@ export type Database = {
           title?: string
           trigger_oracle?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          billing_period: string
+          created_at: string
+          description: string | null
+          display_order: number
+          guru_checkout_url: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+        }
+        Insert: {
+          billing_period?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          guru_checkout_url?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price: number
+        }
+        Update: {
+          billing_period?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          guru_checkout_url?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
         }
         Relationships: []
       }
@@ -498,8 +557,10 @@ export type Database = {
       admin_get_stats: {
         Args: never
         Returns: {
+          active_subscribers: number
           consultations_today: number
           free_users: number
+          overdue_users: number
           premium_users: number
           total_consultations: number
           total_posts: number
@@ -518,9 +579,14 @@ export type Database = {
           email: string
           gender: string
           guru_id: string
+          guru_subscription_id: string
           id: string
           is_premium: boolean
           religion: string
+          subscription_expires_at: string
+          subscription_plan_id: string
+          subscription_started_at: string
+          subscription_status: string
           user_id: string
         }[]
       }

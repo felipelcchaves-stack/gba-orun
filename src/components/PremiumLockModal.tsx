@@ -1,5 +1,7 @@
 import { Lock, ExternalLink } from "lucide-react";
 import { trackInitiateCheckout } from "@/lib/pixel";
+import { useActivePlans } from "@/hooks/useSubscriptionPlans";
+import { useNavigate } from "react-router-dom";
 
 interface PremiumLockModalProps {
   open: boolean;
@@ -7,14 +9,18 @@ interface PremiumLockModalProps {
   checkoutUrl?: string;
 }
 
-const CHECKOUT_URL = "https://pay.hotmart.com/SEU_PRODUTO"; // TODO: substituir pela URL real do checkout Guru
-
 const PremiumLockModal = ({ open, onClose, checkoutUrl }: PremiumLockModalProps) => {
+  const { data: plans } = useActivePlans();
+  const navigate = useNavigate();
+
   if (!open) return null;
+
+  const cheapest = plans?.length ? plans.reduce((a, b) => (Number(a.price) < Number(b.price) ? a : b)) : null;
+  const priceLabel = cheapest ? `R$ ${Number(cheapest.price).toFixed(2).replace(".", ",")}${cheapest.billing_period === "monthly" ? "/mês" : cheapest.billing_period === "quarterly" ? "/trim" : "/ano"}` : "";
 
   const handleCheckout = () => {
     trackInitiateCheckout();
-    window.open(checkoutUrl || CHECKOUT_URL, "_blank");
+    navigate("/oferta");
   };
 
   return (
@@ -28,19 +34,22 @@ const PremiumLockModal = ({ open, onClose, checkoutUrl }: PremiumLockModalProps)
         </div>
         <h2 className="text-2xl font-display font-bold mb-2">Conteúdo Premium 🔒</h2>
         <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
-          Este ritual faz parte do acervo exclusivo. Desbloqueie todos os rituais, Orikis, Ebós e muito mais!
+          Este ritual faz parte do acervo exclusivo. Assine e desbloqueie todos os rituais, Orikis, Ebós e muito mais!
         </p>
+        {priceLabel && (
+          <p className="text-lg font-bold text-foreground mb-4">A partir de {priceLabel}</p>
+        )}
         <ul className="text-left text-sm space-y-2 mb-6">
           <li className="flex items-center gap-2">✅ Receitas completas de Ebo</li>
           <li className="flex items-center gap-2">✅ Todos os Orikis dos Orixás</li>
           <li className="flex items-center gap-2">✅ Rituais de Ibori e proteção</li>
-          <li className="flex items-center gap-2">✅ Proteção contra Iyami</li>
+          <li className="flex items-center gap-2">✅ Cancele quando quiser</li>
         </ul>
         <button
           onClick={handleCheckout}
           className="w-full py-4 rounded-2xl gradient-gold text-accent-foreground font-bold text-lg shadow-gold transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
         >
-          Desbloquear Agora <ExternalLink className="h-5 w-5" />
+          Ver Planos <ExternalLink className="h-5 w-5" />
         </button>
         <button onClick={onClose} className="mt-3 text-sm text-muted-foreground hover:text-foreground">
           Voltar
