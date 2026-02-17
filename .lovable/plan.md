@@ -1,70 +1,82 @@
 
-# Variáveis Intuitivas no Flow Builder
+# Recuperar alteracoes do fluxo e corrigir salvamento
 
-## O que muda para o usuário
+## Situacao atual
 
-Hoje, para usar variáveis o admin precisa:
-1. Saber digitar um nome técnico (ex: `resultado_obi`)
-2. Lembrar de digitar `{{resultado_obi}}` nos campos de texto
-3. Não errar a grafia
+**Seus dados antigos estao SEGUROS no banco.** O que aconteceu:
 
-Isso é confuso para leigos. A proposta é tornar tudo visual e automático.
+1. Voce fez alteracoes no canvas (trocou "Tipo de Ebo" por "Ebo ou Akulebo", entre outras mudancas)
+2. Ao salvar, o sistema tentou deletar os nos antigos e inserir os novos
+3. A politica de seguranca (RLS) bloqueou AMBAS as operacoes silenciosamente
+4. O DELETE retornou "sucesso" mas nao deletou nada (comportamento do PostgREST quando RLS bloqueia)
+5. O INSERT falhou com o erro que voce viu
 
-## Melhorias propostas
+**Resultado:** Os dados originais continuam no banco, intactos. Suas alteracoes estao apenas no canvas do navegador (enquanto voce nao recarregar a pagina).
 
-### 1. Nome de variável automático ao criar o nó
+## Causa raiz
 
-Quando o admin arrastar um nó para o canvas, o sistema já preenche automaticamente o `variable_name` com um nome legível baseado no tipo:
+Sua sessao de administrador provavelmente expirou. As tabelas `oracle_flow_nodes` e `oracle_flow_edges` exigem role de admin para INSERT/UPDATE/DELETE, mas permitem SELECT publico. Por isso voce consegue VER o fluxo mas nao salvar.
 
-- Obi -> `resultado_obi`
-- Ire/Ibi -> `tipo_ire_ibi`
-- Sim/Não -> `pergunta_1` (incrementa se já existir)
-- Múltipla Escolha -> `escolha_1`
-- Pergunta Aberta -> `resposta_1`
-- Mensagem -> (sem variável, não captura resposta)
+## Plano de acao
 
-O admin pode editar se quiser, mas já vem preenchido.
+### Passo 1: Recuperar acesso de admin
 
-### 2. Botão "Inserir Variável" nos campos de texto
+- Faca logout e login novamente no app para renovar sua sessao
+- Depois de logar, volte ao Flow Builder e suas alteracoes AINDA estarao no canvas (o React mantem o estado)
 
-Em vez de digitar `{{nome}}` manualmente, os campos de texto (Mensagem, Descrição, Orientação) terão um botão clicável que abre uma lista com todas as variáveis definidas nos outros nós do fluxo. Ao clicar em uma variável, ela é inserida automaticamente no campo na posição do cursor.
+### Passo 2: Corrigir o salvamento para ser seguro (codigo)
 
-A lista mostra o nome amigável + o tipo do nó de origem:
-- "resultado_obi (Obi)"
-- "tipo_ire_ibi (Irê/Ibi)"
-- "pergunta_1 (Sim/Não)"
+O bug critico e que o `useSaveFlowCanvas` faz DELETE antes do INSERT sem verificar se o DELETE realmente funcionou. Se o INSERT falhar depois, os dados se perdem.
 
-### 3. Variáveis visíveis como chips coloridos nos nós do canvas
+**Arquivo: `src/hooks/useOracleFlows.ts`**
 
-Cada nó no canvas mostrará um pequeno chip/badge com o nome da variável definida (ex: um badge verde escrito "resultado_obi" abaixo do título do nó). Isso dá visibilidade imediata de quais nós geram dados reutilizáveis.
+Modificar `useSaveFlowCanvas` para:
+- Verificar o resultado do DELETE (checar se retornou erro)
+- Fazer INSERT primeiro em uma tabela temporaria ou validar permissoes antes de deletar
+- Alternativa mais simples e eficaz: **verificar se o usuario tem permissao ANTES de deletar**, fazendo um INSERT de teste ou checando a sessao
 
-## Detalhes técnicos
+A abordagem escolhida sera:
+1. Antes de qualquer operacao, verificar se ha sessao ativa (`supabase.auth.getSession()`)
+2. Se nao houver sessao, lancar erro claro ("Sessao expirada, faca login novamente")
+3. Verificar erros nos DELETEs (o PostgREST retorna erro quando RLS bloqueia com token valido mas sem permissao)
+4. Somente se os DELETEs confirmarem sucesso, prosseguir com os INSERTs
 
-### Arquivo 1: `src/components/admin/flow-builder/FlowBuilder.tsx`
+### Passo 3: Salvar novamente
 
-- No `onDrop`, ao criar um novo nó, preencher `config.variable_name` automaticamente com base no tipo do nó
-- Criar função `generateVariableName(type, existingNodes)` que gera nomes únicos incrementais
+Apos relogar e com a correcao aplicada, clique em "Salvar Fluxo" novamente.
 
-### Arquivo 2: `src/components/admin/flow-builder/NodeConfigPanel.tsx`
+## Detalhes tecnicos
 
-- Receber lista de todas as variáveis disponíveis no fluxo (via nova prop `availableVariables`)
-- Criar componente `VariableInsertButton` que aparece ao lado dos campos Textarea
-- Ao clicar, abre um Popover com a lista de variáveis clicáveis
-- Ao selecionar, insere `{{nome}}` no campo na posição do cursor
-- Renomear o label "Nome da variável" para "Apelido desta resposta" com dica mais amigável
+### Mudanca em `useSaveFlowCanvas` (useOracleFlows.ts)
 
-### Arquivo 3: Nós visuais do canvas (todos os arquivos de nós)
+```text
+Antes:
+  await supabase.from("oracle_flow_edges").delete().eq("flow_id", flowId);
+  await supabase.from("oracle_flow_nodes").delete().eq("flow_id", flowId);
+  // INSERT sem verificar se DELETE funcionou
 
-- Adicionar badge com o `variable_name` quando definido nos componentes:
-  - `ObiNode.tsx`, `IreIbiNode.tsx`, `YesNoNode.tsx`, `MultipleChoiceNode.tsx`, `OpenQuestionNode.tsx`, `DiagnosisNode.tsx`
+Depois:
+  // 1. Verificar sessao ativa
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Sessao expirada. Faca login novamente para salvar.");
 
-### Arquivos modificados: 8
+  // 2. DELETE com verificacao de erro
+  const { error: delEdgesErr } = await supabase.from("oracle_flow_edges").delete().eq("flow_id", flowId);
+  if (delEdgesErr) throw new Error("Erro ao limpar edges: " + delEdgesErr.message);
 
-1. `src/components/admin/flow-builder/FlowBuilder.tsx` - auto-gerar nome de variável
-2. `src/components/admin/flow-builder/NodeConfigPanel.tsx` - botão inserir variável + label amigável
-3. `src/components/admin/flow-builder/nodes/ObiNode.tsx` - badge de variável
-4. `src/components/admin/flow-builder/nodes/IreIbiNode.tsx` - badge de variável
-5. `src/components/admin/flow-builder/nodes/YesNoNode.tsx` - badge de variável
-6. `src/components/admin/flow-builder/nodes/MultipleChoiceNode.tsx` - badge de variável
-7. `src/components/admin/flow-builder/nodes/OpenQuestionNode.tsx` - badge de variável
-8. `src/components/admin/flow-builder/nodes/DiagnosisNode.tsx` - badge de variável
+  const { error: delNodesErr } = await supabase.from("oracle_flow_nodes").delete().eq("flow_id", flowId);
+  if (delNodesErr) throw new Error("Erro ao limpar nodes: " + delNodesErr.message);
+
+  // 3. INSERT (ja existente, sem mudanca)
+```
+
+### Arquivo modificado: 1
+
+1. `src/hooks/useOracleFlows.ts` - adicionar verificacao de sessao e erros nos DELETEs
+
+## Acao imediata recomendada
+
+1. **NAO recarregue a pagina** - suas alteracoes estao no canvas
+2. Aprove este plano para eu aplicar a correcao
+3. Faca logout e login novamente
+4. Volte ao Flow Builder e salve
