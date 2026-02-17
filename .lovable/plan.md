@@ -1,113 +1,44 @@
 
+# Correção: Rituais não atualizam após edição no Admin
 
-# Correcao: Auto-Save + Fluxos nao Refletindo na Jornada
+## Problema
 
-## Problemas Identificados
+O app usa `PersistQueryClientProvider` que salva o cache de queries no localStorage com validade de 24 horas. O hook `useRituals` tem `staleTime: 30 minutos`, ou seja, mesmo após salvar um ritual no admin e o `invalidateQueries` funcionar naquela página, ao navegar para outra rota o cache persistido no localStorage serve dados antigos sem buscar novamente no banco.
 
-### Problema 1: Auto-save interfere nas edicoes
-O auto-save grava no localStorage a cada 1 segundo de inatividade e tenta salvar no banco a cada 60 segundos. Isso causa dois problemas:
-- O salvamento automatico no banco pode sobrescrever mudancas em andamento ou disparar durante operacoes delicadas
-- O snapshot "limpo" e capturado uma unica vez no load, mas apos o save manual os IDs dos nodes mudam (de `temp_xxx` para UUIDs reais), invalidando o snapshot e fazendo o sistema achar que tudo mudou de novo
+Mesmo após refresh completo do navegador, o localStorage ainda contém os dados velhos que são restaurados antes de qualquer fetch.
 
-### Problema 2: Rascunho aparece mesmo apos salvar
-Quando o usuario clica "Salvar Fluxo", o `markClean()` remove o rascunho do localStorage. Porem, o debounce de 1 segundo continua rodando e pode regravar o rascunho imediatamente apos o `markClean()`, pois os IDs mudaram durante o save (temp -> UUID) e o snapshot fica desatualizado.
+## Solução
 
-### Problema 3: Fluxos salvos nao aparecem na jornada
-O `useCreateJourneyTasks` nao inclui `offering_id` no tipo TypeScript. Alem disso, o cache dos fluxos no lado do usuario tem `staleTime` de 30 minutos, entao mudancas feitas no admin demoram para aparecer. Tambem existem caminhos no fluxo que nao chegam ao no de Diagnostico (dead ends).
+### 1. Reduzir staleTime do useRituals
 
----
+Remover o `staleTime: 30 minutos` do `useRituals` para usar o padrão global de 5 minutos. Isso garante que dados mais frescos serão buscados com mais frequência.
 
-## Solucao
+**Arquivo:** `src/hooks/useRituals.ts`
+- Remover a linha `staleTime: 1000 * 60 * 30`
 
-### 1. Desativar auto-save automatico no banco (maior impacto)
+### 2. Forçar invalidação completa após mutações
 
-Remover o intervalo de 60 segundos que salva automaticamente. Manter apenas:
-- Deteccao de "dirty" (indicador visual amarelo)
-- Protecao `beforeunload` (aviso ao fechar aba com mudancas)
-- Rascunho local como seguranca (mas com logica corrigida)
+Nas mutations de `useUpdateRitual`, `useCreateRitual` e `useDeleteRitual`, usar `refetchType: 'all'` para invalidar inclusive queries inativas (que existem no cache persistido mas não estão montadas na tela atual).
 
-O usuario continua no controle total: salva apenas quando clica "Salvar Fluxo".
+Também invalidar a query individual `["ritual", id]` no update para cobrir a página de leitura.
 
-**Arquivo: `src/hooks/useFlowAutoSave.ts`**
-- Remover o `setInterval` de auto-save (linhas 103-115)
-- Corrigir o snapshot limpo: atualizar `cleanSnapshotRef` dentro do `markClean` usando os nodes/edges atuais (ja faz, mas precisa cancelar o debounce pendente)
-- No `markClean`, cancelar qualquer debounce pendente para evitar regravacao do rascunho
-- Aumentar debounce de 1s para 3s para reduzir escritas no localStorage
+**Arquivo:** `src/hooks/useRituals.ts`
+- Alterar `onSuccess` para: `qc.invalidateQueries({ queryKey: ["rituals"], refetchType: "all" })`
+- No `useUpdateRitual`, invalidar também: `qc.invalidateQueries({ queryKey: ["ritual"], refetchType: "all" })`
 
-### 2. Corrigir rascunho fantasma apos salvar
+### 3. Remover cache persistido de rituais ao salvar
 
-**Arquivo: `src/hooks/useFlowAutoSave.ts`**
-- Adicionar ref para controlar "cooldown" apos markClean
-- Apos `markClean`, ignorar a proxima deteccao de dirty por 5 segundos (tempo para os IDs se estabilizarem)
+Após qualquer mutação de ritual, remover explicitamente o cache persistido para garantir que um refresh da página busque dados frescos.
 
-### 3. Corrigir `offering_id` no hook de tarefas
-
-**Arquivo: `src/hooks/useJourney.ts`**
-- Adicionar `offering_id?: string` ao tipo do parametro de `useCreateJourneyTasks`
-
-### 4. Invalidar cache de fluxos apos salvar no admin
-
-**Arquivo: `src/hooks/useOracleFlows.ts`**
-- No `onSuccess` do `useSaveFlowCanvas`, invalidar tambem `["oracle_flows"]`
-
-### 5. Validacao de dead ends antes de salvar
-
-**Arquivo: `src/components/admin/flow-builder/FlowBuilder.tsx`**
-- Antes de salvar, verificar se existem nos sem edges de saida (exceto `diagnosis`)
-- Mostrar toast de aviso listando nos desconectados
-- Permitir salvar mesmo assim, mas alertar o admin
+**Arquivo:** `src/hooks/useRituals.ts`
+- No `onSuccess` de cada mutação, chamar `qc.removeQueries({ queryKey: ["rituals"], type: "inactive" })` para limpar queries inativas do cache
 
 ---
 
-## Detalhes tecnicos
+## Resumo
 
-### useFlowAutoSave.ts - Mudancas principais
-
-```text
-Antes:
-- Debounce 1s grava rascunho no localStorage
-- Intervalo 60s salva no banco automaticamente
-- markClean atualiza snapshot mas debounce pode regravar
-
-Depois:
-- Debounce 3s grava rascunho no localStorage
-- SEM auto-save no banco (removido)
-- markClean cancela debounce pendente + cooldown de 5s
-```
-
-### useJourney.ts - Tipo corrigido
-
-Adicionar `offering_id` ao array de tasks:
-```typescript
-tasks: Array<{
-  journey_id: string;
-  task_type: string;
-  task_title: string;
-  ritual_id?: string;
-  offering_id?: string;  // <-- novo
-  guidance_message?: string;
-  guidance_audio_url?: string | null;
-}>
-```
-
-### FlowBuilder.tsx - Validacao de dead ends
-
-Funcao `findDeadEndNodes()`:
-- Percorre todos os nodes
-- Para cada node que NAO e `diagnosis`, verifica se existe pelo menos uma edge com `source === node.id`
-- Retorna lista de nodes sem saida
-- Exibe toast amarelo: "Atencao: os nos [X, Y] nao tem conexao de saida"
-
----
-
-## Resumo de arquivos
-
-| Arquivo | Mudanca |
+| Arquivo | Mudança |
 |---------|---------|
-| `src/hooks/useFlowAutoSave.ts` | Remover auto-save no banco, corrigir rascunho fantasma, aumentar debounce |
-| `src/hooks/useJourney.ts` | Adicionar `offering_id` ao tipo |
-| `src/hooks/useOracleFlows.ts` | Invalidar cache de fluxos apos salvar canvas |
-| `src/components/admin/flow-builder/FlowBuilder.tsx` | Validacao de dead ends antes de salvar |
+| `src/hooks/useRituals.ts` | Remover staleTime de 30min, adicionar refetchType: "all" e removeQueries de inativas nas 3 mutações |
 
-**Total: 4 arquivos modificados, 0 novos**
-
+**Total: 1 arquivo modificado**
