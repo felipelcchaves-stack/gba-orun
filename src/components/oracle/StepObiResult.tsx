@@ -6,11 +6,11 @@ import GuidanceBubble from "@/components/GuidanceBubble";
 
 // Fallback hardcoded values
 export const OBI_RESULTS_FALLBACK = [
-  { key: "oyekun", name: "Oyekun", meaning: "Nenhum aberto — NÃO", color_type: "danger" },
-  { key: "okaran", name: "Okaran", meaning: "1 aberto — TALVEZ", color_type: "warning" },
-  { key: "ejife", name: "Ejife", meaning: "2 abertos — SIM", color_type: "success" },
-  { key: "etagun", name: "Etagun", meaning: "3 abertos — SIM FORTE", color_type: "success" },
-  { key: "alafia", name: "Alafia", meaning: "Todos abertos — PAZ (confirme)", color_type: "accent" },
+  { key: "oyekun", name: "Oyekun", meaning: "Nenhum aberto — NÃO", color_type: "danger", default_ire_ibi: "ibi" },
+  { key: "okaran", name: "Okaran", meaning: "1 aberto — TALVEZ", color_type: "warning", default_ire_ibi: "ibi" },
+  { key: "ejife", name: "Ejife", meaning: "2 abertos — SIM", color_type: "success", default_ire_ibi: "ire" },
+  { key: "etagun", name: "Etagun", meaning: "3 abertos — SIM FORTE", color_type: "success", default_ire_ibi: "ire" },
+  { key: "alafia", name: "Alafia", meaning: "Todos abertos — PAZ (confirme)", color_type: "accent", default_ire_ibi: "ire" },
 ];
 
 const ICON_MAP: Record<string, any> = {
@@ -49,9 +49,9 @@ interface Props {
 const StepObiResult = ({ onSelect }: Props) => {
   const { data: dbConfigs, isLoading } = useOracleConfigs();
 
-  const configs: Array<{ key: string; name: string; meaning: string; color_type: string }> =
+  const configs: Array<{ key: string; name: string; meaning: string; color_type: string; default_ire_ibi: string }> =
     dbConfigs && dbConfigs.length > 0
-      ? dbConfigs.map(c => ({ key: c.result_key, name: c.name, meaning: c.meaning, color_type: c.color_type }))
+      ? dbConfigs.map(c => ({ key: c.result_key, name: c.name, meaning: c.meaning, color_type: c.color_type, default_ire_ibi: c.default_ire_ibi || "ibi" }))
       : OBI_RESULTS_FALLBACK;
 
   if (isLoading) {
