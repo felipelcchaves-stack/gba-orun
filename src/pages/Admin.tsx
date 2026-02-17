@@ -4,11 +4,14 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { useRituals, useCreateRitual, useUpdateRitual, useDeleteRitual, Ritual } from "@/hooks/useRituals";
 import { useAppSettings, useUpdateAppSetting } from "@/hooks/useAppSettings";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, LogOut, Settings, BookOpen, Users, FileJson } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, LogOut, Settings, BookOpen, Users, FileJson, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import JsonImporter from "@/components/JsonImporter";
 import AdminRitualForm from "@/components/admin/AdminRitualForm";
 import AdminOfferSettings from "@/components/admin/AdminOfferSettings";
+import AdminOracleConfigs from "@/components/admin/AdminOracleConfigs";
+import AdminOracleTaskTemplates from "@/components/admin/AdminOracleTaskTemplates";
+import AdminOracleStepTexts from "@/components/admin/AdminOracleStepTexts";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -25,7 +28,8 @@ const AdminPage = () => {
   const [password, setPassword] = useState("");
   const [editing, setEditing] = useState<Ritual | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<"rituals" | "settings" | "import">("rituals");
+  const [activeTab, setActiveTab] = useState<"rituals" | "settings" | "import" | "oracle">("rituals");
+  const [oracleSubTab, setOracleSubTab] = useState<"configs" | "tasks" | "texts">("configs");
   const [filterCat, setFilterCat] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -108,6 +112,7 @@ const AdminPage = () => {
 
   const TABS = [
     { key: "rituals" as const, label: "Rituais", icon: BookOpen },
+    { key: "oracle" as const, label: "Oráculo", icon: Sparkles },
     { key: "settings" as const, label: "Configurações", icon: Settings },
     { key: "import" as const, label: "Importar", icon: FileJson },
   ];
@@ -192,6 +197,33 @@ const AdminPage = () => {
             ) : (
               <p className="text-center text-muted-foreground py-12">Nenhum ritual cadastrado.</p>
             )}
+          </>
+        )}
+
+        {activeTab === "oracle" && (
+          <>
+            <div className="flex gap-2 mb-6">
+              {([
+                { key: "configs" as const, label: "Resultados do Obi" },
+                { key: "tasks" as const, label: "Tarefas Sugeridas" },
+                { key: "texts" as const, label: "Textos das Etapas" },
+              ]).map(sub => (
+                <button
+                  key={sub.key}
+                  onClick={() => setOracleSubTab(sub.key)}
+                  className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    oracleSubTab === sub.key
+                      ? "bg-foreground text-background"
+                      : "border border-border hover:bg-muted"
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+            {oracleSubTab === "configs" && <AdminOracleConfigs />}
+            {oracleSubTab === "tasks" && <AdminOracleTaskTemplates />}
+            {oracleSubTab === "texts" && <AdminOracleStepTexts />}
           </>
         )}
 

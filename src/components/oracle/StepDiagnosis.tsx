@@ -6,7 +6,8 @@ import { useAddXP } from "@/hooks/useUserStats";
 import { useAddJourneyEntry, useCreateJourneyTasks } from "@/hooks/useJourney";
 import { useRituals } from "@/hooks/useRituals";
 import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
-import { OBI_RESULTS } from "./StepObiResult";
+import { useOracleConfigs, useOracleTaskTemplates } from "@/hooks/useOracleConfig";
+import { getObiIcon, getObiColor, OBI_RESULTS_FALLBACK } from "./StepObiResult";
 import { Progress } from "@/components/ui/progress";
 
 export interface WizardState {
@@ -24,54 +25,57 @@ interface TaskDef {
   type: string;
   title: string;
   category: string;
+  ritual_id?: string | null;
 }
 
-function generateTasks(state: WizardState): TaskDef[] {
+function matchCondition(condition: string, state: WizardState): boolean {
+  switch (condition) {
+    case "always": return true;
+    case "ebo_not_done": return !state.eboApurado;
+    case "ebo_done": return state.eboApurado;
+    case "ori_needs": return state.oriPrecisa;
+    case "ori_needs_ibori": return state.oriPrecisa && (state.oriAcao === "ibori" || state.oriAcao === "ambos");
+    case "ori_needs_oracao": return state.oriPrecisa && (state.oriAcao === "oracao" || state.oriAcao === "ambos");
+    case "ori_needs_ambos": return state.oriPrecisa && state.oriAcao === "ambos";
+    case "iyami_wants": return state.iyamiQuer;
+    case "egbe_wants": return state.egbeOrunQuer;
+    default: return false;
+  }
+}
+
+// Fallback hardcoded tasks (same as old generateTasks)
+function generateFallbackTasks(state: WizardState): TaskDef[] {
   const tasks: TaskDef[] = [];
   const isIbi = state.ireOrIbi === "ibi";
 
-  // Ebó tasks
   if (!state.eboApurado) {
-    tasks.push({
-      type: "ebo",
-      title: isIbi ? "Fazer Ebó de Limpeza" : "Fazer Ebó de Agradecimento",
-      category: "ebo",
-    });
+    tasks.push({ type: "ebo", title: isIbi ? "Fazer Ebó de Limpeza" : "Fazer Ebó de Agradecimento", category: "ebo" });
   } else if (state.eboTipo) {
     const label = state.eboTipo.charAt(0).toUpperCase() + state.eboTipo.slice(1);
     tasks.push({ type: "ebo", title: `Ebó de ${label}`, category: "ebo" });
   }
 
-  // Ori tasks
   if (state.oriPrecisa) {
-    if (state.oriAcao === "ibori" || state.oriAcao === "ambos") {
-      tasks.push({ type: "ibori", title: "Ibori de Proteção", category: "ibori" });
-    }
-    if (state.oriAcao === "oracao" || state.oriAcao === "ambos") {
-      tasks.push({ type: "oracao_ori", title: "Oração de Ori", category: "oracao_ori" });
-    }
+    if (state.oriAcao === "ibori" || state.oriAcao === "ambos") tasks.push({ type: "ibori", title: "Ibori de Proteção", category: "ibori" });
+    if (state.oriAcao === "oracao" || state.oriAcao === "ambos") tasks.push({ type: "oracao_ori", title: "Oração de Ori", category: "oracao_ori" });
   }
 
-  // Iyami tasks
   if (state.iyamiQuer) {
     tasks.push({ type: "oracao_iyami", title: "Oração de Iyami", category: "oracao_iyami" });
     tasks.push({ type: "cantiga", title: "Cantiga de Apaziguamento", category: "cantiga" });
   }
 
-  // Egbe Orun tasks
   if (state.egbeOrunQuer) {
     tasks.push({ type: "egbe_orun", title: "Oferenda ao Egbe Orun", category: "egbe_orun" });
     tasks.push({ type: "cantiga", title: "Cantiga Sagrada", category: "cantiga" });
   }
 
-  // Always add daily prayer
   if (isIbi) {
     tasks.push({ type: "oracao_noite", title: "Oração da Noite", category: "oracao_noite" });
   } else {
     tasks.push({ type: "oracao_manha", title: "Oração da Manhã", category: "oracao_manha" });
   }
 
-  // Ire always gets oriki
   if (!isIbi) {
     tasks.push({ type: "oriki", title: "Oriki de Agradecimento", category: "oriki" });
   }
@@ -85,12 +89,38 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
   const addJourneyEntry = useAddJourneyEntry();
   const createTasks = useCreateJourneyTasks();
   const { data: rituals } = useRituals();
+  const { data: dbConfigs } = useOracleConfigs();
+  const { data: dbTemplates } = useOracleTaskTemplates();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const tasks = generateTasks(state);
-  const obiResult = OBI_RESULTS.find(r => r.key === state.result);
+  // Generate tasks from DB templates or fallback
+  const tasks: TaskDef[] = (() => {
+    if (!dbTemplates || dbTemplates.length === 0) return generateFallbackTasks(state);
+
+    return dbTemplates
+      .filter(t => {
+        if (t.oracle_result_key && t.oracle_result_key !== state.result) return false;
+        if (t.ire_or_ibi && t.ire_or_ibi !== state.ireOrIbi) return false;
+        if (!matchCondition(t.condition, state)) return false;
+        return true;
+      })
+      .map(t => ({
+        type: t.task_type,
+        title: t.task_title,
+        category: t.category,
+        ritual_id: t.ritual_id,
+      }));
+  })();
+
+  // Get config from DB or fallback
+  const obiConfig = dbConfigs?.find(c => c.result_key === state.result);
+  const fallback = OBI_RESULTS_FALLBACK.find(r => r.key === state.result);
+  const obiName = obiConfig?.name || fallback?.name || state.result;
+  const obiColorType = obiConfig?.color_type || fallback?.color_type || "accent";
+  const ObiIcon = getObiIcon(obiColorType);
+  const obiColor = getObiColor(obiColorType);
 
   const handleSave = async () => {
     if (!user || saving || saved) return;
@@ -107,26 +137,28 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
         egbeOrunQuer: state.egbeOrunQuer,
       });
 
-      const notes = `${obiResult?.name} em ${state.ireOrIbi === "ire" ? "Irê" : "Ibi"}. ` +
+      const notes = `${obiName} em ${state.ireOrIbi === "ire" ? "Irê" : "Ibi"}. ` +
         `Ebó: ${state.eboApurado ? state.eboTipo : "pendente"}. ` +
         `Ori: ${state.oriPrecisa ? state.oriAcao : "ok"}. ` +
         `Iyami: ${state.iyamiQuer ? "sim" : "não"}. ` +
         `Egbe Orun: ${state.egbeOrunQuer ? "sim" : "não"}.`;
 
       const entry = await addJourneyEntry.mutateAsync({
-        oracle_result: obiResult?.name || state.result,
+        oracle_result: obiName,
         context: contextJson,
         notes,
       });
 
       if (entry) {
         const taskRows = tasks.map(t => {
-          const matchRitual = rituals?.find(r => r.category === t.category);
+          const linkedRitual = t.ritual_id
+            ? rituals?.find(r => r.id === t.ritual_id)
+            : rituals?.find(r => r.category === t.category);
           return {
             journey_id: (entry as any).id,
             task_type: t.type,
             task_title: t.title,
-            ritual_id: matchRitual?.id,
+            ritual_id: linkedRitual?.id || t.ritual_id || undefined,
           };
         });
         await createTasks.mutateAsync(taskRows);
@@ -148,11 +180,11 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
       {/* Summary card */}
       <div className="bg-card rounded-2xl p-5 shadow-card mb-6 animate-fade-up">
         <div className="flex items-center gap-3 mb-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${obiResult?.color}`}>
-            {(() => { const Icon = obiResult?.icon || CheckCircle; return <Icon className="h-5 w-5" strokeWidth={1.5} />; })()}
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${obiColor}`}>
+            <ObiIcon className="h-5 w-5" strokeWidth={1.5} />
           </div>
           <div>
-            <h3 className="font-display font-bold text-lg">{obiResult?.name}</h3>
+            <h3 className="font-display font-bold text-lg">{obiName}</h3>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${state.ireOrIbi === "ire" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
               {state.ireOrIbi === "ire" ? "Irê" : "Ibi"}
             </span>

@@ -1,5 +1,6 @@
 import { Check, X, AlertTriangle, Users } from "lucide-react";
 import { useState } from "react";
+import { useStepText } from "@/hooks/useOracleConfig";
 
 interface Props {
   onAnswer: (iyamiQuer: boolean, egbeOrunQuer: boolean) => void;
@@ -8,6 +9,9 @@ interface Props {
 const StepIyamiEgbe = ({ onAnswer }: Props) => {
   const [subStep, setSubStep] = useState<"iyami" | "egbe">("iyami");
   const [iyamiQuer, setIyamiQuer] = useState<boolean | null>(null);
+
+  const iyamiText = useStepText("iyami", "As Iyami querem algo?", "Verifique se as Mães Ancestrais pedem atenção neste momento.");
+  const egbeText = useStepText("egbe", "O Egbe Orun quer algo?", "Verifique se os ancestrais e sua comunidade espiritual pedem algo.");
 
   const handleIyami = (value: boolean) => {
     setIyamiQuer(value);
@@ -21,10 +25,8 @@ const StepIyamiEgbe = ({ onAnswer }: Props) => {
   if (subStep === "iyami") {
     return (
       <>
-        <h2 className="text-2xl font-display font-bold text-center mb-1">As Iyami querem algo?</h2>
-        <p className="text-center text-muted-foreground text-sm mb-8">
-          Verifique se as Mães Ancestrais pedem atenção neste momento.
-        </p>
+        <h2 className="text-2xl font-display font-bold text-center mb-1">{iyamiText.title}</h2>
+        <p className="text-center text-muted-foreground text-sm mb-8">{iyamiText.description}</p>
 
         <div className="grid grid-cols-2 gap-4">
           <button
@@ -55,10 +57,8 @@ const StepIyamiEgbe = ({ onAnswer }: Props) => {
 
   return (
     <>
-      <h2 className="text-2xl font-display font-bold text-center mb-1">O Egbe Orun quer algo?</h2>
-      <p className="text-center text-muted-foreground text-sm mb-8">
-        Verifique se os ancestrais e sua comunidade espiritual pedem algo.
-      </p>
+      <h2 className="text-2xl font-display font-bold text-center mb-1">{egbeText.title}</h2>
+      <p className="text-center text-muted-foreground text-sm mb-8">{egbeText.description}</p>
 
       <div className="grid grid-cols-2 gap-4">
         <button

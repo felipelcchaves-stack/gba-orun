@@ -1,5 +1,6 @@
 import { Sun, AlertTriangle } from "lucide-react";
-import { OBI_RESULTS } from "./StepObiResult";
+import { useOracleConfigs, useStepText } from "@/hooks/useOracleConfig";
+import { OBI_RESULTS_FALLBACK } from "./StepObiResult";
 
 interface Props {
   obiResult: string;
@@ -7,16 +8,21 @@ interface Props {
 }
 
 const StepIreIbi = ({ obiResult, onSelect }: Props) => {
-  const result = OBI_RESULTS.find(r => r.key === obiResult);
+  const { data: dbConfigs } = useOracleConfigs();
+  const stepText = useStepText("ire_ibi", "Veio em Irê ou Ibi?", "");
+
+  const dbResult = dbConfigs?.find(c => c.result_key === obiResult);
+  const fallback = OBI_RESULTS_FALLBACK.find(r => r.key === obiResult);
+  const resultName = dbResult?.name || fallback?.name || obiResult;
 
   return (
     <>
-      <h2 className="text-2xl font-display font-bold text-center mb-1">Veio em Irê ou Ibi?</h2>
+      <h2 className="text-2xl font-display font-bold text-center mb-1">{stepText.title}</h2>
       <p className="text-center text-muted-foreground text-sm mb-2">
-        O resultado <strong>{result?.name}</strong> veio em caminho positivo ou negativo?
+        O resultado <strong>{resultName}</strong> veio em caminho positivo ou negativo?
       </p>
       <p className="text-center text-xs text-muted-foreground mb-8">
-        Irê = bom caminho · Ibi = caminho que precisa de cuidado
+        {stepText.description || "Irê = bom caminho · Ibi = caminho que precisa de cuidado"}
       </p>
 
       <div className="grid grid-cols-2 gap-4">
@@ -46,6 +52,13 @@ const StepIreIbi = ({ obiResult, onSelect }: Props) => {
           </div>
         </button>
       </div>
+
+      {/* Contextual description from DB */}
+      {dbResult && (
+        <p className="text-center text-xs text-muted-foreground mt-6 italic px-4">
+          Dica: selecione Irê ou Ibi para ver orientações específicas para {resultName}.
+        </p>
+      )}
     </>
   );
 };

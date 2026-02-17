@@ -1,4 +1,6 @@
 import { Check, X, Shield } from "lucide-react";
+import { useState } from "react";
+import { useStepText } from "@/hooks/useOracleConfig";
 
 const EBO_TYPES = [
   { key: "limpeza", label: "Limpeza" },
@@ -16,12 +18,18 @@ interface Props {
 
 const StepEbo = ({ ireOrIbi, onAnswer }: Props) => {
   const [showTypes, setShowTypes] = useState(false);
+  const stepText = useStepText("ebo", "Você já apurou o Ebó?", "");
+  const subStepText = useStepText(
+    ireOrIbi === "ibi" ? "ebo_ibi" : "ebo_ire",
+    "Qual tipo de Ebó?",
+    "Selecione o tipo que foi apurado"
+  );
 
   if (showTypes) {
     return (
       <>
-        <h2 className="text-2xl font-display font-bold text-center mb-1">Qual tipo de Ebó?</h2>
-        <p className="text-center text-muted-foreground text-sm mb-8">Selecione o tipo que foi apurado</p>
+        <h2 className="text-2xl font-display font-bold text-center mb-1">{subStepText.title}</h2>
+        <p className="text-center text-muted-foreground text-sm mb-8">{subStepText.description}</p>
         <div className="space-y-3">
           {EBO_TYPES.map(t => (
             <button
@@ -40,13 +48,15 @@ const StepEbo = ({ ireOrIbi, onAnswer }: Props) => {
     );
   }
 
+  const defaultDesc = ireOrIbi === "ibi"
+    ? "Em Ibi, o ebó é fundamental para restabelecer o equilíbrio."
+    : "Em Irê, o ebó pode ser de agradecimento ou para fortalecer o caminho.";
+
   return (
     <>
-      <h2 className="text-2xl font-display font-bold text-center mb-1">Você já apurou o Ebó?</h2>
+      <h2 className="text-2xl font-display font-bold text-center mb-1">{stepText.title}</h2>
       <p className="text-center text-muted-foreground text-sm mb-8">
-        {ireOrIbi === "ibi"
-          ? "Em Ibi, o ebó é fundamental para restabelecer o equilíbrio."
-          : "Em Irê, o ebó pode ser de agradecimento ou para fortalecer o caminho."}
+        {stepText.description || defaultDesc}
       </p>
 
       <div className="grid grid-cols-2 gap-4">
@@ -76,5 +86,4 @@ const StepEbo = ({ ireOrIbi, onAnswer }: Props) => {
   );
 };
 
-import { useState } from "react";
 export default StepEbo;
