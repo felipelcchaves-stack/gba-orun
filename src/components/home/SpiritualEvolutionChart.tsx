@@ -17,6 +17,10 @@ const SpiritualEvolutionChart = () => {
 
   if (isLoading || !data) return null;
 
+  // Hide chart when user has no journey data
+  const hasNoData = data.energies.every((e) => e.total === 0);
+  if (hasNoData) return null;
+
   return (
     <Card className="border-0 shadow-card">
       <CardHeader

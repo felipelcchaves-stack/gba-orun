@@ -23,6 +23,35 @@ const SpiritualEnergyDashboard = () => {
 
   const { energies, mostUrgent } = data;
 
+  // Check if user has no journey data at all
+  const hasNoData = energies.every((e) => e.total === 0);
+
+  if (hasNoData) {
+    return (
+      <Card className="border-0 shadow-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Compass className="h-5 w-5 text-accent" />
+            Equilíbrio Espiritual
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-6">
+            <Compass className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" strokeWidth={1.5} />
+            <p className="text-sm text-muted-foreground mb-1">Você ainda não iniciou sua jornada</p>
+            <p className="text-xs text-muted-foreground/70 mb-4">Consulte o Oráculo para ver seu equilíbrio espiritual aqui.</p>
+            <Link
+              to="/oraculo"
+              className="inline-block text-xs font-semibold py-2 px-5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            >
+              Consultar Oráculo
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-0 shadow-card">
       <CardHeader className="pb-3">
