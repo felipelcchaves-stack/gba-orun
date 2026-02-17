@@ -1,71 +1,97 @@
 
 
-# Plano: Limpar Home e Criar Banner de Ofertas Condicional
+# Plano: Vincular Ire/Ibi ao Cadastro do Obi (Eliminar Passo Manual)
 
 ## Problema
 
-A Home tem 3 icones de acesso rapido (Oraculo, Jornada, Ofertas) que sao redundantes com a barra inferior. Alem disso, "Ofertas" deveria aparecer como um banner visual atraente, e somente quando existir alguma oferta ativa com um check especifico habilitado pelo admin.
+Hoje, apos o usuario selecionar o resultado do Obi (Apotaku, Okaran, Ejife, etc.), o wizard pergunta manualmente "Veio em Ire ou Ibi?". Porem, na pratica liturgica, cada caida ja tem sua natureza definida -- o proprio resultado ja diz se e Ire ou Ibi. Essa pergunta e redundante e confunde o usuario.
 
 ---
 
 ## Solucao
 
-### 1. Remover os icones de acesso rapido
+### 1. Novo campo `default_ire_ibi` na tabela `oracle_configs`
 
-Eliminar o bloco `QUICK_ACCESS` (Oraculo, Jornada, Ofertas) da Home. A navegacao ja esta coberta pela barra inferior.
-
-**Arquivo:** `src/pages/Home.tsx`
-- Remover a constante `QUICK_ACCESS` (linhas 16-20)
-- Remover o bloco JSX de renderizacao dos icones (linhas 87-108)
-
----
-
-### 2. Novo campo `show_on_home` na tabela `promotions`
-
-Adicionar uma coluna booleana para o admin controlar quais ofertas aparecem como banner na Home.
+Adicionar uma coluna para o admin definir se cada resultado do Obi e Ire ou Ibi por padrao.
 
 ```text
-ALTER TABLE public.promotions
-  ADD COLUMN show_on_home BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.oracle_configs
+  ADD COLUMN default_ire_ibi TEXT NOT NULL DEFAULT 'ibi';
 ```
 
-Isso permite que o admin marque especificamente quais promocoes devem virar banner na Home, independente de estarem ativas na pagina de Ofertas.
+Valores possiveis: `'ire'` ou `'ibi'`.
+
+Isso permite que o admin configure, por exemplo:
+- Apotaku (Oyekun) -> Ibi
+- Okaran -> Ibi
+- Ejife -> Ire
+- Etagun -> Ire
+- Alafia -> Ire
 
 ---
 
-### 3. Componente `PromoBanner`
+### 2. Eliminar o Step 3 (StepIreIbi) do Wizard
 
-Novo componente: `src/components/home/PromoBanner.tsx`
+**Arquivo:** `src/pages/Oracle.tsx`
 
-- Busca promocoes onde `is_active = true` AND `show_on_home = true`
-- Se nenhuma existir, retorna `null` (nao ocupa espaco)
-- Se existir uma ou mais, exibe um banner horizontal atraente com:
-  - Imagem do banner (se houver) como fundo
-  - Titulo e descricao da oferta
-  - Botao "Ver Oferta" que leva para `/promocoes` ou abre o link direto
-  - Indicador visual (badge "Oferta") no canto
-  - Se houver multiplas, exibe apenas a primeira (maior prioridade por `display_order`)
-- Rastreia cliques usando o hook `useTrackClick` existente
+O wizard hoje tem 7 passos. Ao eliminar o passo "Ire ou Ibi?", ficara com 6:
 
-**Posicao na Home:** Logo abaixo do `SpiritualCareCard`, antes do `SpiritualEnergyDashboard` -- um local de destaque natural.
+1. Intencao
+2. Resultado do Obi
+3. ~~Ire ou Ibi~~ (REMOVIDO)
+4. Ebo -> vira Step 3
+5. Ori -> vira Step 4
+6. Iyami/Egbe -> vira Step 5
+7. Diagnostico -> vira Step 6
 
----
+No Step 2 (StepObiResult), ao selecionar o resultado, o sistema ja busca o `default_ire_ibi` do `oracle_configs` e preenche automaticamente no state, avancando direto para o proximo passo.
 
-### 4. Atualizar Admin de Promocoes
-
-**Arquivo:** `src/components/admin/AdminPromotions.tsx`
-
-- Adicionar um toggle "Exibir na Home" (`show_on_home`) no formulario de criacao/edicao
-- Exibir na tabela de listagem um indicador de quais promocoes estao com banner ativo na Home
+Mudancas:
+- `TOTAL_STEPS` de 7 para 6
+- No `step === 2`, apos o usuario selecionar o resultado, buscar o `default_ire_ibi` correspondente e definir `ireOrIbi` no state automaticamente
+- Renumerar os steps 4-7 para 3-6
+- Remover a importacao e uso de `StepIreIbi`
 
 ---
 
-### 5. Atualizar hook e tipos
+### 3. Atualizar o Admin de Resultados do Oraculo
 
-**Arquivo:** `src/hooks/usePromotions.ts`
+**Arquivo:** `src/components/admin/AdminOracleConfigs.tsx`
 
-- Adicionar `show_on_home` na interface `Promotion`
-- Criar hook `useHomeBannerPromotion()` que busca a primeira promocao ativa com `show_on_home = true`
+Adicionar um campo select "Natureza do resultado" no formulario de edicao com as opcoes:
+- Ire (Caminho positivo)
+- Ibi (Precisa de cuidado)
+
+Isso aparece ao lado dos campos ja existentes (Nome, Significado, Descricao Ire/Ibi, Estilo Visual).
+
+---
+
+### 4. Atualizar tipos e hook
+
+**Arquivo:** `src/hooks/useOracleConfig.ts`
+
+- Adicionar `default_ire_ibi: string` na interface `OracleConfig`
+
+**Arquivo:** `src/components/oracle/StepObiResult.tsx`
+
+- O fallback `OBI_RESULTS_FALLBACK` ganha o campo `default_ire_ibi` para cada resultado
+
+---
+
+### 5. Propagar para o callback do Oracle.tsx
+
+**Arquivo:** `src/pages/Oracle.tsx`
+
+No step 2, o callback `onSelect` passara tanto o `result_key` quanto o `default_ire_ibi`:
+
+```text
+onSelect={(key) => {
+  const config = dbConfigs?.find(c => c.result_key === key);
+  const ireOrIbi = config?.default_ire_ibi === 'ire' ? 'ire' : 'ibi';
+  setState(s => ({ ...s, result: key, ireOrIbi }));
+  setStep(3); // agora vai direto pro Ebo
+}}
+```
 
 ---
 
@@ -73,18 +99,22 @@ Novo componente: `src/components/home/PromoBanner.tsx`
 
 | Arquivo | Acao |
 |---|---|
-| Migration SQL | ADD COLUMN `show_on_home` em `promotions` |
-| `src/pages/Home.tsx` | Remover `QUICK_ACCESS`; inserir `PromoBanner` |
-| `src/components/home/PromoBanner.tsx` | Criar: banner condicional de ofertas |
-| `src/hooks/usePromotions.ts` | Adicionar campo e hook `useHomeBannerPromotion` |
-| `src/components/admin/AdminPromotions.tsx` | Adicionar toggle "Exibir na Home" |
+| Migration SQL | ADD COLUMN `default_ire_ibi` em `oracle_configs` + UPDATE valores iniciais |
+| `src/hooks/useOracleConfig.ts` | Adicionar `default_ire_ibi` na interface |
+| `src/components/oracle/StepObiResult.tsx` | Adicionar `default_ire_ibi` ao fallback; exportar configs para uso externo |
+| `src/pages/Oracle.tsx` | Reduzir de 7 para 6 steps; preencher `ireOrIbi` automaticamente no step 2; remover `StepIreIbi` |
+| `src/components/admin/AdminOracleConfigs.tsx` | Adicionar select "Ire/Ibi" no formulario de edicao |
 
-## Fluxo
+---
+
+## Fluxo Antes vs. Depois
 
 ```text
-1. Admin cria promocao "Curso de Ebo" -> marca "Exibir na Home" = ON
-2. Usuario abre o app -> banner atraente aparece na Home
-3. Usuario clica -> vai para a pagina de Ofertas (ou checkout direto)
-4. Admin desliga o check -> banner some instantaneamente da Home
-5. Sem ofertas ativas na Home -> nenhum banner, layout limpo
+ANTES (7 passos):
+  Intencao -> Obi -> "Ire ou Ibi?" -> Ebo -> Ori -> Iyami/Egbe -> Diagnostico
+
+DEPOIS (6 passos):
+  Intencao -> Obi (ja define Ire/Ibi automatico) -> Ebo -> Ori -> Iyami/Egbe -> Diagnostico
 ```
+
+O admin configura uma vez no cadastro do Obi, e o usuario nunca mais precisa responder essa pergunta.
