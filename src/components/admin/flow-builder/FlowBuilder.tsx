@@ -22,6 +22,9 @@ import ObiNode from "./nodes/ObiNode";
 import IreIbiNode from "./nodes/IreIbiNode";
 import OpenQuestionNode from "./nodes/OpenQuestionNode";
 import DiagnosisNode from "./nodes/DiagnosisNode";
+import MediaNode from "./nodes/MediaNode";
+import TimerNode from "./nodes/TimerNode";
+import ConditionalNode from "./nodes/ConditionalNode";
 import NodePalette from "./NodePalette";
 import NodeConfigPanel from "./NodeConfigPanel";
 import AutoSaveIndicator from "./AutoSaveIndicator";
@@ -58,6 +61,9 @@ const nodeTypes = {
   ire_ibi: IreIbiNode,
   open_question: OpenQuestionNode,
   diagnosis: DiagnosisNode,
+  media: MediaNode,
+  timer: TimerNode,
+  conditional: ConditionalNode,
 };
 
 interface FlowBuilderProps {
@@ -71,6 +77,8 @@ const VARIABLE_PREFIXES: Record<string, string> = {
   multiple_choice: "escolha",
   open_question: "resposta",
   diagnosis: "diagnostico",
+  timer: "timer",
+  conditional: "condicional",
 };
 
 function generateVariableName(type: string, existingNodes: Node[]): string {
