@@ -194,6 +194,45 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
                     <Input value={localConfig.no_description || ""} onChange={(e) => updateField("no_description", e.target.value)} className="mt-1" placeholder="(opcional)" />
                   </div>
                 </div>
+
+                {/* Alert on "No" */}
+                <div className="border-t border-border pt-3 mt-3 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!localConfig.no_alert_enabled}
+                      onChange={(e) => updateField("no_alert_enabled", e.target.checked)}
+                      className="rounded border-border"
+                    />
+                    <span className="text-xs font-semibold text-foreground">⚠️ Ativar alerta ao negar</span>
+                  </label>
+                  {localConfig.no_alert_enabled && (
+                    <div className="space-y-2 pl-1">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Título do alerta</label>
+                        <Input value={localConfig.no_alert_title || ""} onChange={(e) => updateField("no_alert_title", e.target.value)} className="mt-1" placeholder="Tem certeza?" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Mensagem do alerta</label>
+                        <Textarea value={localConfig.no_alert_message || ""} onChange={(e) => updateField("no_alert_message", e.target.value)} className="mt-1 min-h-[60px]" placeholder="Sem apurar o Ebo, o problema pode persistir..." />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Áudio do alerta (URL)</label>
+                        <Input value={localConfig.no_alert_audio_url || ""} onChange={(e) => updateField("no_alert_audio_url", e.target.value)} className="mt-1" placeholder="https://..." />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">Botão confirmar</label>
+                          <Input value={localConfig.no_alert_confirm_label || ""} onChange={(e) => updateField("no_alert_confirm_label", e.target.value)} className="mt-1" placeholder="Tenho certeza" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">Botão voltar</label>
+                          <Input value={localConfig.no_alert_cancel_label || ""} onChange={(e) => updateField("no_alert_cancel_label", e.target.value)} className="mt-1" placeholder="Vou reconsiderar" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
