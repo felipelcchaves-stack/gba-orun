@@ -1,6 +1,7 @@
 import { ChevronRight, AlertTriangle, Shield, CheckCircle, Sparkles, Heart, Loader2 } from "lucide-react";
 import obiOracle from "@/assets/obi-oracle.jpg";
 import { useOracleConfigs, type OracleConfig } from "@/hooks/useOracleConfig";
+import RitualHelpButton from "@/components/RitualHelpButton";
 
 // Fallback hardcoded values
 export const OBI_RESULTS_FALLBACK = [
@@ -62,7 +63,10 @@ const StepObiResult = ({ onSelect }: Props) => {
 
   return (
     <>
-      <h1 className="text-3xl font-display font-bold text-center mb-1">Oráculo do Obi</h1>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="text-3xl font-display font-bold text-center flex-1">Oráculo do Obi</h1>
+        <RitualHelpButton point="oracle_step_obi" />
+      </div>
       <p className="text-center text-muted-foreground text-sm mb-8">Qual foi o resultado do seu Obi hoje?</p>
 
       <div className="w-24 h-24 mx-auto mb-8 rounded-full overflow-hidden shadow-soft">

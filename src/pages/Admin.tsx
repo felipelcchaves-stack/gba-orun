@@ -13,6 +13,7 @@ import AdminOracleStepTexts from "@/components/admin/AdminOracleStepTexts";
 import AdminSidebar, { AdminSection } from "@/components/admin/AdminSidebar";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminUsers from "@/components/admin/AdminUsers";
+import AdminRitualLinks from "@/components/admin/AdminRitualLinks";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -193,6 +194,8 @@ const AdminPage = () => {
             {oracleSubTab === "texts" && <AdminOracleStepTexts />}
           </div>
         )}
+
+        {activeSection === "links" && <AdminRitualLinks />}
 
         {activeSection === "settings" && (
           <div className="space-y-6">

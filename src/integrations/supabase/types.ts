@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_ritual_links: {
+        Row: {
+          app_point: string
+          created_at: string
+          id: string
+          ritual_id: string | null
+        }
+        Insert: {
+          app_point: string
+          created_at?: string
+          id?: string
+          ritual_id?: string | null
+        }
+        Update: {
+          app_point?: string
+          created_at?: string
+          id?: string
+          ritual_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_ritual_links_ritual_id_fkey"
+            columns: ["ritual_id"]
+            isOneToOne: false
+            referencedRelation: "rituals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           id: string

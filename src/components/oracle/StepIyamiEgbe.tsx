@@ -1,6 +1,7 @@
 import { Check, X, AlertTriangle, Users } from "lucide-react";
 import { useState } from "react";
 import { useStepText } from "@/hooks/useOracleConfig";
+import RitualHelpButton from "@/components/RitualHelpButton";
 
 interface Props {
   onAnswer: (iyamiQuer: boolean, egbeOrunQuer: boolean) => void;
@@ -25,7 +26,10 @@ const StepIyamiEgbe = ({ onAnswer }: Props) => {
   if (subStep === "iyami") {
     return (
       <>
-        <h2 className="text-2xl font-display font-bold text-center mb-1">{iyamiText.title}</h2>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-2xl font-display font-bold text-center flex-1">{iyamiText.title}</h2>
+          <RitualHelpButton point="oracle_step_iyami_egbe" />
+        </div>
         <p className="text-center text-muted-foreground text-sm mb-8">{iyamiText.description}</p>
 
         <div className="grid grid-cols-2 gap-4">

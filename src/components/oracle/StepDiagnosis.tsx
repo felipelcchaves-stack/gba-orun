@@ -10,6 +10,7 @@ import { useOracleConfigs, useOracleTaskTemplates } from "@/hooks/useOracleConfi
 import { getObiIcon, getObiColor, OBI_RESULTS_FALLBACK } from "./StepObiResult";
 import { Progress } from "@/components/ui/progress";
 import RitualCombobox from "@/components/RitualCombobox";
+import RitualHelpButton from "@/components/RitualHelpButton";
 
 export interface WizardState {
   result: string;
@@ -194,7 +195,10 @@ const StepDiagnosis = ({ state }: { state: WizardState }) => {
 
   return (
     <>
-      <h2 className="text-2xl font-display font-bold text-center mb-1">Diagnóstico Completo</h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-2xl font-display font-bold text-center flex-1">Diagnóstico Completo</h2>
+        <RitualHelpButton point="oracle_step_diagnosis" />
+      </div>
       <p className="text-center text-muted-foreground text-sm mb-6">Resumo da sua consulta ao Obi</p>
 
       {/* Summary card */}
