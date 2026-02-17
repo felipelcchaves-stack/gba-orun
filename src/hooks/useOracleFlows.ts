@@ -152,9 +152,16 @@ export const useSaveFlowCanvas = () => {
       nodes: Omit<OracleFlowNode, "id">[];
       edges: Omit<OracleFlowEdge, "id">[];
     }): Promise<{ nodeIdMap: Record<string, string> }> => {
-      // Delete existing nodes/edges
-      await supabase.from("oracle_flow_edges").delete().eq("flow_id", flowId);
-      await supabase.from("oracle_flow_nodes").delete().eq("flow_id", flowId);
+      // 1. Verificar sessão ativa
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada. Faça login novamente para salvar.");
+
+      // 2. Delete com verificação de erro
+      const { error: delEdgesErr } = await supabase.from("oracle_flow_edges").delete().eq("flow_id", flowId);
+      if (delEdgesErr) throw new Error("Erro ao limpar edges: " + delEdgesErr.message);
+
+      const { error: delNodesErr } = await supabase.from("oracle_flow_nodes").delete().eq("flow_id", flowId);
+      if (delNodesErr) throw new Error("Erro ao limpar nodes: " + delNodesErr.message);
 
       const nodeIdMap: Record<string, string> = {};
 
