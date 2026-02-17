@@ -186,6 +186,7 @@ export type Database = {
           guidance_message: string | null
           id: string
           journey_id: string
+          offering_id: string | null
           ritual_id: string | null
           task_title: string
           task_type: string
@@ -199,6 +200,7 @@ export type Database = {
           guidance_message?: string | null
           id?: string
           journey_id: string
+          offering_id?: string | null
           ritual_id?: string | null
           task_title: string
           task_type: string
@@ -212,6 +214,7 @@ export type Database = {
           guidance_message?: string | null
           id?: string
           journey_id?: string
+          offering_id?: string | null
           ritual_id?: string | null
           task_title?: string
           task_type?: string
@@ -226,6 +229,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journey_tasks_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "offerings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "journey_tasks_ritual_id_fkey"
             columns: ["ritual_id"]
             isOneToOne: false
@@ -233,6 +243,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      offerings: {
+        Row: {
+          audio_url: string | null
+          category: string
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          image_url: string | null
+          ingredients: string
+          instructions: string
+          is_premium: boolean
+          title: string
+        }
+        Insert: {
+          audio_url?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          ingredients?: string
+          instructions?: string
+          is_premium?: boolean
+          title: string
+        }
+        Update: {
+          audio_url?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          ingredients?: string
+          instructions?: string
+          is_premium?: boolean
+          title?: string
+        }
+        Relationships: []
       }
       oracle_configs: {
         Row: {
@@ -331,6 +383,7 @@ export type Database = {
           id: string
           intention: string | null
           ire_or_ibi: string | null
+          offering_id: string | null
           oracle_result_key: string | null
           ritual_id: string | null
           task_title: string
@@ -345,6 +398,7 @@ export type Database = {
           id?: string
           intention?: string | null
           ire_or_ibi?: string | null
+          offering_id?: string | null
           oracle_result_key?: string | null
           ritual_id?: string | null
           task_title: string
@@ -359,12 +413,20 @@ export type Database = {
           id?: string
           intention?: string | null
           ire_or_ibi?: string | null
+          offering_id?: string | null
           oracle_result_key?: string | null
           ritual_id?: string | null
           task_title?: string
           task_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "oracle_task_templates_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "offerings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "oracle_task_templates_ritual_id_fkey"
             columns: ["ritual_id"]

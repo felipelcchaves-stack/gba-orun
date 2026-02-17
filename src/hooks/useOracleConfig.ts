@@ -25,6 +25,7 @@ export interface OracleTaskTemplate {
   task_type: string;
   category: string;
   ritual_id: string | null;
+  offering_id: string | null;
   display_order: number;
   intention: string | null;
   guidance_message: string;
