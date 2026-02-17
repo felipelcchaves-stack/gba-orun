@@ -1,12 +1,14 @@
-import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare, UserCheck, AlertTriangle, DollarSign, MousePointerClick } from "lucide-react";
+import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare, UserCheck, AlertTriangle, DollarSign, MousePointerClick, GraduationCap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useAdminStats, useAdminProfiles } from "@/hooks/useAdminData";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAdminStats, useAdminProfiles, useAdminKnowledgeStats } from "@/hooks/useAdminData";
 import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { useState } from "react";
 
 const GENDER_LABELS: Record<string, string> = {
   masculino: "Masculino",
@@ -36,6 +38,8 @@ const AdminDashboard = () => {
   const { data: stats, isLoading: statsLoading } = useAdminStats();
   const { data: profiles, isLoading: profilesLoading } = useAdminProfiles();
   const { data: plans } = useSubscriptionPlans();
+  const { data: knowledgeStats } = useAdminKnowledgeStats();
+  const [knowledgeFilter, setKnowledgeFilter] = useState<string>("all");
 
   // Revenue forecast: active subscribers × their plan price
   const revenueForecast = (() => {
@@ -96,7 +100,30 @@ const AdminDashboard = () => {
     }));
   })();
 
-  const recentProfiles = profiles?.slice(0, 10) ?? [];
+  const knowledgeBarData = (() => {
+    if (!knowledgeStats || !knowledgeStats.total_onboarded) return [];
+    const t = knowledgeStats.total_onboarded;
+    return [
+      { name: "Obi", pct: Math.round((knowledgeStats.not_knows_obi / t) * 100) },
+      { name: "Ebó", pct: Math.round((knowledgeStats.not_knows_ebo / t) * 100) },
+      { name: "Ori", pct: Math.round((knowledgeStats.not_knows_ori / t) * 100) },
+      { name: "Iyami", pct: Math.round((knowledgeStats.not_knows_iyami / t) * 100) },
+      { name: "Egbe", pct: Math.round((knowledgeStats.not_knows_egbe_orun / t) * 100) },
+    ].sort((a, b) => b.pct - a.pct);
+  })();
+
+  const filteredProfiles = (() => {
+    if (!profiles) return [];
+    let list = [...profiles];
+    if (knowledgeFilter === "not_obi") list = list.filter(p => p.knows_obi === false);
+    else if (knowledgeFilter === "not_ebo") list = list.filter(p => p.knows_ebo === false);
+    else if (knowledgeFilter === "not_ori") list = list.filter(p => p.knows_ori === false);
+    else if (knowledgeFilter === "not_iyami") list = list.filter(p => p.knows_iyami === false);
+    else if (knowledgeFilter === "not_egbe") list = list.filter(p => p.knows_egbe_orun === false);
+    return list;
+  })();
+
+  const recentProfiles = filteredProfiles.slice(0, 10);
 
   return (
     <div className="space-y-8">
@@ -159,8 +186,42 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {knowledgeBarData.length > 0 && (
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              <h3 className="font-display font-semibold text-sm">Lacunas de Conhecimento</h3>
+              <span className="text-xs text-muted-foreground ml-auto">{knowledgeStats?.total_onboarded ?? 0} alunos mapeados</span>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={knowledgeBarData} layout="vertical" margin={{ left: 40, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
+                <YAxis type="category" dataKey="name" width={50} />
+                <Tooltip formatter={(v: number) => `${v}%`} />
+                <Bar dataKey="pct" fill="hsl(0, 84%, 60%)" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
       <div>
-        <h2 className="text-lg font-display font-semibold text-foreground mb-3">Últimos Usuários Cadastrados</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-display font-semibold text-foreground">Últimos Usuários</h2>
+          <Select value={knowledgeFilter} onValueChange={setKnowledgeFilter}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filtrar por lacuna" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="not_obi">Não sabe Obi</SelectItem>
+              <SelectItem value="not_ebo">Não sabe Ebó</SelectItem>
+              <SelectItem value="not_ori">Não sabe Ori</SelectItem>
+              <SelectItem value="not_iyami">Não sabe Iyami</SelectItem>
+              <SelectItem value="not_egbe">Não sabe Egbe</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Card>
           <Table>
             <TableHeader>
@@ -168,7 +229,7 @@ const AdminDashboard = () => {
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Assinatura</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Conhecimento</TableHead>
                 <TableHead>Cadastro</TableHead>
               </TableRow>
             </TableHeader>
@@ -191,20 +252,26 @@ const AdminDashboard = () => {
                     free: { label: "Gratuito", className: "" },
                   };
                   const cfg = statusConfig[subStatus] || statusConfig.free;
-
+                  const knowledgeBadges = [
+                    { key: "Obi", val: p.knows_obi },
+                    { key: "Ebó", val: p.knows_ebo },
+                    { key: "Ori", val: p.knows_ori },
+                    { key: "Iyami", val: p.knows_iyami },
+                    { key: "Egbe", val: p.knows_egbe_orun },
+                  ];
                   return (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.display_name || "—"}</TableCell>
                       <TableCell>{p.email}</TableCell>
                       <TableCell>
-                        <Badge variant={subStatus === "free" ? "secondary" : "default"} className={cfg.className}>
-                          {cfg.label}
-                        </Badge>
+                        <Badge variant={subStatus === "free" ? "secondary" : "default"} className={cfg.className}>{cfg.label}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={p.is_premium ? "default" : "secondary"} className={p.is_premium ? "bg-green-600 hover:bg-green-700" : ""}>
-                          {p.is_premium ? "Premium" : "Gratuito"}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {p.onboarding_completed ? knowledgeBadges.map(kb => (
+                            <Badge key={kb.key} variant="outline" className={`text-[10px] px-1.5 py-0 ${kb.val ? "border-green-500 text-green-600" : "border-destructive text-destructive"}`}>{kb.key}</Badge>
+                          )) : <span className="text-xs text-muted-foreground">—</span>}
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
