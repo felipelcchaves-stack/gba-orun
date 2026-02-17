@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { Compass, BookOpen, GraduationCap, Flame, Map, Heart, Bookmark, Sunrise, Moon, Music, Shield, Sparkles, Tag } from "lucide-react";
+import { Compass, Flame, Map, Bookmark, Sunrise, Moon, Tag } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { useUserStats } from "@/hooks/useUserStats";
 import { useRituals } from "@/hooks/useRituals";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -13,13 +14,7 @@ import { useCareReminder } from "@/hooks/useCareReminder";
 import heroBanner from "@/assets/hero-banner.jpg";
 
 const QUICK_ACCESS = [
-  { to: "/oraculo", icon: Compass, label: "Obi", bg: "bg-amber-100 dark:bg-amber-900/40", fg: "text-amber-600 dark:text-amber-400" },
-  { to: "/rituais", icon: BookOpen, label: "Rituais", bg: "bg-emerald-100 dark:bg-emerald-900/40", fg: "text-emerald-600 dark:text-emerald-400" },
-  { to: "/rituais?cat=ibori", icon: Heart, label: "Ibori", bg: "bg-pink-100 dark:bg-pink-900/40", fg: "text-pink-600 dark:text-pink-400" },
-  { to: "/rituais?cat=oriki", icon: Sparkles, label: "Oriki", bg: "bg-purple-100 dark:bg-purple-900/40", fg: "text-purple-600 dark:text-purple-400" },
-  { to: "/rituais?cat=ebo", icon: Shield, label: "Ebó", bg: "bg-orange-100 dark:bg-orange-900/40", fg: "text-orange-600 dark:text-orange-400" },
-  { to: "/rituais?cat=oracao_manha", icon: Sunrise, label: "Orações", bg: "bg-yellow-100 dark:bg-yellow-900/40", fg: "text-yellow-600 dark:text-yellow-400" },
-  { to: "/rituais?cat=cantiga", icon: Music, label: "Cantigas", bg: "bg-blue-100 dark:bg-blue-900/40", fg: "text-blue-600 dark:text-blue-400" },
+  { to: "/oraculo", icon: Compass, label: "Oráculo", bg: "bg-amber-100 dark:bg-amber-900/40", fg: "text-amber-600 dark:text-amber-400" },
   { to: "/jornada", icon: Map, label: "Jornada", bg: "bg-teal-100 dark:bg-teal-900/40", fg: "text-teal-600 dark:text-teal-400" },
   { to: "/promocoes", icon: Tag, label: "Ofertas", bg: "bg-red-100 dark:bg-red-900/40", fg: "text-red-600 dark:text-red-400" },
 ];
@@ -35,6 +30,7 @@ const FALLBACK_IMAGES = [ritualPlaceholder1, ritualPlaceholder2, eboCategory, ib
 
 const HomePage = () => {
   const { user } = useAuth();
+  const { data: profile } = useProfile();
   const { data: stats } = useUserStats();
   const { data: rituals } = useRituals();
   const { data: settings } = useAppSettings();
@@ -42,7 +38,7 @@ const HomePage = () => {
   // Fire care reminder on home load
   useCareReminder();
 
-  const displayName = user?.user_metadata?.display_name || "Visitante";
+  const displayName = profile?.display_name || user?.user_metadata?.display_name || "";
   const featured = rituals?.slice(0, 6) ?? [];
 
   // Show morning or night prayers based on time of day
@@ -60,7 +56,7 @@ const HomePage = () => {
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div>
             <p className="text-muted-foreground text-xs tracking-wide">Bem-vindo de volta</p>
-            <h1 className="text-3xl font-display font-bold mt-0.5">Olá, {displayName}</h1>
+            <h1 className="text-3xl font-display font-bold mt-0.5">Olá{displayName ? `, ${displayName}` : "!"}</h1>
           </div>
           {stats && stats.streak_days > 0 && (
             <div className="flex items-center gap-1.5 bg-accent/15 rounded-full px-3 py-1.5">
