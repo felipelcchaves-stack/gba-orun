@@ -70,6 +70,11 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
   const removeTask = (i: number) => {
     updateField("tasks", tasks.filter((_, idx) => idx !== i));
   };
+  const updateTaskFields = (i: number, fields: Record<string, any>) => {
+    const updated = [...tasks];
+    updated[i] = { ...updated[i], ...fields };
+    updateField("tasks", updated);
+  };
 
   // Multiple choice option helpers (now with description + links)
   const options: Array<{ label: string; description?: string; ritual_id?: string | null; offering_id?: string | null }> = 
@@ -321,7 +326,7 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
                   <div className="space-y-1">
                     <MultiRitualCombobox
                       value={task.ritual_ids || (task.ritual_id ? [task.ritual_id] : [])}
-                      onChange={(ids) => { updateTask(i, "ritual_ids", ids); updateTask(i, "ritual_id", null); }}
+                      onChange={(ids) => updateTaskFields(i, { ritual_ids: ids, ritual_id: null })}
                       placeholder="Adicionar ritual..."
                     />
                     <OfferingCombobox value={task.offering_id || null} onChange={(id) => updateTask(i, "offering_id", id)} placeholder="Oferenda..." />
