@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ExternalLink, CheckCircle, Star, Shield, BookOpen, Compass, Headphones, Zap, Eye, Heart, HelpCircle, ChevronRight } from "lucide-react";
 import { trackInitiateCheckout } from "@/lib/pixel";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -36,6 +37,7 @@ const PERIOD_LABELS: Record<string, string> = {
 const OfertaPage = () => {
   const { data: settings } = useAppSettings();
   const { data: plans } = useActivePlans();
+  const navigate = useNavigate();
 
   const mainPlan = plans?.[0];
   const checkoutUrl = mainPlan?.guru_checkout_url || settings?.checkout_url || "#";
@@ -89,8 +91,14 @@ const OfertaPage = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Urgency Bar */}
-      <div className="bg-accent text-accent-foreground text-center py-2.5 px-4 text-sm font-semibold sticky top-0 z-50">
-        {urgencyText}
+      <div className="bg-accent text-accent-foreground flex items-center justify-between py-2.5 px-4 text-sm font-semibold sticky top-0 z-50">
+        <span className="flex-1 text-center">{urgencyText}</span>
+        <button
+          onClick={() => navigate("/auth")}
+          className="shrink-0 ml-4 bg-background text-foreground px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-background/90 transition-colors"
+        >
+          Entrar
+        </button>
       </div>
 
       {/* Hero */}
