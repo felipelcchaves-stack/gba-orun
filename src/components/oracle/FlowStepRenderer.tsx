@@ -113,23 +113,7 @@ const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowSte
 
   // ── YES/NO ──
   if (node.node_type === "yes_no") {
-    const yesLabel = config.yes_label || "Sim";
-    const noLabel = config.no_label || "Não";
-    return (
-      <div className="space-y-4 animate-fade-up">
-        <StepHeader node={{ ...node, label: config.question || node.label }} />
-        <div className="grid grid-cols-2 gap-4">
-          <button onClick={() => onNext("sim", "sim")} className="py-4 rounded-2xl bg-primary/90 text-primary-foreground font-bold text-lg shadow-md hover:bg-primary transition">
-            <span className="block">{yesLabel}</span>
-            {config.yes_description && <span className="block text-xs font-normal opacity-80 mt-1">{config.yes_description}</span>}
-          </button>
-          <button onClick={() => onNext("nao", "nao")} className="py-4 rounded-2xl bg-destructive/80 text-destructive-foreground font-bold text-lg shadow-md hover:bg-destructive transition">
-            <span className="block">{noLabel}</span>
-            {config.no_description && <span className="block text-xs font-normal opacity-80 mt-1">{config.no_description}</span>}
-          </button>
-        </div>
-      </div>
-    );
+    return <YesNoStep node={node} config={config} onNext={onNext} />;
   }
 
   // ── MULTIPLE CHOICE ──
@@ -193,6 +177,67 @@ const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowSte
   }
 
   return <p className="text-muted-foreground">Tipo de bloco desconhecido: {node.node_type}</p>;
+};
+
+// ── YES/NO STEP (with optional alert on "No") ──
+const YesNoStep = ({ node, config, onNext }: { node: OracleFlowNode; config: Record<string, any>; onNext: (h: string, a?: string) => void }) => {
+  const [showNoAlert, setShowNoAlert] = useState(false);
+
+  const yesLabel = config.yes_label || "Sim";
+  const noLabel = config.no_label || "Não";
+
+  const handleNo = () => {
+    if (config.no_alert_enabled) {
+      setShowNoAlert(true);
+    } else {
+      onNext("nao", "nao");
+    }
+  };
+
+  if (showNoAlert) {
+    const alertTitle = config.no_alert_title || "Tem certeza?";
+    const alertMessage = config.no_alert_message || "";
+    const alertAudio = config.no_alert_audio_url || null;
+    const confirmLabel = config.no_alert_confirm_label || "Tenho certeza";
+    const cancelLabel = config.no_alert_cancel_label || "Vou reconsiderar";
+
+    return (
+      <div className="space-y-4 animate-fade-up">
+        <h2 className="text-xl font-display font-bold text-foreground text-center">⚠️ {alertTitle}</h2>
+        {alertMessage && <InlineGuidance message={alertMessage} audioUrl={alertAudio} />}
+        <div className="grid grid-cols-1 gap-3">
+          <button
+            onClick={() => setShowNoAlert(false)}
+            className="w-full py-3 rounded-2xl bg-primary text-primary-foreground font-bold text-lg shadow-md hover:bg-primary/90 transition"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={() => onNext("nao", "nao")}
+            className="w-full py-3 rounded-2xl bg-muted text-muted-foreground font-semibold text-sm hover:bg-muted/80 transition"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 animate-fade-up">
+      <StepHeader node={{ ...node, label: config.question || node.label }} />
+      <div className="grid grid-cols-2 gap-4">
+        <button onClick={() => onNext("sim", "sim")} className="py-4 rounded-2xl bg-primary/90 text-primary-foreground font-bold text-lg shadow-md hover:bg-primary transition">
+          <span className="block">{yesLabel}</span>
+          {config.yes_description && <span className="block text-xs font-normal opacity-80 mt-1">{config.yes_description}</span>}
+        </button>
+        <button onClick={handleNo} className="py-4 rounded-2xl bg-destructive/80 text-destructive-foreground font-bold text-lg shadow-md hover:bg-destructive transition">
+          <span className="block">{noLabel}</span>
+          {config.no_description && <span className="block text-xs font-normal opacity-80 mt-1">{config.no_description}</span>}
+        </button>
+      </div>
+    </div>
+  );
 };
 
 // ── OBI STEP (uses oracle_configs from DB) ──
