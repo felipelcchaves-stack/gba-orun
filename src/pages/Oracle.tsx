@@ -1,156 +1,279 @@
-import { useState, useCallback } from "react";
-import cowrieShell from "@/assets/cowrie-shell.png";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddXP } from "@/hooks/useUserStats";
 import { useCheckAchievements } from "@/hooks/useAchievements";
-import { useAddJourneyEntry } from "@/hooks/useJourney";
+import { useAddJourneyEntry, useCreateJourneyTasks } from "@/hooks/useJourney";
 import { useRituals } from "@/hooks/useRituals";
 import { Link } from "react-router-dom";
-import { BookOpen } from "lucide-react";
+import { BookOpen, ArrowLeft, CheckCircle, ChevronRight, AlertTriangle, Shield, Heart, Users, Sparkles } from "lucide-react";
 
-const ORACLE_RESULTS: Record<number, { name: string; meaning: string; description: string; trigger: string }> = {
-  0: { name: "Oyekun", meaning: "Nenhum aberto", description: "Não. A resposta é negativa. Momento de recolhimento, introspecção e cuidado espiritual. Os Orixás pedem cautela.", trigger: "Oyekun" },
-  1: { name: "Okaran", meaning: "1 aberto", description: "Pode ser, mas com ressalvas. Cuidado com caminhos incertos. Faça oferendas e peça orientação antes de prosseguir.", trigger: "Okaran" },
-  2: { name: "Ejife", meaning: "2 abertos", description: "Sim! Confirmação absoluta. Os Orixás aprovam e abençoam. Caminho aberto, siga em frente com fé e gratidão.", trigger: "Ejife" },
-  3: { name: "Etagun", meaning: "3 abertos", description: "Sim, com força! Os ancestrais estão ao seu lado. Momento de agir com coragem e determinação. Vitória garantida.", trigger: "Etagun" },
-  4: { name: "Alafia", meaning: "Todos abertos", description: "Paz total! Mas confirme novamente. Alafia pode significar paz ou indiferença. Jogue mais uma vez para ter certeza.", trigger: "Alafia" },
+import obiOracle from "@/assets/obi-oracle.jpg";
+import eboCategory from "@/assets/ebo-category.jpg";
+import iboriCategory from "@/assets/ibori-category.jpg";
+import iyamiCategory from "@/assets/iyami-category.jpg";
+import egbeOrunCategory from "@/assets/egbe-orun-category.jpg";
+import orikiCategory from "@/assets/oriki-category.jpg";
+
+type OracleResult = {
+  key: string;
+  name: string;
+  meaning: string;
+  description: string;
+  trigger: string;
+  image: string;
+  icon: typeof AlertTriangle;
+  color: string;
+  suggestions: Array<{
+    type: string;
+    title: string;
+    description: string;
+    category: string;
+    image: string;
+    icon: typeof Shield;
+  }>;
 };
 
+const ORACLE_RESULTS: OracleResult[] = [
+  {
+    key: "oyekun",
+    name: "Oyekun",
+    meaning: "Nenhum aberto — NÃO",
+    description: "A resposta é negativa. Momento de recolhimento, introspecção e cuidado espiritual profundo. Os Orixás pedem cautela e atenção.",
+    trigger: "Oyekun",
+    image: obiOracle,
+    icon: AlertTriangle,
+    color: "bg-destructive/10 text-destructive",
+    suggestions: [
+      { type: "ebo", title: "Fazer Ebó de Limpeza", description: "Limpeza espiritual urgente para remover bloqueios", category: "ebo", image: eboCategory, icon: Shield },
+      { type: "ibori", title: "Cuidar do Ori", description: "Fortalecer e proteger seu Ori com Ibori", category: "ibori", image: iboriCategory, icon: Heart },
+      { type: "iyami", title: "Verificar Iyami", description: "Checar se há influência das Mães Ancestrais", category: "geral", image: iyamiCategory, icon: AlertTriangle },
+    ],
+  },
+  {
+    key: "okaran",
+    name: "Okaran",
+    meaning: "1 aberto — TALVEZ",
+    description: "Pode ser, mas com ressalvas. Cuidado com caminhos incertos. Faça oferendas e peça orientação antes de prosseguir.",
+    trigger: "Okaran",
+    image: obiOracle,
+    icon: Shield,
+    color: "bg-accent/15 text-accent-foreground",
+    suggestions: [
+      { type: "ebo", title: "Ebó Leve", description: "Oferenda simples para abrir caminhos", category: "ebo", image: eboCategory, icon: Shield },
+      { type: "ibori", title: "Fortalecer o Ori", description: "Ibori para clareza nas decisões", category: "ibori", image: iboriCategory, icon: Heart },
+    ],
+  },
+  {
+    key: "ejife",
+    name: "Ejife",
+    meaning: "2 abertos — SIM",
+    description: "Confirmação absoluta! Os Orixás aprovam e abençoam. Caminho aberto, siga em frente com fé e gratidão.",
+    trigger: "Ejife",
+    image: obiOracle,
+    icon: CheckCircle,
+    color: "bg-primary/10 text-primary",
+    suggestions: [
+      { type: "oriki", title: "Oriki de Agradecimento", description: "Reze um Oriki em gratidão aos Orixás", category: "oriki", image: orikiCategory, icon: Sparkles },
+    ],
+  },
+  {
+    key: "etagun",
+    name: "Etagun",
+    meaning: "3 abertos — SIM FORTE",
+    description: "Sim, com força! Os ancestrais estão ao seu lado. Momento de agir com coragem e determinação. Vitória garantida.",
+    trigger: "Etagun",
+    image: obiOracle,
+    icon: Sparkles,
+    color: "bg-primary/10 text-primary",
+    suggestions: [
+      { type: "oriki", title: "Oriki de Louvor", description: "Louve os Orixás pela força recebida", category: "oriki", image: orikiCategory, icon: Sparkles },
+      { type: "egbe_orun", title: "Oferenda ao Egbe Orun", description: "Agradeça aos ancestrais com oferenda", category: "geral", image: egbeOrunCategory, icon: Users },
+    ],
+  },
+  {
+    key: "alafia",
+    name: "Alafia",
+    meaning: "Todos abertos — PAZ (confirme)",
+    description: "Paz total! Mas Alafia pede confirmação. Pode significar paz verdadeira ou indiferença. Jogue mais uma vez para ter certeza.",
+    trigger: "Alafia",
+    image: obiOracle,
+    icon: Heart,
+    color: "bg-accent/15 text-accent-foreground",
+    suggestions: [
+      { type: "ibori", title: "Ibori de Proteção", description: "Mantenha a paz fortalecendo seu Ori", category: "ibori", image: iboriCategory, icon: Heart },
+    ],
+  },
+];
+
 const OraclePage = () => {
-  const [shells, setShells] = useState<boolean[]>([false, false, false, false]);
-  const [thrown, setThrown] = useState(false);
-  const [animating, setAnimating] = useState(false);
-  const [result, setResult] = useState<typeof ORACLE_RESULTS[0] | null>(null);
+  const [selectedResult, setSelectedResult] = useState<OracleResult | null>(null);
+  const [saved, setSaved] = useState(false);
   const { user } = useAuth();
   const addXP = useAddXP();
   const checkAchievements = useCheckAchievements();
   const addJourneyEntry = useAddJourneyEntry();
+  const createTasks = useCreateJourneyTasks();
   const { data: rituals } = useRituals();
 
-  const throwShells = useCallback(() => {
-    if (animating) return;
-    setAnimating(true);
-    setResult(null);
+  const handleSelect = async (result: OracleResult) => {
+    setSelectedResult(result);
+    setSaved(false);
 
-    const interval = setInterval(() => {
-      setShells(prev => prev.map(() => Math.random() > 0.5));
-    }, 100);
+    if (user) {
+      addXP.mutate({ xp: 10, field: "oracle_throws" });
 
-    setTimeout(async () => {
-      clearInterval(interval);
-      const finalShells = [Math.random() > 0.5, Math.random() > 0.5, Math.random() > 0.5, Math.random() > 0.5];
-      setShells(finalShells);
-      setThrown(true);
-      setAnimating(false);
+      // Find matching ritual
+      const matchingRitual = rituals?.find(r =>
+        r.trigger_oracle?.toLowerCase() === result.trigger.toLowerCase()
+      );
 
-      const openCount = finalShells.filter(Boolean).length;
-      const oracleResult = ORACLE_RESULTS[openCount];
-      setResult(oracleResult);
+      // Create journey entry
+      const entry = await addJourneyEntry.mutateAsync({
+        oracle_result: result.name,
+        suggested_ritual_id: matchingRitual?.id,
+        context: "rotina_diaria",
+      });
 
-      if (user) {
-        addXP.mutate({ xp: 10, field: "oracle_throws" });
-        const matchingRitual = rituals?.find(r =>
-          r.trigger_oracle?.toLowerCase() === oracleResult.trigger.toLowerCase()
-        );
-        addJourneyEntry.mutate({
-          oracle_result: oracleResult.name,
-          suggested_ritual_id: matchingRitual?.id,
+      // Create suggested tasks
+      if (entry) {
+        const tasks = result.suggestions.map(s => {
+          const matchRitual = rituals?.find(r => r.category === s.category);
+          return {
+            journey_id: (entry as any).id,
+            task_type: s.type,
+            task_title: s.title,
+            ritual_id: matchRitual?.id,
+          };
         });
+        await createTasks.mutateAsync(tasks);
       }
-    }, 1500);
-  }, [animating, user, rituals]);
 
-  const reset = () => {
-    setShells([false, false, false, false]);
-    setThrown(false);
-    setResult(null);
+      setSaved(true);
+    }
   };
 
-  const suggestedRituals = result && rituals
-    ? rituals.filter(r => r.trigger_oracle?.toLowerCase() === result.trigger.toLowerCase())
-    : [];
+  const reset = () => {
+    setSelectedResult(null);
+    setSaved(false);
+  };
 
   return (
-    <div className="min-h-screen pb-24 px-6 bg-background">
-      <div className="max-w-lg mx-auto pt-10">
-        <h1 className="text-3xl font-display font-medium text-center mb-1">Oráculo dos Búzios</h1>
-        <p className="text-center text-muted-foreground text-sm mb-10">Concentre-se na sua pergunta e jogue os búzios</p>
+    <div className="min-h-screen pb-24 bg-background">
+      <div className="max-w-lg mx-auto pt-10 px-6">
+        {!selectedResult ? (
+          <>
+            {/* Selection screen */}
+            <h1 className="text-3xl font-display font-bold text-center mb-1">Oráculo do Obi</h1>
+            <p className="text-center text-muted-foreground text-sm mb-8">Qual foi o resultado do seu Obi hoje?</p>
 
-        {/* Shells grid */}
-        <div className="grid grid-cols-2 gap-5 mb-10 max-w-xs mx-auto">
-          {shells.map((isOpen, i) => (
-            <div
-              key={i}
-              className={`relative aspect-square rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                isOpen
-                  ? "bg-accent/10 shadow-soft"
-                  : "bg-card shadow-card"
-              } ${animating ? "animate-shell-wobble" : ""}`}
-            >
-              <img
-                src={cowrieShell}
-                alt="Búzio"
-                className={`w-14 h-14 object-contain transition-transform duration-500 ${
-                  isOpen ? "rotate-0 drop-shadow-md" : "rotate-180 opacity-50"
-                }`}
-              />
-              <span className={`absolute bottom-2.5 text-xs font-medium ${isOpen ? "text-foreground" : "text-muted-foreground"}`}>
-                {isOpen ? "Aberto" : "Fechado"}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Action button */}
-        <button
-          onClick={thrown ? reset : throwShells}
-          disabled={animating}
-          className={`w-full py-4 rounded-full text-base font-medium transition-all active:scale-[0.98] ${
-            thrown
-              ? "bg-card border border-border text-foreground"
-              : "bg-foreground text-background shadow-sm"
-          } disabled:opacity-50`}
-        >
-          {animating ? "Consultando..." : thrown ? "Jogar Novamente" : "Jogar Obi"}
-        </button>
-
-        {/* Result */}
-        {result && !animating && (
-          <div className="mt-8 space-y-4 animate-fade-up">
-            <div className="bg-card rounded-2xl p-6 shadow-card">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="bg-foreground text-background px-3 py-1 rounded-full text-sm font-medium">
-                  {result.name}
-                </span>
-                <span className="text-sm text-muted-foreground">{result.meaning}</span>
-              </div>
-              <p className="text-foreground leading-relaxed text-sm">{result.description}</p>
+            {/* Obi image */}
+            <div className="w-24 h-24 mx-auto mb-8 rounded-full overflow-hidden shadow-soft">
+              <img src={obiOracle} alt="Obi" className="w-full h-full object-cover" />
             </div>
 
-            {suggestedRituals.length > 0 && (
-              <div className="bg-card rounded-2xl p-5 shadow-card">
-                <h3 className="font-display font-medium text-sm mb-3">Rituais Sugeridos</h3>
-                <div className="space-y-2">
-                  {suggestedRituals.map(r => (
-                    <Link
-                      key={r.id}
-                      to={`/rituais/${r.id}`}
-                      className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors"
-                    >
-                      <BookOpen className="h-4 w-4 text-primary shrink-0" strokeWidth={1.5} />
-                      <span className="text-sm font-medium">{r.title}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Result buttons */}
+            <div className="space-y-3">
+              {ORACLE_RESULTS.map(result => {
+                const Icon = result.icon;
+                return (
+                  <button
+                    key={result.key}
+                    onClick={() => handleSelect(result)}
+                    className="w-full flex items-center gap-4 p-4 bg-card rounded-2xl shadow-card hover:shadow-soft transition-all active:scale-[0.98] text-left"
+                  >
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${result.color}`}>
+                      <Icon className="h-5 w-5" strokeWidth={1.5} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display font-bold text-base">{result.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">{result.meaning}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
 
             {!user && (
-              <p className="text-center text-xs text-muted-foreground">
-                <Link to="/auth" className="text-primary underline">Faça login</Link> para salvar suas consultas e ganhar XP.
+              <p className="text-center text-xs text-muted-foreground mt-6">
+                <Link to="/auth" className="text-primary underline">Faça login</Link> para salvar consultas e ganhar XP.
               </p>
             )}
-          </div>
+          </>
+        ) : (
+          <>
+            {/* Diagnosis screen */}
+            <button onClick={reset} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+              <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Nova consulta
+            </button>
+
+            {/* Result card */}
+            <div className="bg-card rounded-2xl p-6 shadow-card mb-6 animate-fade-up">
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${selectedResult.color}`}>
+                  {(() => { const Icon = selectedResult.icon; return <Icon className="h-6 w-6" strokeWidth={1.5} />; })()}
+                </div>
+                <div>
+                  <h2 className="font-display font-bold text-2xl">{selectedResult.name}</h2>
+                  <p className="text-sm text-muted-foreground">{selectedResult.meaning}</p>
+                </div>
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">{selectedResult.description}</p>
+              {saved && (
+                <div className="flex items-center gap-2 mt-4 text-xs text-primary">
+                  <CheckCircle className="h-3.5 w-3.5" /> Salvo na sua jornada
+                </div>
+              )}
+            </div>
+
+            {/* Suggested actions */}
+            <h3 className="font-display font-bold text-lg mb-3">O que fazer agora</h3>
+            <div className="space-y-3">
+              {selectedResult.suggestions.map((suggestion, i) => {
+                const Icon = suggestion.icon;
+                // Find a matching ritual to link to
+                const matchRitual = rituals?.find(r => r.category === suggestion.category);
+
+                return (
+                  <div key={i} className="animate-fade-up" style={{ animationDelay: `${(i + 1) * 100}ms` }}>
+                    {matchRitual ? (
+                      <Link
+                        to={`/rituais/${matchRitual.id}`}
+                        className="flex items-center gap-3.5 p-4 bg-card rounded-2xl shadow-card hover:shadow-soft transition-all active:scale-[0.98]"
+                      >
+                        <img src={suggestion.image} alt={suggestion.title} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-display font-bold text-sm">{suggestion.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">{suggestion.description}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                      </Link>
+                    ) : (
+                      <Link
+                        to={`/rituais?cat=${suggestion.category}`}
+                        className="flex items-center gap-3.5 p-4 bg-card rounded-2xl shadow-card hover:shadow-soft transition-all active:scale-[0.98]"
+                      >
+                        <img src={suggestion.image} alt={suggestion.title} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-display font-bold text-sm">{suggestion.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">{suggestion.description}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                      </Link>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Link to journey */}
+            <Link
+              to="/jornada"
+              className="block mt-6 text-center bg-foreground text-background py-3 rounded-full font-medium text-sm"
+            >
+              Ver minha Jornada
+            </Link>
+          </>
         )}
       </div>
     </div>
