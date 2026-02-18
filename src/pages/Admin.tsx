@@ -18,6 +18,7 @@ import AdminGuidance from "@/components/admin/AdminGuidance";
 import AdminOfferings from "@/components/admin/AdminOfferings";
 import AdminReviews from "@/components/admin/AdminReviews";
 import AdminFlows from "@/components/admin/AdminFlows";
+import AdminCategories from "@/components/admin/AdminCategories";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -117,6 +118,7 @@ const AdminPage = () => {
         {activeSection === "dashboard" && <AdminDashboard />}
         {activeSection === "users" && <AdminUsers />}
         {activeSection === "plans" && <AdminPlans />}
+        {activeSection === "categories" && <AdminCategories />}
 
         {activeSection === "rituals" && (
           <div className="space-y-6">
