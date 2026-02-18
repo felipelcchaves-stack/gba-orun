@@ -15,16 +15,18 @@ export const useOnboardingStatus = () => {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["onboarding-status", user?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean | null> => {
       if (!user) return null;
       const { data } = await supabase
         .from("profiles")
         .select("onboarding_completed")
         .eq("user_id", user.id)
         .maybeSingle();
-      return data?.onboarding_completed ?? false;
+      if (!data) return null; // profile not found yet — treat as loading
+      return data.onboarding_completed ?? false;
     },
     enabled: !!user,
+    staleTime: 1000 * 60 * 5, // 5 min to avoid false re-fetches
   });
 };
 
