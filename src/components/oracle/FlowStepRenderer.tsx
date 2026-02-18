@@ -237,12 +237,31 @@ const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowSte
 
   // ── MESSAGE ──
   if (node.node_type === "message") {
+    const enableTextInput = !!(config as any).enable_text_input;
     return (
       <div className="space-y-4 animate-fade-up">
         <StepHeader node={node} answers={answers} />
         {config.message && <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{interpolateVars(config.message as string, answers)}</p>}
         {config.audio_url && <AudioPlayer url={config.audio_url as string} />}
-        <button onClick={() => onNext("default")} className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-lg">
+        {enableTextInput && (
+          <textarea
+            value={openAnswer}
+            onChange={(e) => setOpenAnswer(e.target.value)}
+            placeholder={(config as any).text_input_placeholder || "Escreva aqui..."}
+            className="w-full rounded-2xl border border-border bg-background p-4 text-foreground min-h-[100px]"
+          />
+        )}
+        <button
+          onClick={() => {
+            if (enableTextInput) {
+              onNext("default", openAnswer.trim());
+            } else {
+              onNext("default");
+            }
+          }}
+          disabled={enableTextInput && !openAnswer.trim()}
+          className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-lg disabled:opacity-50"
+        >
           Continuar
         </button>
       </div>
@@ -663,6 +682,9 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
             .filter(([key]) => {
               const srcNode = allNodes.find(n => n.id === key || (n.config as any)?.variable_name === key);
               if (!srcNode) return true;
+              // Use show_in_diagnosis if explicitly set, otherwise fallback to legacy skipTypes
+              const showInDiagnosis = (srcNode.config as any)?.show_in_diagnosis;
+              if (showInDiagnosis !== undefined) return showInDiagnosis === true;
               const skipTypes = ["start", "message", "timer", "media", "conditional"];
               return !skipTypes.includes(srcNode.node_type);
             })
