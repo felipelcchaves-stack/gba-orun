@@ -2,7 +2,7 @@ import { useRitual } from "@/hooks/useRituals";
 import { usePremium } from "@/hooks/usePremium";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddXP } from "@/hooks/useUserStats";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -15,6 +15,7 @@ import ritualPlaceholder1 from "@/assets/ritual-placeholder-1.jpg";
 
 const RitualReader = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data: ritual, isLoading } = useRitual(id!);
   const { isPremium } = usePremium();
   const { user } = useAuth();
@@ -59,9 +60,9 @@ const RitualReader = () => {
       {/* Header */}
       <div className="px-6 pt-10">
         <div className="max-w-2xl mx-auto">
-          <Link to="/rituais" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+          <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
             <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Voltar
-          </Link>
+          </button>
 
           {/* Card header with image */}
           <div className="flex items-center gap-4 mb-8 bg-background rounded-2xl p-4">
