@@ -1,112 +1,47 @@
 
 
-# Instalar Meta Conversions API (CAPI) + Ativar Eventos Pixel
+# Melhorar aviso de nos sem conexao de saida no Flow Builder
 
-## Por que o CAPI?
+## Problema identificado
 
-O Pixel do Meta roda no navegador do usuario e pode ser bloqueado por ad blockers, iOS 14+, ou perda de cookies. O CAPI envia os mesmos eventos **pelo servidor**, garantindo que o Meta receba 100% das conversoes. Juntos, Pixel + CAPI formam o que o Meta chama de "Redundant Event Setup" -- a configuracao recomendada.
+O fluxo **esta salvando corretamente** -- nao ha erro real. A mensagem amarela que aparece e apenas um **aviso de validacao** informando que alguns nos nao possuem conexoes de saida. O problema e que a mensagem diz "multiple_choice, multiple_choice" em vez de mostrar o nome real do no, tornando impossivel saber qual no precisa ser corrigido.
+
+**Causa tecnica:** O codigo usa `(n.data as any)?.label || n.type || n.id`. Quando o label e uma string vazia `""` (falsy em JS), ele cai no fallback `n.type`, mostrando "multiple_choice" em vez do nome do no.
 
 ## O que sera feito
 
-### 1. Criar Edge Function `meta-capi` (servidor)
+### 1. Melhorar identificacao dos nos na mensagem de aviso
 
-Nova funcao backend que envia eventos diretamente para a API do Meta (`graph.facebook.com`).
+Na funcao `findDeadEndNodes` e no `handleManualSave`, usar o label do no, ou a `variable_name` do config, ou o tipo traduzido em portugues. Nunca mostrar o tipo tecnico cru como "multiple_choice".
 
-**Eventos enviados pelo servidor:**
-- **Purchase** -- quando o webhook da Guru confirma pagamento
-- **Lead** -- quando um novo usuario faz login pela primeira vez
+### 2. Nao bloquear o salvamento
 
-**Como funciona:**
-- A funcao recebe `event_name`, `email`, `value`, `currency`
-- Faz hash SHA-256 do email (exigencia do Meta)
-- Envia para `https://graph.facebook.com/v21.0/{PIXEL_ID}/events`
-- Usa o `META_CAPI_TOKEN` (token de acesso do servidor)
+Manter o comportamento atual: o aviso aparece mas o fluxo salva normalmente. Isso e intencional -- o usuario pode estar construindo o fluxo aos poucos.
 
-**Segredos necessarios (novos):**
-- `META_CAPI_TOKEN` -- Token de acesso gerado no Gerenciador de Eventos do Meta
-- O Pixel ID ja esta salvo na tabela `app_settings` (chave `meta_pixel_id`)
+### 3. Excluir nos-folha intencionais da validacao
 
-### 2. Guru Webhook envia Purchase via CAPI
-
-Apos ativar a assinatura do usuario com sucesso, o webhook da Guru chamara a funcao `meta-capi` internamente para enviar o evento `Purchase` com o email e valor.
-
-### 3. Disparar Lead no primeiro login
-
-No `Auth.tsx`, apos login bem-sucedido, verificar se e o primeiro acesso do usuario (checando `onboarding_completed` no perfil). Se for o primeiro login, disparar:
-- `trackLead()` no Pixel (navegador)
-- Chamada a funcao `meta-capi` com evento `Lead` (servidor)
-
-### 4. Disparar InitiateCheckout via CAPI tambem
-
-No `PremiumLockModal.tsx` e `Oferta.tsx`, alem do Pixel no navegador, tambem enviar `InitiateCheckout` pelo servidor via `meta-capi`.
+Alem de excluir nos do tipo "diagnosis" (ja feito), tambem excluir nos do tipo "message" que estejam na ponta de ramificacoes -- pois mensagens finais sao terminacoes validas em sub-fluxos.
 
 ---
 
 ## Detalhes tecnicos
 
-### Nova Edge Function: `supabase/functions/meta-capi/index.ts`
+**Arquivo unico:** `src/components/admin/flow-builder/FlowBuilder.tsx`
 
+**Mudanca na linha 261 (handleManualSave):**
+
+Trocar:
+```text
+(n.data as any)?.label || n.type || n.id
 ```
-POST /meta-capi
-Body: { event_name, email, value?, currency?, event_source_url? }
-```
+Por uma funcao que:
+1. Usa o `label` se nao for vazio
+2. Usa `variable_name` do config como fallback
+3. Usa um dicionario de nomes em portugues para o tipo: `{ multiple_choice: "Escolha Multipla", yes_no: "Sim/Nao", message: "Mensagem", ... }`
+4. Adiciona um numero de posicao para diferenciar nos do mesmo tipo (ex: "Escolha Multipla #3")
 
-- Busca `meta_pixel_id` da tabela `app_settings`
-- Usa secret `META_CAPI_TOKEN` do ambiente
-- Hash SHA-256 do email com `crypto.subtle.digest`
-- POST para `graph.facebook.com/v21.0/{pixel_id}/events`
-- Retorna status do envio
-
-### Arquivo: `supabase/functions/guru-webhook/index.ts`
-
-- Apos bloco de ativacao de assinatura (linha 93), adicionar chamada interna a `meta-capi` com:
-  - `event_name: "Purchase"`
-  - `email` do comprador
-  - `value` do pagamento (se disponivel no payload da Guru)
-
-### Novo helper: `src/lib/capi.ts`
-
-Funcao client-side que chama a edge function `meta-capi`:
-```ts
-export const sendCAPIEvent = async (eventName, email, value?, currency?)
-```
-
-### Arquivo: `src/pages/Auth.tsx`
-
-- Apos login bem-sucedido, buscar perfil do usuario
-- Se `onboarding_completed === false` ou perfil recem-criado:
-  - Chamar `trackLead()` (Pixel browser)
-  - Chamar `sendCAPIEvent("Lead", email)` (CAPI servidor)
-
-### Arquivos: `src/components/PremiumLockModal.tsx` e `src/pages/Oferta.tsx`
-
-- Apos `trackInitiateCheckout()`, tambem chamar `sendCAPIEvent("InitiateCheckout", userEmail)`
-
----
-
-## Segredo necessario
-
-Voce precisara gerar um **Token de Acesso do Servidor** no Meta:
-1. Acesse o [Gerenciador de Eventos](https://business.facebook.com/events_manager)
-2. Selecione seu Pixel
-3. Va em **Configuracoes** > **Conversions API**
-4. Clique em **Gerar token de acesso**
-5. Copie o token gerado
-
-Eu vou solicitar esse token de forma segura antes de implementar.
-
----
-
-## Resumo de arquivos
-
-| Arquivo | Acao |
-|---------|------|
-| `supabase/functions/meta-capi/index.ts` | Criar (nova edge function) |
-| `supabase/functions/guru-webhook/index.ts` | Modificar (adicionar chamada CAPI no Purchase) |
-| `src/lib/capi.ts` | Criar (helper client-side) |
-| `src/pages/Auth.tsx` | Modificar (trackLead no primeiro login) |
-| `src/components/PremiumLockModal.tsx` | Modificar (adicionar CAPI InitiateCheckout) |
-| `src/pages/Oferta.tsx` | Modificar (adicionar CAPI InitiateCheckout) |
-
-**Total: 4 arquivos modificados + 2 novos**
+**Resultado esperado:** A mensagem passara de:
+- "os nos [multiple_choice, multiple_choice] nao tem conexao de saida"
+Para:
+- "os nos [escolha_1 (Escolha Multipla), escolha_2 (Escolha Multipla)] nao tem conexao de saida"
 
