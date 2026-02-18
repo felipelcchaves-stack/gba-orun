@@ -1,21 +1,20 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { trackLead } from "@/lib/pixel";
 import { supabase } from "@/integrations/supabase/client";
 
-type AuthMode = "login" | "signup" | "forgot";
+type AuthMode = "login" | "forgot";
 
 const AuthPage = () => {
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,115 +30,99 @@ const AuthPage = () => {
       return;
     }
 
-    if (mode === "login") {
-      const { error } = await signIn(email, password);
-      if (error) toast.error(error.message);
-      else { toast.success("Bem-vindo de volta!"); navigate("/"); }
-    } else {
-      const { error } = await signUp(email, password, name);
-      if (error) toast.error(error.message);
-      else {
-        toast.success("Conta criada! Verifique seu email para confirmar.");
-        trackLead();
-      }
-    }
+    const { error } = await signIn(email, password);
+    if (error) toast.error(error.message);
+    else { toast.success("Bem-vindo de volta!"); navigate("/"); }
     setLoading(false);
   };
 
-  const titles: Record<AuthMode, string> = {
-    login: "Entrar",
-    signup: "Criar Conta",
-    forgot: "Recuperar Senha",
-  };
-
-  const subtitles: Record<AuthMode, string> = {
-    login: "Acesse sua conta",
-    signup: "Registre-se no Gba-Orun",
-    forgot: "Digite seu email para receber o link de recuperação",
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center px-5">
-      <div className="w-full max-w-sm">
-        <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
-          <ArrowLeft className="h-4 w-4" /> Voltar
-        </Link>
-        <h1 className="text-3xl font-display font-bold mb-1">{titles[mode]}</h1>
-        <p className="text-muted-foreground mb-8">{subtitles[mode]}</p>
+    <div className="min-h-screen flex items-center justify-center px-5 pb-[env(safe-area-inset-bottom)]">
+      <Link to="/" className="absolute top-6 left-5 text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-6 w-6" />
+      </Link>
+
+      <div className="w-full max-w-sm animate-fade-in">
+        {/* Mascote Agemo */}
+        <div className="text-center mb-6">
+          <span className="text-5xl">🦎</span>
+          <p className="text-muted-foreground mt-2 text-sm">
+            {mode === "login" ? "Axé! Bem-vindo de volta." : "Vamos recuperar seu acesso."}
+          </p>
+        </div>
+
+        <h1 className="text-3xl font-display font-bold mb-1 text-center">
+          {mode === "login" ? "Entrar" : "Recuperar Senha"}
+        </h1>
+        <p className="text-muted-foreground mb-8 text-center text-sm">
+          {mode === "login" ? "Acesse sua conta" : "Digite seu email para receber o link"}
+        </p>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "signup" && (
+          {/* Email */}
+          <div className="relative">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
-              type="text"
-              placeholder="Seu nome"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:ring-2 focus:ring-primary outline-none"
-            />
-          )}
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:ring-2 focus:ring-primary outline-none"
-            required
-          />
-          {mode !== "forgot" && (
-            <input
-              type="password"
-              placeholder="Senha"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:ring-2 focus:ring-primary outline-none"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 rounded-xl bg-card border border-border focus:ring-2 focus:ring-primary outline-none text-base"
               required
             />
+          </div>
+
+          {/* Senha */}
+          {mode === "login" && (
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Senha"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full pl-12 pr-12 py-4 rounded-xl bg-card border border-border focus:ring-2 focus:ring-primary outline-none text-base"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
           )}
+
+          {/* Botão */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl gradient-sacred text-primary-foreground font-bold text-lg disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-2xl gradient-sacred text-primary-foreground font-bold text-lg disabled:opacity-50 inline-flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
           >
             {loading && <Loader2 className="h-5 w-5 animate-spin" />}
-            {loading
-              ? "Aguarde..."
-              : mode === "login"
-              ? "Entrar"
-              : mode === "signup"
-              ? "Registrar"
-              : "Enviar Link"}
+            {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Enviar Link"}
           </button>
         </form>
 
-        {mode === "login" && (
-          <button
-            onClick={() => setMode("forgot")}
-            className="block w-full text-center text-sm text-muted-foreground hover:text-primary mt-4 underline"
-          >
-            Esqueci minha senha
-          </button>
-        )}
-
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          {mode === "forgot" ? (
-            <button onClick={() => setMode("login")} className="text-primary font-semibold underline">
+        {/* Rodapé */}
+        <div className="text-center mt-6">
+          {mode === "login" ? (
+            <button
+              onClick={() => setMode("forgot")}
+              className="text-sm text-muted-foreground hover:text-primary underline"
+            >
+              Esqueci minha senha
+            </button>
+          ) : (
+            <button
+              onClick={() => setMode("login")}
+              className="text-sm text-primary font-semibold underline"
+            >
               Voltar ao login
             </button>
-          ) : mode === "login" ? (
-            <>
-              Não tem conta?{" "}
-              <button onClick={() => setMode("signup")} className="text-primary font-semibold underline">
-                Registre-se
-              </button>
-            </>
-          ) : (
-            <>
-              Já tem conta?{" "}
-              <button onClick={() => setMode("login")} className="text-primary font-semibold underline">
-                Entrar
-              </button>
-            </>
           )}
-        </p>
+        </div>
       </div>
     </div>
   );
