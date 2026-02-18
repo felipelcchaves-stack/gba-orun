@@ -1,9 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import BottomNav from "@/components/BottomNav";
@@ -34,10 +32,9 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      gcTime: 1000 * 60 * 60 * 24, // 24h
-      staleTime: 1000 * 60 * 5, // 5 min default
+      gcTime: 1000 * 60 * 60, // 1h
+      staleTime: 1000 * 30, // 30s
       retry: (failureCount, error) => {
-        // Don't retry when offline
         if (!navigator.onLine) return false;
         return failureCount < 3;
       },
@@ -45,10 +42,8 @@ const queryClient = new QueryClient({
   },
 });
 
-const persister = createSyncStoragePersister({
-  storage: window.localStorage,
-  key: "gba-orun-cache",
-});
+// Clean up old persisted cache
+try { localStorage.removeItem("gba-orun-cache"); } catch {}
 
 const AppContent = () => {
   const { data: settings } = useAppSettings();
@@ -89,7 +84,7 @@ const AppContent = () => {
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 }}>
+    <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -97,7 +92,7 @@ const App = () => (
           <AppContent />
         </BrowserRouter>
       </TooltipProvider>
-    </PersistQueryClientProvider>
+    </QueryClientProvider>
   </ThemeProvider>
 );
 
