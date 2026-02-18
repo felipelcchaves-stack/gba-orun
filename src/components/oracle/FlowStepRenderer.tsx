@@ -685,6 +685,8 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
               // Use show_in_diagnosis if explicitly set, otherwise fallback to legacy skipTypes
               const showInDiagnosis = (srcNode.config as any)?.show_in_diagnosis;
               if (showInDiagnosis !== undefined) return showInDiagnosis === true;
+              // Blocos message com texto livre habilitado aparecem automaticamente
+              if (srcNode.node_type === "message" && (srcNode.config as any)?.enable_text_input) return true;
               const skipTypes = ["start", "message", "timer", "media", "conditional"];
               return !skipTypes.includes(srcNode.node_type);
             })
