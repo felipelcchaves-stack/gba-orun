@@ -4,6 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { trackLead } from "@/lib/pixel";
+import { sendCAPIEvent } from "@/lib/capi";
 
 type AuthMode = "login" | "forgot";
 
@@ -31,8 +33,31 @@ const AuthPage = () => {
     }
 
     const { error } = await signIn(email, password);
-    if (error) toast.error(error.message);
-    else { toast.success("Bem-vindo de volta!"); navigate("/"); }
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Bem-vindo de volta!");
+
+      // Check if first login (onboarding not completed) → track Lead
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("onboarding_completed")
+            .eq("user_id", currentUser.id)
+            .maybeSingle();
+          if (profile && !profile.onboarding_completed) {
+            trackLead();
+            sendCAPIEvent("Lead", email);
+          }
+        }
+      } catch (leadErr) {
+        console.warn("Lead tracking error (non-blocking):", leadErr);
+      }
+
+      navigate("/");
+    }
     setLoading(false);
   };
 

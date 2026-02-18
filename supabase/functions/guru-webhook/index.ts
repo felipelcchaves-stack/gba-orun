@@ -92,6 +92,28 @@ Deno.serve(async (req) => {
       }
       console.log(`User ${email} subscription activated`);
 
+      // Send Purchase event via Meta CAPI
+      try {
+        const purchaseValue = body?.transaction?.value || body?.amount || body?.price || null;
+        const capiRes = await fetch(`${supabaseUrl}/functions/v1/meta-capi`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            event_name: "Purchase",
+            email,
+            value: purchaseValue ? Number(purchaseValue) : undefined,
+            currency: "BRL",
+          }),
+        });
+        const capiBody = await capiRes.text();
+        console.log("CAPI Purchase response:", capiBody);
+      } catch (capiErr) {
+        console.error("CAPI Purchase error (non-blocking):", capiErr);
+      }
+
     } else if (
       status === "subscription_overdue" || status === "payment_refunded" || status === "overdue"
     ) {

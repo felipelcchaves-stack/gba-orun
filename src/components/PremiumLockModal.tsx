@@ -1,7 +1,9 @@
 import { Lock, ExternalLink } from "lucide-react";
 import { trackInitiateCheckout } from "@/lib/pixel";
+import { sendCAPIEvent } from "@/lib/capi";
 import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PremiumLockModalProps {
   open: boolean;
@@ -12,6 +14,7 @@ interface PremiumLockModalProps {
 const PremiumLockModal = ({ open, onClose, checkoutUrl }: PremiumLockModalProps) => {
   const { data: plans } = useActivePlans();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   if (!open) return null;
 
@@ -20,6 +23,7 @@ const PremiumLockModal = ({ open, onClose, checkoutUrl }: PremiumLockModalProps)
 
   const handleCheckout = () => {
     trackInitiateCheckout();
+    if (user?.email) sendCAPIEvent("InitiateCheckout", user.email);
     navigate("/oferta");
   };
 
