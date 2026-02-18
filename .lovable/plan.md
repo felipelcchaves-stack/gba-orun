@@ -1,54 +1,58 @@
 
-# Melhorar Grafico Espiritual + Corrigir Mapeamento de Energias
 
-## Problemas atuais
+# Posts Fixados pelo Admin ("Recado do Oluwo")
 
-1. **Task types desconectados**: O fluxo do oraculo gera tipos como `oracao_manha`, mas o hook so reconhece `ebo`, `ibori`, `oracao_ori`, `iyami`, `egbe_orun`. Resultado: energias ficam com score padrao de 50 e nunca refletem a realidade.
-2. **Grafico inadequado**: O LineChart de linhas com 4 energias fica poluido em tela de celular e nao comunica "equilibrio" visualmente.
-3. **Imule nunca aparece**: Como Iyami nunca chega a "critico", a sugestao de fazer Imule fica escondida.
+## O que sera implementado
 
-## Solucao proposta
+O admin podera fixar posts no topo do feed da comunidade. Posts fixados aparecem com visual diferenciado (borda dourada, icone de pin, label "Recado do Oluwo") e ficam sempre no topo, separados do feed cronologico.
 
-### 1. Trocar LineChart por RadarChart (grafico de teia)
+## Mudancas no banco de dados
 
-O RadarChart e ideal para este caso porque:
-- Mostra as 4 energias como pontos de uma mandala/compasso espiritual
-- O usuario ve de imediato onde esta forte e onde esta fraco
-- E mais bonito e intuitivo que linhas cruzadas
-- Ocupa menos espaco vertical
+Adicionar coluna `is_pinned` na tabela `community_posts`:
 
-O grafico tera 4 eixos (Ebo, Ori, Iyami, Egbe) com valores de 0 a 100, onde 100 = equilibrado.
+```text
+ALTER TABLE community_posts ADD COLUMN is_pinned boolean NOT NULL DEFAULT false;
+```
 
-### 2. Expandir o mapeamento de task_types
+Nenhuma tabela nova. A policy de UPDATE existente ja permite que admins modifiquem posts (via RLS "Users can update own posts"). Porem, como o admin precisa fixar posts de OUTROS usuarios, sera necessario adicionar uma policy de UPDATE para admins:
 
-Adicionar mapeamentos mais abrangentes para capturar os tipos reais gerados pelos fluxos:
+```text
+CREATE POLICY "Admins can update any post"
+ON community_posts FOR UPDATE
+TO authenticated
+USING (has_role(auth.uid(), 'admin'::app_role));
+```
 
-| Energia | Task types atuais | Task types adicionados |
-|---------|-------------------|----------------------|
-| Ebo | `ebo` | `limpeza`, `banho` |
-| Ori | `ibori`, `oracao_ori` | `oracao_manha`, `oracao_noite`, `meditacao` |
-| Iyami | `iyami`, `oracao_iyami` | `oferenda_iyami` |
-| Egbe | `egbe_orun` | `oferenda_egbe` |
+## Mudancas nos arquivos
 
-Tambem incluir um fallback: task types nao mapeados contarao para a energia geral mais proxima baseado em palavras-chave no nome.
+### 1. `src/hooks/useCommunity.ts`
+- Adicionar `is_pinned` na interface `CommunityPost`
+- No `usePosts`, ordenar posts fixados primeiro (is_pinned DESC, created_at DESC)
+- Criar hook `useTogglePin` que faz UPDATE do campo `is_pinned` no post
 
-### 3. Corrigir score padrao
+### 2. `src/components/community/CommunityPost.tsx`
+- Se `post.is_pinned === true`, renderizar visual diferenciado:
+  - Borda dourada (border-2 border-yellow-500/60)
+  - Badge "Recado do Oluwo" com icone Pin no topo
+  - Background levemente dourado (bg-yellow-50/30 dark:bg-yellow-900/10)
+- Se o usuario e admin, mostrar botao de pin/unpin ao lado do botao de deletar
 
-Quando uma energia tem 0 tarefas, em vez de retornar score 50 ("atencao"), retornar 0 e nao exibir essa energia no radar. Isso evita falsos alertas.
+### 3. `src/pages/Community.tsx`
+- Separar posts fixados dos normais no feed
+- Posts fixados aparecem primeiro, em secao propria com label sutil
+- Posts normais aparecem abaixo
 
-## Arquivos modificados
-
-| Arquivo | Acao |
-|---------|------|
-| `src/hooks/useSpiritualAnalysis.ts` | Expandir TASK_TYPE_MAP, corrigir score padrao (0 em vez de 50), adicionar fallback por palavra-chave |
-| `src/components/home/SpiritualEvolutionChart.tsx` | Substituir LineChart por RadarChart com visual de mandala espiritual |
-| `src/components/home/SpiritualEnergyDashboard.tsx` | Ajustar logica de "hasNoData" para considerar o novo score padrao |
-
-**Total: 3 arquivos, 0 tabelas novas**
+### 4. `src/components/admin/AdminCommunity.tsx`
+- Adicionar coluna "Fixado" na tabela
+- Adicionar botao de toggle pin (icone Pin) ao lado do botao de deletar
+- Posts fixados aparecem com indicador visual na tabela
 
 ## Resultado esperado
 
-- O radar mostra visualmente o equilibrio espiritual como um mapa
-- Sugestoes como Imule aparecem corretamente quando Iyami esta critico
-- Tarefas do fluxo (como `oracao_manha`) alimentam os scores corretamente
-- Energias sem dados simplesmente nao aparecem, sem falsos alertas
+- Admin pode fixar/desfixar posts tanto pelo feed da comunidade quanto pelo painel admin
+- Posts fixados aparecem sempre no topo com visual dourado e label "Recado do Oluwo"
+- Maximo de posts fixados: sem limite tecnico, mas visualmente ficam destacados no topo
+- Usuarios comuns veem os posts fixados mas nao podem fixar/desfixar
+
+**Total: 1 coluna nova, 1 policy nova, 4 arquivos modificados**
+
