@@ -63,11 +63,12 @@ const ReviewModal = ({ open, onClose, onDismiss }: ReviewModalProps) => {
     onClose();
   };
 
-  const starSize = isMobile ? "h-10 w-10" : "h-8 w-8";
-  const starPadding = isMobile ? "p-2" : "p-1";
+  const starSize = isMobile ? "h-12 w-12" : "h-8 w-8";
+  const starPadding = isMobile ? "p-3" : "p-1";
+  const starGap = isMobile ? "gap-2" : "gap-1";
 
   const formContent = (
-    <div className={`space-y-5 ${isMobile ? "px-5 pb-6" : "pt-2"}`}>
+    <div className={`${isMobile ? "space-y-6 px-5 pb-6" : "space-y-5 pt-2"}`}>
       {/* Name */}
       <div>
         <label className="text-xs text-muted-foreground font-medium">Seu nome</label>
@@ -77,7 +78,7 @@ const ReviewModal = ({ open, onClose, onDismiss }: ReviewModalProps) => {
       {/* Stars */}
       <div>
         <label className="text-xs text-muted-foreground font-medium mb-2 block">Nota</label>
-        <div className="flex gap-1">
+        <div className={`flex ${starGap}`}>
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
@@ -90,8 +91,8 @@ const ReviewModal = ({ open, onClose, onDismiss }: ReviewModalProps) => {
               <Star
                 className={`${starSize} transition-colors ${
                   star <= (hoverRating || rating)
-                    ? "fill-accent text-accent"
-                    : "text-muted-foreground/30"
+                    ? "fill-accent text-accent drop-shadow-[0_0_6px_hsl(var(--accent)/0.5)]"
+                    : "text-accent/30"
                 }`}
               />
             </button>
@@ -109,7 +110,7 @@ const ReviewModal = ({ open, onClose, onDismiss }: ReviewModalProps) => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Conte como tem sido sua experiência com o Gba-Orun..."
-          className="min-h-[100px] rounded-xl"
+          className="min-h-[100px] rounded-xl focus-visible:ring-accent"
           maxLength={500}
         />
         <p className={`text-xs mt-1 ${textLength < 20 ? "text-muted-foreground" : "text-primary"}`}>
@@ -122,16 +123,16 @@ const ReviewModal = ({ open, onClose, onDismiss }: ReviewModalProps) => {
         <Button
           variant="outline"
           onClick={handleDismiss}
-          className="flex-1 rounded-xl"
+          className="flex-1 rounded-2xl"
         >
           Agora não
         </Button>
         <Button
           onClick={handleSubmit}
           disabled={!isValid || submitting}
-          className="flex-1 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90"
+          className="flex-1 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
         >
-          {submitting ? "Enviando..." : "Enviar"}
+          {submitting ? "Enviando..." : "Enviar ⭐"}
         </Button>
       </div>
     </div>
@@ -142,7 +143,7 @@ const ReviewModal = ({ open, onClose, onDismiss }: ReviewModalProps) => {
       <Drawer open={open} onOpenChange={(o) => { if (!o) handleDismiss(); }}>
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle className="font-display text-xl">Como você avalia o Gba-Orun?</DrawerTitle>
+            <DrawerTitle className="font-display text-xl text-primary">Como você avalia o Gba-Orun?</DrawerTitle>
             <DrawerDescription>Sua opinião nos ajuda a melhorar!</DrawerDescription>
           </DrawerHeader>
           {formContent}
