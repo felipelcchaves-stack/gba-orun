@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { CheckCircle, Circle, Compass, Sunrise, Moon } from "lucide-react";
+import { CheckCircle, Circle, Compass, Sunrise, Moon, ChevronDown, PartyPopper } from "lucide-react";
 import { format } from "date-fns";
 import { useJourneyTasks } from "@/hooks/useJourney";
 import { useOracleConfigs } from "@/hooks/useOracleConfig";
@@ -7,7 +7,7 @@ import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
 import { Progress } from "@/components/ui/progress";
 import GuidanceBubble from "@/components/GuidanceBubble";
 import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 
 const JourneyEntryCard = ({
   entry,
@@ -28,6 +28,18 @@ const JourneyEntryCard = ({
   const completedCount = tasks?.filter((t: any) => t.completed).length ?? 0;
   const totalCount = tasks?.length ?? 0;
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const allDone = totalCount > 0 && completedCount === totalCount;
+
+  const [expanded, setExpanded] = useState(false);
+  const autoCompletedRef = useRef(false);
+
+  // Auto-mark journey as completed when all tasks are done
+  useEffect(() => {
+    if (allDone && !entry.completed && !autoCompletedRef.current) {
+      autoCompletedRef.current = true;
+      onComplete();
+    }
+  }, [allDone, entry.completed, onComplete]);
 
   const morningTypes = ["oracao_manha", "oracao_ori"];
   const nightTypes = ["oracao_noite", "oracao_iyami"];
@@ -35,8 +47,49 @@ const JourneyEntryCard = ({
   const nightTasks = tasks?.filter((t: any) => nightTypes.includes(t.task_type)) ?? [];
   const otherTasks = tasks?.filter((t: any) => !morningTypes.includes(t.task_type) && !nightTypes.includes(t.task_type)) ?? [];
 
+  // --- Compact completed state ---
+  if (allDone && !expanded) {
+    return (
+      <div className="bg-card rounded-3xl p-4 shadow-sacred border border-leaf/30 transition-all">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-leaf/15 flex items-center justify-center shrink-0">
+            <PartyPopper className="h-5 w-5 text-leaf" strokeWidth={1.5} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-bold text-sm text-leaf">Rotina concluída! ✨</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] bg-leaf/15 text-leaf px-2 py-0.5 rounded-full font-medium">
+                {oracleNameMap[entry.oracle_result] || entry.oracle_result}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {format(new Date(entry.created_at), "HH:mm")}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setExpanded(true)}
+            className="shrink-0 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Ver detalhes
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Full expanded state ---
   return (
-    <div className="bg-card rounded-3xl p-5 shadow-sacred border border-border/50 transition-all hover:shadow-gold/10">
+    <div className={`bg-card rounded-3xl p-5 shadow-sacred border transition-all hover:shadow-gold/10 ${allDone ? "border-leaf/30" : "border-border/50"}`}>
+      {allDone && (
+        <button
+          onClick={() => setExpanded(false)}
+          className="flex items-center gap-1 text-[11px] text-leaf font-medium mb-3 hover:opacity-80 transition-opacity"
+        >
+          <ChevronDown className="h-3.5 w-3.5 rotate-180" />
+          Recolher
+        </button>
+      )}
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
           <Compass className="h-5 w-5 text-accent" strokeWidth={1.5} />
@@ -59,13 +112,15 @@ const JourneyEntryCard = ({
             </Link>
           )}
         </div>
-        <button onClick={onComplete} className="shrink-0 transition-transform active:scale-90">
-          {entry.completed ? (
-            <CheckCircle className="h-6 w-6 text-leaf" strokeWidth={1.5} />
-          ) : (
-            <Circle className="h-6 w-6 text-muted-foreground/30" strokeWidth={1.5} />
-          )}
-        </button>
+        {!allDone && (
+          <button onClick={onComplete} className="shrink-0 transition-transform active:scale-90">
+            {entry.completed ? (
+              <CheckCircle className="h-6 w-6 text-leaf" strokeWidth={1.5} />
+            ) : (
+              <Circle className="h-6 w-6 text-muted-foreground/30" strokeWidth={1.5} />
+            )}
+          </button>
+        )}
       </div>
 
       {totalCount > 0 && (
