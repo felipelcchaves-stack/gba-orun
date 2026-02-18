@@ -1,39 +1,53 @@
 
-# Corrigir Menu Inferior Invisivel no Chrome/Safari iOS
+
+# Tornar o Link de Instalacao Visivel para o Usuario
 
 ## Problema
 
-O menu de navegacao inferior (BottomNav) fica escondido atras da barra de ferramentas do navegador em iPhones, especialmente quando o app e aberto pelo WhatsApp (navegador in-app). Isso acontece porque o CSS `env(safe-area-inset-bottom)` -- que adiciona espaco para a barra do navegador -- so funciona quando o `index.html` declara `viewport-fit=cover`, e essa declaracao esta faltando.
+A pagina `/instalar` existe e funciona, mas ninguem consegue chega-la porque:
+
+1. Nao existe nenhum link ou botao no app apontando para `/instalar` (nem no menu inferior, nem na Home, nem no Perfil)
+2. O evento `beforeinstallprompt` so e capturado quando o usuario ja esta na pagina, mas ele nunca navega ate la
 
 ## Solucao
 
-Duas correcoes simples:
+Adicionar um link visivel na pagina de **Perfil** (`src/pages/Profile.tsx`) com um botao "Instalar App", pois e o local mais natural para essa acao (junto de configuracoes da conta). Tambem capturar o evento `beforeinstallprompt` globalmente no `App.tsx` para nao perder a oportunidade de instalacao.
 
-### 1. Ativar safe-area no viewport (index.html)
+### 1. Capturar `beforeinstallprompt` globalmente
 
-Adicionar `viewport-fit=cover` na meta tag viewport. Isso instrui o navegador a informar ao CSS qual e a area segura do dispositivo.
+Criar um hook `src/hooks/useInstallPrompt.ts` que:
+- Escuta o evento `beforeinstallprompt` no nivel global (window)
+- Armazena o evento em um state
+- Detecta se e iOS
+- Detecta se ja esta instalado (standalone)
+- Exporta: `deferredPrompt`, `isIOS`, `isInstalled`, `triggerInstall()`
 
-**De:**
-```
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-```
+### 2. Adicionar botao "Instalar App" na pagina Perfil
 
-**Para:**
-```
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-```
+No `src/pages/Profile.tsx`, importar o hook e exibir um card/botao com icone de download:
+- Se ja instalado: nao exibir nada
+- Se Android com prompt disponivel: botao "Instalar App" que aciona o prompt diretamente
+- Se iOS: botao que navega para `/instalar` (onde tem as instrucoes passo a passo)
+- Se Android sem prompt: botao que navega para `/instalar` (instrucoes manuais)
 
-### 2. Garantir padding seguro no body (index.css)
+### 3. Simplificar a pagina Install.tsx
 
-Adicionar `padding-bottom: env(safe-area-inset-bottom)` no body para que o conteudo das paginas tambem respeite a area segura, evitando que texto ou cards fiquem atras do menu.
+Atualizar `/instalar` para tambem usar o novo hook, removendo a logica duplicada de captura do evento.
 
 ## Detalhes Tecnicos
 
-### Arquivos modificados:
+### Arquivos:
+- **`src/hooks/useInstallPrompt.ts`** (novo): hook global para capturar beforeinstallprompt
+- **`src/pages/Profile.tsx`**: adicionar botao de instalacao
+- **`src/pages/Install.tsx`**: refatorar para usar o novo hook
 
-- **`index.html`** (linha 5): adicionar `viewport-fit=cover` na meta viewport
-- **`src/index.css`**: adicionar `padding-bottom: env(safe-area-inset-bottom)` no body
+### Fluxo do usuario:
 
-O `BottomNav` ja usa `pb-[max(0.625rem,env(safe-area-inset-bottom))]`, entao ele vai funcionar corretamente assim que o `viewport-fit=cover` for ativado. Nenhuma mudanca necessaria no componente BottomNav.
+```text
+Usuario abre Perfil --> Ve botao "Instalar App"
+  --> Android: clica e instala direto
+  --> iOS: clica e ve instrucoes passo a passo em /instalar
+```
 
-Mudanca de 2 linhas em 2 arquivos.
+Mudancas em 2 arquivos existentes + 1 novo hook.
+
