@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import FlowBuilder from "./flow-builder/FlowBuilder";
+import FlowWizard from "./FlowWizard";
 
 const AdminFlows = () => {
   const { data: flows, isLoading } = useOracleFlows();
@@ -21,6 +22,7 @@ const AdminFlows = () => {
   const [creatingDefault, setCreatingDefault] = useState(false);
   const [creatingOrientation, setCreatingOrientation] = useState(false);
   const [cloningId, setCloningId] = useState<string | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
 
   const handleCloneFlow = async (flowId: string) => {
     const flow = flows?.find((f) => f.id === flowId);
@@ -265,6 +267,18 @@ const AdminFlows = () => {
     }
   };
 
+  if (showWizard) {
+    return (
+      <FlowWizard
+        onClose={() => setShowWizard(false)}
+        onComplete={(flowId) => {
+          setShowWizard(false);
+          setEditingFlowId(flowId);
+        }}
+      />
+    );
+  }
+
   if (editingFlowId) {
     const flow = flows?.find((f) => f.id === editingFlowId);
     return (
@@ -292,6 +306,9 @@ const AdminFlows = () => {
           <Input placeholder="Nome do novo fluxo..." value={newName} onChange={(e) => setNewName(e.target.value)} className="max-w-sm" />
           <button onClick={handleCreate} disabled={createFlow.isPending} className="bg-secondary text-secondary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shrink-0">
             <Plus className="h-4 w-4" /> Criar Fluxo
+          </button>
+          <button onClick={() => setShowWizard(true)} className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 shrink-0">
+            <Wand2 className="h-4 w-4" /> Criar com Wizard
           </button>
         </div>
         {newName && (
