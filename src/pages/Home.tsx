@@ -8,7 +8,6 @@ import { useRituals } from "@/hooks/useRituals";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { getCategoryLabel } from "@/lib/categories";
 import SpiritualCareCard from "@/components/home/SpiritualCareCard";
-import SpiritualEnergyDashboard from "@/components/home/SpiritualEnergyDashboard";
 import SpiritualEvolutionChart from "@/components/home/SpiritualEvolutionChart";
 import PromoBanner from "@/components/home/PromoBanner";
 import SubscriptionBanner from "@/components/home/SubscriptionBanner";
@@ -49,7 +48,7 @@ const HomePage = () => {
   const prayerLabel = hour < 12 ? "Orações da Manhã" : "Orações da Noite";
   const prayerIcon = hour < 12 ? Sunrise : Moon;
   const dailyPrayers = rituals?.filter((r: any) => r.category === prayerCategory).slice(0, 3) ?? [];
-  const dailyRituals = rituals?.slice(0, 4) ?? [];
+  
 
   return (
     <div className="min-h-screen pb-24 bg-background">
@@ -95,8 +94,7 @@ const HomePage = () => {
 
       {user &&
       <div className="px-6 mb-5">
-          <div className="max-w-lg mx-auto space-y-4">
-            <SpiritualEnergyDashboard />
+          <div className="max-w-lg mx-auto">
             <SpiritualEvolutionChart />
           </div>
         </div>
@@ -188,34 +186,6 @@ const HomePage = () => {
         </div>
       }
 
-      {/* Rituais do Dia */}
-      {dailyRituals.length > 0 &&
-      <div className="px-6">
-          <div className="max-w-lg mx-auto">
-            <h3 className="font-display font-bold text-lg mb-3">Rituais do Dia</h3>
-            <div className="space-y-1">
-              {dailyRituals.map((ritual: any, i: number) =>
-            <Link
-              key={ritual.id}
-              to={`/rituais/${ritual.id}`}
-              className="flex items-center gap-3.5 py-3 border-b border-border/40 last:border-b-0">
-
-                  <img
-                src={ritual.image_url || FALLBACK_IMAGES[i % FALLBACK_IMAGES.length]}
-                alt={ritual.title}
-                className="w-14 h-14 rounded-full object-cover shrink-0" />
-
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-display font-bold text-sm truncate">{ritual.title}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">{getCategoryLabel(ritual.category)}</p>
-                  </div>
-                  <Bookmark className="h-4 w-4 text-muted-foreground/40 shrink-0" strokeWidth={1.5} />
-                </Link>
-            )}
-            </div>
-          </div>
-        </div>
-      }
 
       <ReviewModal
         open={reviewOpen || showReview}

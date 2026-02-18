@@ -79,6 +79,11 @@ const SpiritualEvolutionChart = () => {
           <p className="text-xs text-center text-muted-foreground mt-1">
             Quanto maior a área, mais equilibrado você está
           </p>
+          {data.mostUrgent && data.mostUrgent.level !== "equilibrado" && (
+            <p className="text-xs text-center mt-2 text-accent font-medium">
+              ✨ Que tal cuidar do seu {data.mostUrgent.label} hoje?
+            </p>
+          )}
         </CardContent>
       )}
     </Card>
