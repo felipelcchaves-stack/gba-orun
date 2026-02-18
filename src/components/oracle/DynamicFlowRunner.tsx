@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { useFlowNodes, useFlowEdges, type OracleFlowNode } from "@/hooks/useOracleFlows";
 import FlowStepRenderer from "./FlowStepRenderer";
 import OracleProgressBar from "./OracleProgressBar";
@@ -15,19 +15,19 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [isDeadEnd, setIsDeadEnd] = useState(false);
 
   useEffect(() => {
     if (nodes && edges && nodes.length > 0 && !currentNodeId) {
       const startNode = nodes.find((n) => n.node_type === "start");
       if (startNode) {
-        // Auto-skip: follow the default edge out of Start
         const outEdge = edges.find(
           (e) => e.source_node_id === startNode.id && (e.source_handle === "default" || e.source_handle === "")
         );
         if (outEdge) {
           setCurrentNodeId(outEdge.target_node_id);
         } else {
-          setCurrentNodeId(startNode.id); // fallback
+          setCurrentNodeId(startNode.id);
         }
       } else {
         setCurrentNodeId(nodes[0].id);
@@ -58,6 +58,7 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
     );
 
     if (edge) {
+      setIsDeadEnd(false);
       setHistory((prev) => [...prev, currentNodeId]);
       setCurrentNodeId(edge.target_node_id);
     } else {
@@ -65,8 +66,12 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
         (e) => e.source_node_id === currentNodeId && (e.source_handle === "default" || e.source_handle === "")
       );
       if (defaultEdge) {
+        setIsDeadEnd(false);
         setHistory((prev) => [...prev, currentNodeId]);
         setCurrentNodeId(defaultEdge.target_node_id);
+      } else {
+        // Dead end detected
+        setIsDeadEnd(true);
       }
     }
   };
@@ -76,12 +81,14 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
     const prev = history[history.length - 1];
     setHistory((h) => h.slice(0, -1));
     setCurrentNodeId(prev);
+    setIsDeadEnd(false);
   };
 
   const reset = () => {
     setCurrentNodeId(null);
     setHistory([]);
     setAnswers({});
+    setIsDeadEnd(false);
   };
 
   if (!nodes || !edges || !currentNode) {
@@ -116,6 +123,21 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
           allNodes={nodes}
         />
       </div>
+
+      {isDeadEnd && !isDiagnosis && (
+        <div className="mt-6 p-4 rounded-2xl bg-card border border-border text-center space-y-3">
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <AlertTriangle className="h-5 w-5" />
+            <span className="text-sm font-medium">Este caminho chegou ao fim.</span>
+          </div>
+          <button
+            onClick={reset}
+            className="px-6 py-2.5 rounded-xl gradient-sacred text-primary-foreground font-bold text-sm"
+          >
+            Nova Consulta
+          </button>
+        </div>
+      )}
     </div>
   );
 };
