@@ -42,7 +42,11 @@ export const useAddJourneyEntry = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["journey"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["journey"] });
+      qc.invalidateQueries({ queryKey: ["journey-month"] });
+      qc.invalidateQueries({ queryKey: ["journey-month-tasks"] });
+    },
   });
 };
 
@@ -56,7 +60,10 @@ export const useCompleteJourney = () => {
       }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["journey"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["journey"] });
+      qc.invalidateQueries({ queryKey: ["journey-month"] });
+    },
   });
 };
 
@@ -103,7 +110,10 @@ export const useCreateJourneyTasks = () => {
       const { error } = await supabase.from("journey_tasks" as any).insert(rows);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["journey-tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["journey-tasks"] });
+      qc.invalidateQueries({ queryKey: ["journey-month-tasks"] });
+    },
   });
 };
 
@@ -117,7 +127,10 @@ export const useCompleteTask = () => {
       }).eq("id", taskId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["journey-tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["journey-tasks"] });
+      qc.invalidateQueries({ queryKey: ["journey-month-tasks"] });
+    },
   });
 };
 
