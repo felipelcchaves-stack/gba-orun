@@ -1,90 +1,74 @@
 
 
-# Redesign da Pagina Aprender - Sem Duplicacoes + Aba Oferendas
+# Limpeza e Reorganizacao da Home - Remover Duplicacoes
 
-## Problemas identificados
+## Problemas encontrados
 
-1. **Duplicacao massiva**: A pagina Aprender (`/aprender`) e a pagina Rituais (`/rituais`) sao quase identicas - mesma fonte de dados (`useRituals`), mesmos filtros, mesmo layout de cards. O usuario ve a mesma coisa em dois lugares.
-2. **Duas navegacoes sobrepostas na mesma pagina**: Os icones tematicos (THEMED_ICONS) e os chips de filtro (FILTER_CATEGORIES) fazem a mesma coisa - filtrar por categoria. Isso polui a tela.
-3. **Icone "Obi" fora de contexto**: Um atalho para o Oraculo dentro de uma pagina de estudo nao faz sentido.
-4. **Oferendas ausentes**: O sistema de oferendas (`useOfferings`) existe no codigo mas nao tem aba na pagina.
-5. **Visual monotono**: Lista simples sem hierarquia, sem destaque visual por categoria.
+### 1. SpiritualEnergyDashboard + SpiritualEvolutionChart = mesma coisa
+Ambos usam o mesmo hook `useSpiritualAnalysis` e mostram os mesmos dados:
+- Dashboard: barras de progresso + "Ebo precisa de atencao"
+- EvolutionChart: grafico radar (mandala) com os mesmos scores
 
-## Solucao
+O usuario ve a mesma informacao duas vezes, em formatos diferentes.
 
-Transformar o Aprender em um hub de conteudo com **duas abas** (Rituais e Oferendas), remover duplicacoes internas, e melhorar o visual.
+### 2. "Destaques" + "Rituais do Dia" = mesmos rituais
+- Destaques: `rituals?.slice(0, 6)` (cards horizontais)
+- Rituais do Dia: `rituals?.slice(0, 4)` (lista vertical)
 
-## Estrutura da nova pagina
+Ambos pegam os primeiros rituais da mesma query. O usuario ve os mesmos rituais repetidos.
 
-### 1. Header
-- Titulo: **"Aprender"**
-- Subtitulo: "Sabedoria ancestral ao seu alcance"
+### 3. SpiritualCareCard + SpiritualEnergyDashboard = sobreposicao
+- CareCard: "Seu Ori sente sua falta" / "Hoje e dia de cuidado" (pessoal, motivacional)
+- EnergyDashboard: "Ebo precisa de atencao" (tecnico, pode assustar)
 
-### 2. Tabs (Rituais | Oferendas)
-- Usar o componente Tabs do Radix ja instalado
-- Visual com fundo suave e indicador ativo em foreground
-- Aba "Rituais" como padrao
+O CareCard ja cumpre o papel de motivar. O Dashboard duplica com tom alarmista.
 
-### 3. Aba Rituais
-- **Remover** os THEMED_ICONS (duplicam os chips)
-- **Manter** apenas os chips de filtro por categoria (FILTER_CATEGORIES) - simplificados
-- Lista de rituais com visual melhorado:
-  - Imagem arredondada
-  - Titulo, categoria, badges (Premium, Audio)
-  - Sem icone Bookmark solto (nao tem funcionalidade de favoritos implementada)
+### 4. Logica do "precisa de atencao" pode gerar falsos alertas
+Se o usuario tem 2 tarefas de Ebo e completou 0, o score e 100% = "critico". Mas pode ser que ele acabou de comecar! A mensagem assusta sem contexto.
 
-### 4. Aba Oferendas (NOVA)
-- Mesmos chips de filtro por categoria (reutilizar)
-- Lista de oferendas usando `useOfferings`
-- Card similar ao de rituais mas com icone de UtensilsCrossed
-- Cada oferenda linka para um reader (por enquanto, abre um dialog/modal com detalhes em Markdown)
+## Solucao proposta
 
-### 5. Pagina Rituais (`/rituais`)
-- Manter como esta, pois serve como ponto de entrada direto (links do Oraculo apontam para `/rituais?cat=X`)
-- Nenhuma mudanca necessaria nela
+### Unificar os dashboards espirituais
+- **Manter** o `SpiritualEvolutionChart` (radar/mandala) como o unico painel de analise. E visualmente mais bonito e informativo.
+- **Remover** o `SpiritualEnergyDashboard` (barras de progresso + alerta). Sua funcao e coberta pelo radar + CareCard.
+- **Mover** a sugestao de "precisa de atencao" para dentro do radar (opcional, como texto sutil abaixo do grafico, sem tom alarmista).
+
+### Corrigir "Destaques" e "Rituais do Dia"
+- **Manter "Destaques"** como carousel horizontal (visual atrativo).
+- **Transformar "Rituais do Dia"** em algo util: mostrar rituais de uma categoria diferente da dos Destaques, OU remover completamente se nao tiver logica propria.
+- Alternativa: "Rituais do Dia" poderia mostrar rituais sugeridos pela ultima consulta ao Oraculo (campo `suggested_ritual_id` em `user_journey`), dando personalidade real a secao.
+
+### Melhorar tom do alerta espiritual
+- Trocar "precisa de atencao" por frases mais suaves como "Que tal cuidar do seu Ebo hoje?" dentro do radar
+- Manter o CareCard como unico ponto de urgencia (ele ja tem logica de dias sem atividade)
 
 ## Mudancas nos arquivos
 
 | Arquivo | Mudanca |
 |---|---|
-| `src/pages/Learn.tsx` | Rewrite: adicionar Tabs (Rituais/Oferendas), remover THEMED_ICONS, remover chips duplicados, adicionar aba Oferendas |
-| `src/components/learn/OfferingCard.tsx` | Novo: card para exibir oferenda na lista |
-| `src/components/learn/OfferingDetailModal.tsx` | Novo: modal para exibir detalhes da oferenda (ingredientes, instrucoes em Markdown) |
+| `src/pages/Home.tsx` | Remover import e uso do SpiritualEnergyDashboard. Remover secao "Rituais do Dia" (duplica Destaques). |
+| `src/components/home/SpiritualEvolutionChart.tsx` | Adicionar sugestao sutil abaixo do radar quando houver energia em atencao (tom suave, nao alarmista). |
+| `src/components/home/SpiritualEnergyDashboard.tsx` | Nenhuma mudanca no arquivo (apenas deixa de ser usado na Home). Pode ser util em outra pagina futuramente. |
+
+## Resultado
+
+A Home passa de 8+ secoes para uma estrutura mais limpa:
+
+1. Header + Streak
+2. SubscriptionBanner (condicional)
+3. SpiritualCareCard (motivacional, personalizado)
+4. PromoBanner (condicional)
+5. Mapa Espiritual (radar, colapsavel)
+6. Hero Banner (link para Jornada)
+7. Oracoes do Dia (contextual por horario)
+8. Destaques (carousel de rituais)
+
+Sem duplicacoes. Cada secao tem um proposito unico.
 
 ## Detalhes tecnicos
 
-### Learn.tsx - Nova estrutura
-
-```text
-+---------------------------+
-|  Aprender                 |
-|  Sabedoria ancestral...   |
-+---------------------------+
-| [Rituais]  [Oferendas]    |  <-- Tabs
-+---------------------------+
-| Todos | Oriki | Ibori |.. |  <-- Chips filtro
-+---------------------------+
-| [img] Titulo do Ritual    |
-|       Categoria  Premium  |
-+---------------------------+
-| [img] Titulo do Ritual 2  |
-|       Categoria  Audio    |
-+---------------------------+
-```
-
-### OfferingCard.tsx
-- Exibe: imagem, titulo, categoria, badge premium
-- Ao clicar: abre OfferingDetailModal (se free) ou PremiumLockModal (se premium e usuario free)
-
-### OfferingDetailModal.tsx
-- Dialog com scroll
-- Mostra: titulo, descricao, ingredientes (Markdown), instrucoes (Markdown)
-- Player de audio se disponivel
-
-### Hooks reutilizados
-- `useRituals` (ja existe)
-- `useOfferings` (ja existe)
-- `usePremium` (ja existe)
-
-### Nenhuma mudanca no banco de dados
+- Nenhuma mudanca no banco de dados
+- Nenhum hook novo
+- O componente SpiritualEnergyDashboard continua existindo no codigo (pode ser reutilizado na pagina Jornada ou Perfil se necessario)
+- A sugestao no radar usa dados do `mostUrgent` que ja existe no hook `useSpiritualAnalysis`
 
