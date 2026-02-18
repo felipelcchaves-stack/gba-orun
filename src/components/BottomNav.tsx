@@ -13,7 +13,7 @@ const BottomNav = () => {
   const { isOnline } = useOnlineStatus();
 
   // Hide BottomNav on admin and landing page routes
-  if (location.pathname.startsWith("/admin") || location.pathname === "/oferta") return null;
+  if (location.pathname.startsWith("/admin") || location.pathname === "/oferta" || location.pathname === "/onboarding") return null;
 
   const links = [
     { to: "/", icon: Home, label: "Início" },

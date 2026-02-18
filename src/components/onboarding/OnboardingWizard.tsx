@@ -185,7 +185,7 @@ const OnboardingWizard = () => {
         )}
 
         {step === 1 && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-10">
+          <div className="fixed bottom-0 left-0 right-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-background via-background to-transparent z-50">
             <div className="max-w-md mx-auto">
               <Button onClick={() => setStep(2)} className="w-full bg-primary text-primary-foreground font-semibold rounded-xl h-12">
                 Continuar
@@ -218,7 +218,7 @@ const OnboardingWizard = () => {
         )}
 
         {step === 2 && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-10">
+          <div className="fixed bottom-0 left-0 right-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-background via-background to-transparent z-50">
             <div className="max-w-md mx-auto">
               <Button
                 onClick={handleFinish}

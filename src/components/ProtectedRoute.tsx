@@ -12,7 +12,9 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: { children: R
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { status: deviceStatus, confirmDeviceChange } = useDeviceGuard(user?.id, isAdmin);
 
-  if (loading || (user && !skipOnboardingCheck && onboardingLoading) || (user && adminLoading)) {
+  const onboardingStillLoading = user && !skipOnboardingCheck && (onboardingLoading || onboardingCompleted === null);
+
+  if (loading || onboardingStillLoading || (user && adminLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Carregando...</p>
