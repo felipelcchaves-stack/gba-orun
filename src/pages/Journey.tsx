@@ -93,8 +93,9 @@ const JourneyPage = () => {
             <h1 className="text-2xl font-display font-bold">Minha Jornada</h1>
             <p className="text-muted-foreground text-xs mt-0.5">{getGreeting(profile?.display_name)}</p>
           </div>
-          <Link to="/oraculo" className="p-2.5 rounded-xl bg-accent/10 shadow-card hover:shadow-soft transition-all">
-            <Sparkles className="h-5 w-5 text-accent" strokeWidth={1.5} />
+          <Link to="/oraculo" className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent/15 text-accent font-semibold text-sm shadow-card hover:shadow-soft transition-all">
+            <Sparkles className="h-4.5 w-4.5" strokeWidth={1.5} />
+            Nova consulta
           </Link>
         </div>
 
