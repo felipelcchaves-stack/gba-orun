@@ -1,10 +1,16 @@
-import { Link, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Home, MessageCircle, Map, User, Shield, GraduationCap, Tag } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { toast } from "sonner";
+
+const OFFLINE_ROUTES = ["/", "/rituais", "/aprender", "/jornada"];
 
 const BottomNav = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAdmin } = useAdmin();
+  const { isOnline } = useOnlineStatus();
 
   // Hide BottomNav on admin and landing page routes
   if (location.pathname.startsWith("/admin") || location.pathname === "/oferta") return null;
@@ -22,15 +28,23 @@ const BottomNav = () => {
     links.push({ to: "/admin", icon: Shield, label: "Admin" });
   }
 
+  const handleNavigate = (to: string) => {
+    if (!isOnline && !OFFLINE_ROUTES.includes(to)) {
+      toast.error("Você está offline. Esta página precisa de conexão.");
+      return;
+    }
+    navigate(to);
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border/50">
       <div className="flex items-center justify-around px-1 pt-2 pb-[max(0.625rem,env(safe-area-inset-bottom))] max-w-lg mx-auto">
         {links.map(({ to, icon: Icon, label }) => {
           const active = location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
           return (
-            <Link
+            <button
               key={to}
-              to={to}
+              onClick={() => handleNavigate(to)}
               className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-all relative ${
                 active
                   ? "text-foreground"
@@ -42,7 +56,7 @@ const BottomNav = () => {
               )}
               <Icon className="h-5 w-5" strokeWidth={active ? 2 : 1.5} />
               <span className="text-[10px] font-medium leading-tight">{label}</span>
-            </Link>
+            </button>
           );
         })}
       </div>
