@@ -111,9 +111,9 @@ const HomePage = () => {
                 </h2>
                 <span className="text-xs font-medium text-white/80">Começar →</span>
               </div>
-              <div className="w-[140px] shrink-0 relative">
+              <div className="w-[180px] shrink-0 relative">
                 <img src={heroBanner} alt="Jornada" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/30 to-transparent" />
               </div>
             </div>
           </Link>
