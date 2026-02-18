@@ -28,9 +28,11 @@ const JourneyEntryCard = ({
   const otherTasks = tasks?.filter((t: any) => !morningTypes.includes(t.task_type) && !nightTypes.includes(t.task_type)) ?? [];
 
   return (
-    <div className="bg-card rounded-2xl p-5 shadow-card">
+    <div className="bg-card rounded-3xl p-5 shadow-sacred border border-border/50 transition-all hover:shadow-gold/10">
       <div className="flex items-center gap-3 mb-4">
-        <img src={getCategoryImage("geral")} alt="Obi" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+        <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
+          <Compass className="h-5 w-5 text-accent" strokeWidth={1.5} />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <span className="text-[10px] bg-foreground text-background px-2 py-0.5 rounded-full font-medium">
@@ -49,9 +51,9 @@ const JourneyEntryCard = ({
             </Link>
           )}
         </div>
-        <button onClick={onComplete} className="shrink-0">
+        <button onClick={onComplete} className="shrink-0 transition-transform active:scale-90">
           {entry.completed ? (
-            <CheckCircle className="h-6 w-6 text-primary" strokeWidth={1.5} />
+            <CheckCircle className="h-6 w-6 text-leaf" strokeWidth={1.5} />
           ) : (
             <Circle className="h-6 w-6 text-muted-foreground/30" strokeWidth={1.5} />
           )}
@@ -70,25 +72,27 @@ const JourneyEntryCard = ({
 
       <GuidanceBubble pointKey="journey_task_card" className="mb-4" />
 
-      {morningTasks.length > 0 && <TaskSection icon={Sunrise} label="Manhã" tasks={morningTasks} onComplete={onCompleteTask} />}
-      {otherTasks.length > 0 && <TaskSection icon={Compass} label="Rituais & Oferendas" tasks={otherTasks} onComplete={onCompleteTask} />}
-      {nightTasks.length > 0 && <TaskSection icon={Moon} label="Noite" tasks={nightTasks} onComplete={onCompleteTask} />}
+      {morningTasks.length > 0 && <TaskSection icon={Sunrise} label="Manhã" iconBg="bg-accent/15" iconColor="text-accent" tasks={morningTasks} onComplete={onCompleteTask} />}
+      {otherTasks.length > 0 && <TaskSection icon={Compass} label="Rituais & Oferendas" iconBg="bg-earth/15" iconColor="text-earth" tasks={otherTasks} onComplete={onCompleteTask} />}
+      {nightTasks.length > 0 && <TaskSection icon={Moon} label="Noite" iconBg="bg-primary/15" iconColor="text-primary" tasks={nightTasks} onComplete={onCompleteTask} />}
     </div>
   );
 };
 
-const TaskSection = ({ icon: Icon, label, tasks, onComplete }: { icon: typeof Sunrise; label: string; tasks: any[]; onComplete: (id: string) => void }) => (
-  <div className="mb-3 last:mb-0">
-    <div className="flex items-center gap-1.5 mb-2">
-      <Icon className="h-3.5 w-3.5 text-accent" strokeWidth={1.5} />
+const TaskSection = ({ icon: Icon, label, iconBg, iconColor, tasks, onComplete }: { icon: typeof Sunrise; label: string; iconBg: string; iconColor: string; tasks: any[]; onComplete: (id: string) => void }) => (
+  <div className="mb-4 last:mb-0">
+    <div className="flex items-center gap-2 mb-2.5">
+      <div className={`w-6 h-6 rounded-lg ${iconBg} flex items-center justify-center`}>
+        <Icon className={`h-3.5 w-3.5 ${iconColor}`} strokeWidth={1.5} />
+      </div>
       <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</span>
     </div>
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 pl-1">
       {tasks.map((task: any) => (
         <div key={task.id} className="flex items-center gap-3 py-1.5">
-          <button onClick={() => !task.completed && onComplete(task.id)} className="shrink-0">
+          <button onClick={() => !task.completed && onComplete(task.id)} className="shrink-0 transition-transform active:scale-75">
             {task.completed ? (
-              <CheckCircle className="h-5 w-5 text-primary" strokeWidth={1.5} />
+              <CheckCircle className="h-5 w-5 text-leaf" strokeWidth={1.5} />
             ) : (
               <Circle className="h-5 w-5 text-muted-foreground/30" strokeWidth={1.5} />
             )}
