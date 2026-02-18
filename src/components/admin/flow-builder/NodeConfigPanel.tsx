@@ -168,6 +168,17 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
                 <p className="text-[10px] text-muted-foreground mt-0.5">Esse apelido permite usar a resposta em outros blocos. Ex: {"{{resultado_obi}}"}</p>
               </div>
             )}
+            {nodeType !== "start" && nodeType !== "diagnosis" && (
+              <label className="flex items-center gap-2 cursor-pointer mt-2">
+                <input
+                  type="checkbox"
+                  checked={localConfig.show_in_diagnosis ?? ["obi", "ire_ibi", "yes_no", "multiple_choice", "open_question"].includes(nodeType)}
+                  onChange={(e) => updateField("show_in_diagnosis", e.target.checked)}
+                  className="rounded border-border"
+                />
+                <span className="text-xs font-medium text-foreground">📋 Exibir no diagnóstico?</span>
+              </label>
+            )}
           </div>
         )}
       </div>
@@ -232,6 +243,23 @@ const NodeConfigPanel = ({ nodeId, nodeType, config, label, onUpdate, onClose, o
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">URL do Áudio da Mensagem</label>
                   <Input value={localConfig.audio_url || ""} onChange={(e) => updateField("audio_url", e.target.value)} className="mt-1" />
+                </div>
+                <div className="border-t border-border pt-3 mt-3 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!localConfig.enable_text_input}
+                      onChange={(e) => updateField("enable_text_input", e.target.checked)}
+                      className="rounded border-border"
+                    />
+                    <span className="text-xs font-semibold text-foreground">✏️ Habilitar campo de texto para o assinante</span>
+                  </label>
+                  {localConfig.enable_text_input && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Placeholder do campo</label>
+                      <Input value={localConfig.text_input_placeholder || ""} onChange={(e) => updateField("text_input_placeholder", e.target.value)} className="mt-1" placeholder="Ex: Escreva sua intenção..." />
+                    </div>
+                  )}
                 </div>
               </>
             )}
