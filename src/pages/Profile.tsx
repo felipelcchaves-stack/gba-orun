@@ -15,8 +15,9 @@ import ProfileForm from "@/components/profile/ProfileForm";
 import PasswordForm from "@/components/profile/PasswordForm";
 import ThemeToggle from "@/components/profile/ThemeToggle";
 import { usePremium } from "@/hooks/usePremium";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { Link as RouterLink } from "react-router-dom";
-import { Crown, AlertTriangle, XCircle, Clock } from "lucide-react";
+import { Crown, AlertTriangle, XCircle, Clock, Download, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const ProfilePage = () => {
@@ -25,6 +26,7 @@ const ProfilePage = () => {
   const { data: unlocked } = useAchievements();
   const { subscriptionStatus, expiresAt, daysRemaining, isExpiringSoon, isOverdue, isPremium } = usePremium();
   const resetJourney = useResetJourney();
+  const { deferredPrompt, isIOS, isInstalled, triggerInstall } = useInstallPrompt();
   const [showReset, setShowReset] = useState(false);
   const [resetConfirm, setResetConfirm] = useState("");
 
@@ -128,6 +130,25 @@ const ProfilePage = () => {
             })}
           </div>
         </div>
+
+        {/* Install App */}
+        {!isInstalled && (
+          deferredPrompt ? (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => triggerInstall()}
+            >
+              <Download className="h-4 w-4 mr-2" /> Instalar App
+            </Button>
+          ) : (
+            <Link to="/instalar">
+              <Button variant="outline" className="w-full">
+                <Smartphone className="h-4 w-4 mr-2" /> {isIOS ? "Como instalar no iPhone" : "Instalar App"}
+              </Button>
+            </Link>
+          )
+        )}
 
         {/* Reset Journey */}
         <Button
