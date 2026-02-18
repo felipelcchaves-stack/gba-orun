@@ -1,20 +1,35 @@
 import { useJourneyByMonth, useCompleteJourney, useCompleteTask } from "@/hooks/useJourney";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useUserStats } from "@/hooks/useUserStats";
 import { Link } from "react-router-dom";
-import { Compass, Sparkles } from "lucide-react";
+import { Compass, Sparkles, ChevronDown, CalendarDays } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import TodayHeroCard from "@/components/journey/TodayHeroCard";
+import WeekStreak from "@/components/journey/WeekStreak";
 import MonthlyStats from "@/components/journey/MonthlyStats";
 import JourneyEntryCard from "@/components/journey/JourneyEntryCard";
 
-import dailyRoutine from "@/assets/daily-routine.jpg";
+const getGreeting = (name?: string | null) => {
+  const h = new Date().getHours();
+  const n = name || "";
+  if (h < 12) return `Bom dia${n ? ", " + n : ""} ☀️`;
+  if (h < 18) return `Boa tarde${n ? ", " + n : ""} 🌤️`;
+  return `Boa noite${n ? ", " + n : ""} 🌙`;
+};
 
 const JourneyPage = () => {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const { data: profile } = useProfile();
+  const { data: stats } = useUserStats();
+  const today = new Date();
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [calendarMonth, setCalendarMonth] = useState(today);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const { entries, tasks, isLoading } = useJourneyByMonth(
     calendarMonth.getFullYear(),
@@ -24,7 +39,6 @@ const JourneyPage = () => {
   const completeJourney = useCompleteJourney();
   const completeTask = useCompleteTask();
 
-  // Map: day number -> { entries, allTasksDone }
   const dayMap = useMemo(() => {
     const map = new Map<string, { entries: any[]; tasksDone: number; tasksTotal: number }>();
     for (const e of entries) {
@@ -42,30 +56,23 @@ const JourneyPage = () => {
     return map;
   }, [entries, tasks]);
 
-  const dayEntries = entries.filter((e: any) => isSameDay(new Date(e.created_at), selectedDate));
+  // Today's data
+  const todayKey = format(today, "yyyy-MM-dd");
+  const todayInfo = dayMap.get(todayKey);
+  const todayEntries = entries.filter((e: any) => isSameDay(new Date(e.created_at), today));
+  const todayTasksDone = todayInfo?.tasksDone ?? 0;
+  const todayTasksTotal = todayInfo?.tasksTotal ?? 0;
+
+  // Selected day entries (only when calendar is open and a non-today date is selected)
+  const showingToday = isSameDay(selectedDate, today);
+  const displayEntries = showingToday
+    ? todayEntries
+    : entries.filter((e: any) => isSameDay(new Date(e.created_at), selectedDate));
 
   // Monthly stats
   const totalConsultations = entries.length;
   const totalTasksDone = tasks.filter((t: any) => t.completed).length;
   const activeDays = dayMap.size;
-
-  // Modifiers for calendar dots
-  const daysWithActivity = useMemo(() => {
-    const result: { complete: Date[]; partial: Date[]; none: Date[] } = { complete: [], partial: [], none: [] };
-    dayMap.forEach((val, key) => {
-      const d = new Date(key + "T12:00:00");
-      if (val.tasksTotal === 0 && val.entries.length > 0) {
-        result.none.push(d);
-      } else if (val.tasksDone === val.tasksTotal && val.tasksTotal > 0) {
-        result.complete.push(d);
-      } else if (val.tasksDone > 0) {
-        result.partial.push(d);
-      } else if (val.tasksTotal > 0) {
-        result.none.push(d);
-      }
-    });
-    return result;
-  }, [dayMap]);
 
   if (!user) {
     return (
@@ -80,86 +87,32 @@ const JourneyPage = () => {
   return (
     <div className="min-h-screen pb-24 bg-background">
       <div className="max-w-lg mx-auto pt-10 px-6">
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-display font-bold">Plano de Vida</h1>
-            <p className="text-muted-foreground text-xs mt-0.5">Sua rotina espiritual</p>
+            <h1 className="text-2xl font-display font-bold">Minha Jornada</h1>
+            <p className="text-muted-foreground text-xs mt-0.5">{getGreeting(profile?.display_name)}</p>
           </div>
-          <Link to="/oraculo" className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 shadow-card hover:shadow-soft transition-all">
-            <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" strokeWidth={1.5} />
+          <Link to="/oraculo" className="p-2.5 rounded-xl bg-accent/10 shadow-card hover:shadow-soft transition-all">
+            <Sparkles className="h-5 w-5 text-accent" strokeWidth={1.5} />
           </Link>
         </div>
 
-        <MonthlyStats totalConsultations={totalConsultations} totalTasksDone={totalTasksDone} activeDays={activeDays} />
+        {/* Hero Card */}
+        <TodayHeroCard
+          completedCount={todayTasksDone}
+          totalCount={todayTasksTotal}
+          greeting={getGreeting(profile?.display_name)}
+        />
 
-        {/* Calendar */}
-        <div className="bg-card rounded-2xl shadow-card mb-6 flex justify-center">
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(d) => d && setSelectedDate(d)}
-            month={calendarMonth}
-            onMonthChange={setCalendarMonth}
-            locale={ptBR}
-            className="p-3 pointer-events-auto"
-            modifiers={{
-              activity_complete: daysWithActivity.complete,
-              activity_partial: daysWithActivity.partial,
-              activity_none: daysWithActivity.none,
-            }}
-            modifiersStyles={{
-              activity_complete: {
-                position: "relative",
-              },
-              activity_partial: {
-                position: "relative",
-              },
-              activity_none: {
-                position: "relative",
-              },
-            }}
-            components={{
-              DayContent: ({ date }) => {
-                const key = format(date, "yyyy-MM-dd");
-                const info = dayMap.get(key);
-                let dotColor: string | null = null;
-                if (info) {
-                  if (info.tasksTotal > 0 && info.tasksDone === info.tasksTotal) {
-                    dotColor = "hsl(var(--leaf))";
-                  } else if (info.tasksDone > 0) {
-                    dotColor = "hsl(var(--accent))";
-                  } else {
-                    dotColor = "hsl(var(--destructive))";
-                  }
-                }
-                return (
-                  <div className="flex flex-col items-center">
-                    <span>{date.getDate()}</span>
-                    {dotColor && (
-                      <span
-                        className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: dotColor }}
-                      />
-                    )}
-                  </div>
-                );
-              },
-            }}
-          />
-        </div>
-
-        {/* Selected day label */}
-        <p className="text-xs text-muted-foreground mb-3 font-medium">
-          {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
-        </p>
-
+        {/* Today's tasks */}
         {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-20 bg-card rounded-2xl shadow-card animate-pulse" />)}
+          <div className="space-y-4 mb-6">
+            {[1, 2].map(i => <div key={i} className="h-24 bg-card rounded-3xl shadow-card animate-pulse" />)}
           </div>
-        ) : dayEntries.length > 0 ? (
-          <div className="space-y-6">
-            {dayEntries.map((entry: any) => (
+        ) : todayEntries.length > 0 && showingToday ? (
+          <div className="space-y-4 mb-6">
+            {todayEntries.map((entry: any) => (
               <JourneyEntryCard
                 key={entry.id}
                 entry={entry}
@@ -168,19 +121,102 @@ const JourneyPage = () => {
               />
             ))}
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <img src={dailyRoutine} alt="Rotina" className="w-24 h-24 rounded-full mx-auto mb-4 object-cover opacity-60" />
-            <p className="text-muted-foreground text-sm mb-1 font-medium">Nenhuma consulta neste dia</p>
-            <p className="text-muted-foreground text-xs mb-4">Consulte o Oráculo para começar sua rotina</p>
+        ) : showingToday ? (
+          <div className="text-center py-8 mb-6 bg-card rounded-3xl shadow-card">
+            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3">
+              <Compass className="h-7 w-7 text-accent" strokeWidth={1.5} />
+            </div>
+            <p className="text-sm font-medium mb-1">Nenhuma consulta hoje</p>
+            <p className="text-xs text-muted-foreground mb-4">Consulte o Oráculo para começar sua rotina</p>
             <Link
               to="/oraculo"
-              className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-2.5 rounded-full text-sm font-medium"
+              className="inline-flex items-center gap-2 bg-foreground text-background px-5 py-2.5 rounded-2xl text-sm font-medium hover:opacity-90 transition-opacity"
             >
               <Compass className="h-4 w-4" /> Consultar Obi
             </Link>
           </div>
-        )}
+        ) : null}
+
+        {/* Week Streak */}
+        <WeekStreak dayMap={dayMap} streakDays={(stats as any)?.streak_days ?? 0} />
+
+        {/* Collapsible Calendar + Stats */}
+        <Collapsible open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <CollapsibleTrigger asChild>
+            <button className="w-full flex items-center justify-between bg-card rounded-2xl px-4 py-3 shadow-card mb-4 hover:shadow-soft transition-all">
+              <div className="flex items-center gap-2.5">
+                <CalendarDays className="h-4.5 w-4.5 text-muted-foreground" strokeWidth={1.5} />
+                <span className="text-sm font-medium">Ver histórico</span>
+              </div>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${calendarOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
+            <div className="bg-card rounded-2xl shadow-card mb-4 flex justify-center">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => d && setSelectedDate(d)}
+                month={calendarMonth}
+                onMonthChange={setCalendarMonth}
+                locale={ptBR}
+                className="p-3 pointer-events-auto"
+                components={{
+                  DayContent: ({ date }) => {
+                    const key = format(date, "yyyy-MM-dd");
+                    const info = dayMap.get(key);
+                    let dotColor: string | null = null;
+                    if (info) {
+                      if (info.tasksTotal > 0 && info.tasksDone === info.tasksTotal) {
+                        dotColor = "hsl(var(--leaf))";
+                      } else if (info.tasksDone > 0) {
+                        dotColor = "hsl(var(--accent))";
+                      } else {
+                        dotColor = "hsl(var(--destructive))";
+                      }
+                    }
+                    return (
+                      <div className="flex flex-col items-center relative">
+                        <span>{date.getDate()}</span>
+                        {dotColor && (
+                          <span
+                            className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: dotColor }}
+                          />
+                        )}
+                      </div>
+                    );
+                  },
+                }}
+              />
+            </div>
+
+            {/* Selected day label + entries */}
+            {!showingToday && (
+              <>
+                <p className="text-xs text-muted-foreground mb-3 font-medium">
+                  {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+                </p>
+                {displayEntries.length > 0 ? (
+                  <div className="space-y-4 mb-4">
+                    {displayEntries.map((entry: any) => (
+                      <JourneyEntryCard
+                        key={entry.id}
+                        entry={entry}
+                        onComplete={() => !entry.completed && completeJourney.mutate(entry.id)}
+                        onCompleteTask={(taskId: string) => completeTask.mutate(taskId)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-6 mb-4">Nenhuma consulta neste dia.</p>
+                )}
+              </>
+            )}
+
+            <MonthlyStats totalConsultations={totalConsultations} totalTasksDone={totalTasksDone} activeDays={activeDays} />
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
