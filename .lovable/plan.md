@@ -1,32 +1,18 @@
 
+# Ajustar degradê do banner para mostrar mais da foto
 
-# Atualizar imagem e degradê do banner "Jornada Espiritual"
+## Problema
+O degradê atual (`from-black via-black/70 to-transparent`) cobre praticamente toda a imagem, fazendo ela desaparecer. A direção do gradiente também está invertida -- vai da esquerda (preto) para a direita (transparente), mas como a imagem fica à direita, o gradiente deveria ir da direita (transparente) para a esquerda (preto), cobrindo apenas a borda onde o texto encontra a imagem.
 
 ## O que sera feito
 
-Manter o layout atual do banner (texto a esquerda, imagem a direita com degradê sobreposto), fazendo duas mudancas:
+No arquivo `src/pages/Home.tsx` (linha 116), duas mudancas:
 
-1. **Trocar a imagem** da direita pela foto enviada (Oluwo Ifatokun com a pomba branca), copiando o arquivo para `src/assets/hero-banner.jpg`
-2. **Escurecer o degradê** que cobre a transicao entre texto e imagem -- trocar de `from-secondary via-secondary/60 to-transparent` (tom marrom/avermelhado atual) para um degradê preto/escuro (`from-black via-black/70 to-transparent`), harmonizando com a foto
-3. **Ajustar o fundo** do lado esquerdo do banner para combinar com o degradê escuro (de `bg-secondary` para `bg-black` ou `bg-neutral-900`)
-4. **Ajustar cores do texto** para garantir contraste sobre o fundo escuro (textos em branco)
+1. **Aumentar a area da imagem**: Trocar `w-[140px]` por `w-[180px]` para a foto ocupar mais espaco
+2. **Suavizar o degradê**: Trocar `from-black via-black/70 to-transparent` por `from-black/80 via-black/30 to-transparent` -- isso deixa o lado esquerdo da imagem com um leve escurecimento (para o texto continuar legivel) mas revela a foto no lado direito
 
-## Detalhes tecnicos
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/pages/Home.tsx` | Linha 114: `w-[140px]` para `w-[180px]`; Linha 116: gradiente mais suave |
 
-### Arquivo: `src/assets/hero-banner.jpg`
-Copiar a imagem enviada pelo usuario para substituir o arquivo atual.
-
-### Arquivo: `src/pages/Home.tsx` (bloco do hero banner, ~linhas 97-112)
-
-Mudancas no JSX:
-- Trocar `bg-secondary` do container por `bg-black`
-- Trocar `text-secondary-foreground` dos textos por `text-white` e `text-white/70`
-- Trocar o degradê `from-secondary via-secondary/60 to-transparent` por `from-black via-black/70 to-transparent`
-
-| Arquivo | Acao |
-|---------|------|
-| `src/assets/hero-banner.jpg` | Substituir pela foto enviada |
-| `src/pages/Home.tsx` | Ajustar cores do banner (fundo preto, degradê escuro, texto branco) |
-
-**Total: 2 arquivos modificados**
-
+**Total: 1 arquivo, 2 linhas**
