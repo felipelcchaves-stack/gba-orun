@@ -1,60 +1,54 @@
 
+# Melhorar Grafico Espiritual + Corrigir Mapeamento de Energias
 
-# Sistema Inteligente de Lembretes Espirituais
+## Problemas atuais
 
-## Problema atual
+1. **Task types desconectados**: O fluxo do oraculo gera tipos como `oracao_manha`, mas o hook so reconhece `ebo`, `ibori`, `oracao_ori`, `iyami`, `egbe_orun`. Resultado: energias ficam com score padrao de 50 e nunca refletem a realidade.
+2. **Grafico inadequado**: O LineChart de linhas com 4 energias fica poluido em tela de celular e nao comunica "equilibrio" visualmente.
+3. **Imule nunca aparece**: Como Iyami nunca chega a "critico", a sugestao de fazer Imule fica escondida.
 
-O sistema atual so funciona se o usuario tem um "dia de cuidado" configurado, e cobra ele por nao ter consultado naquele dia especifico. Isso e frustrante para assinantes ativos que usam o app diariamente.
+## Solucao proposta
 
-## Nova logica (2 cenarios)
+### 1. Trocar LineChart por RadarChart (grafico de teia)
 
-### Cenario 1: Usuario TEM dia de cuidado configurado
-- **Contagem regressiva positiva**: "Faltam X dias para seu cuidado espiritual" (tom de antecipacao, nao de cobranca)
-- **No dia**: "Hoje e seu dia de cuidado! Cuide do seu Ori" (celebracao)
-- **Ja cuidou no dia**: "Voce ja cuidou do seu Ori hoje. Axe!" (reconhecimento)
-- **SEM alerta vermelho** por "perder" o dia -- ele pode usar o app quando quiser
+O RadarChart e ideal para este caso porque:
+- Mostra as 4 energias como pontos de uma mandala/compasso espiritual
+- O usuario ve de imediato onde esta forte e onde esta fraco
+- E mais bonito e intuitivo que linhas cruzadas
+- Ocupa menos espaco vertical
 
-### Cenario 2: Usuario NAO tem dia de cuidado configurado
-- Buscar a **ultima atividade geral** (ultima consulta ao oraculo)
-- Se faz **3+ dias sem nenhuma atividade**: "Voce esta ha X dias sem cuidar da sua espiritualidade. Que tal consultar o Oraculo?"
-- Se faz **7+ dias**: tom mais urgente com icone de alerta
-- Se esta ativo: mostrar mensagem positiva com dias de sequencia
+O grafico tera 4 eixos (Ebo, Ori, Iyami, Egbe) com valores de 0 a 100, onde 100 = equilibrado.
 
-### Toast/Notificacao (useCareReminder)
-- **Com dia de cuidado**: notificar apenas no dia configurado (manter atual)
-- **Sem dia de cuidado**: notificar se inativo ha 3+ dias (maximo 1x por dia)
+### 2. Expandir o mapeamento de task_types
 
-## Mudancas visuais no card
+Adicionar mapeamentos mais abrangentes para capturar os tipos reais gerados pelos fluxos:
 
-| Estado | Cor | Icone | Mensagem |
-|--------|-----|-------|----------|
-| Contagem regressiva | Neutro (card normal) | CalendarHeart | "Proximo cuidado: Segunda (faltam 3 dias)" |
-| Hoje e o dia | Dourado | Sparkles | "Hoje e seu dia de cuidado!" |
-| Ja cuidou hoje | Verde suave | CheckCircle | "Voce ja cuidou do seu Ori. Axe!" |
-| Inativo 3-6 dias (sem dia configurado) | Amarelo suave | Clock | "Voce esta ha X dias sem cuidar..." |
-| Inativo 7+ dias (sem dia configurado) | Laranja | AlertTriangle | "Seu Ori sente sua falta..." |
-| Ativo recentemente (sem dia configurado) | Verde suave | Sparkles | "Voce esta em dia! Ultima consulta: ontem" |
+| Energia | Task types atuais | Task types adicionados |
+|---------|-------------------|----------------------|
+| Ebo | `ebo` | `limpeza`, `banho` |
+| Ori | `ibori`, `oracao_ori` | `oracao_manha`, `oracao_noite`, `meditacao` |
+| Iyami | `iyami`, `oracao_iyami` | `oferenda_iyami` |
+| Egbe | `egbe_orun` | `oferenda_egbe` |
 
-## Detalhes tecnicos
+Tambem incluir um fallback: task types nao mapeados contarao para a energia geral mais proxima baseado em palavras-chave no nome.
 
-### Arquivo: `src/components/home/SpiritualCareCard.tsx`
-- Buscar ultima entrada da jornada geral (nao so da semana) para calcular dias de inatividade
-- Remover o estado "alert" de "Voce perdeu seu cuidado de [dia]"
-- Adicionar novo cenario para usuarios sem dia de cuidado: mostrar card baseado em inatividade
-- Adicionar estado "success" (verde) para quando ja cuidou
-- Trocar mensagem do estado sem dia configurado de "Defina seu dia" para mostrar inatividade
+### 3. Corrigir score padrao
 
-### Arquivo: `src/hooks/useCareReminder.ts`
-- Adicionar logica para usuarios SEM dia de cuidado: verificar ultima atividade
-- Se inativo ha 3+ dias, mostrar toast e notificacao de lembrete
-- Manter logica atual para usuarios COM dia de cuidado
+Quando uma energia tem 0 tarefas, em vez de retornar score 50 ("atencao"), retornar 0 e nao exibir essa energia no radar. Isso evita falsos alertas.
 
-### Arquivos modificados
+## Arquivos modificados
 
 | Arquivo | Acao |
 |---------|------|
-| `src/components/home/SpiritualCareCard.tsx` | Refatorar logica de estados e mensagens |
-| `src/hooks/useCareReminder.ts` | Adicionar lembrete por inatividade |
+| `src/hooks/useSpiritualAnalysis.ts` | Expandir TASK_TYPE_MAP, corrigir score padrao (0 em vez de 50), adicionar fallback por palavra-chave |
+| `src/components/home/SpiritualEvolutionChart.tsx` | Substituir LineChart por RadarChart com visual de mandala espiritual |
+| `src/components/home/SpiritualEnergyDashboard.tsx` | Ajustar logica de "hasNoData" para considerar o novo score padrao |
 
-**Total: 2 arquivos modificados, 0 tabelas novas**
+**Total: 3 arquivos, 0 tabelas novas**
 
+## Resultado esperado
+
+- O radar mostra visualmente o equilibrio espiritual como um mapa
+- Sugestoes como Imule aparecem corretamente quando Iyami esta critico
+- Tarefas do fluxo (como `oracao_manha`) alimentam os scores corretamente
+- Energias sem dados simplesmente nao aparecem, sem falsos alertas
