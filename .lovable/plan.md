@@ -1,42 +1,41 @@
 
 
-# Correcao do Onboarding: Botao Sumindo + Onboarding Reaparecendo
+# Harmonizar a Tela "Aprender" com Cards de Categoria Destacados
 
-## Problemas Encontrados
+## Problema Atual
 
-### Problema 1: Botao "Continuar" escondido pelo menu inferior
-No passo 2 (perguntas de conhecimento), o botao "Continuar" esta posicionado com `position: fixed` na parte inferior da tela com `z-index: 10`. Porem, o menu de navegacao inferior (BottomNav) tambem esta fixo na parte inferior com `z-index: 50`, cobrindo o botao completamente. Alem disso, o BottomNav nao esta configurado para se esconder na rota `/onboarding`.
+A tela "Aprender" mostra rituais e oferendas em listas simples (icone pequeno + texto), enquanto a tela "Rituais Sagrados" tem cards de categoria bonitos com imagens grandes. O resultado e uma experiencia visual inconsistente -- os cards com imagens ficaram excelentes mas os itens de lista abaixo quebram a harmonia.
 
-### Problema 2: Onboarding reaparecendo apos completar
-O hook `useOnboardingStatus` consulta o campo `onboarding_completed` na tabela `profiles`. Quando a consulta nao retorna dados (ex: falha momentanea, perfil ainda nao criado), o resultado e `false` por causa do fallback `?? false`. Isso redireciona o usuario de volta ao onboarding mesmo que ele ja tenha completado. Alem disso, o `staleTime` de 30 segundos pode causar re-fetches que momentaneamente retornam `false` durante a transicao.
+## Solucao
 
-## Solucoes
+Transformar a tela "Aprender" para usar **apenas os cards de categoria com imagens** como navegacao principal. Ao clicar em um card de categoria, o usuario e levado para a lista filtrada de conteudo daquela categoria.
 
-### Correcao 1: Esconder BottomNav no onboarding
-Adicionar `/onboarding` a lista de rotas onde o BottomNav nao aparece, no arquivo `BottomNav.tsx`.
+## Como vai funcionar
 
-### Correcao 2: Ajustar z-index dos botoes fixos
-Aumentar o `z-index` dos botoes fixos no `OnboardingWizard.tsx` para `z-50` e adicionar padding inferior para o safe-area do dispositivo.
+### Tela Aprender (visao padrao)
+- Titulo "Aprender" + subtitulo
+- Abas "Rituais" e "Oferendas" (mantidas)
+- Chips de filtro de categoria (mantidos, mais compactos)
+- Quando "Todos" esta selecionado: mostra **somente os cards de categoria com imagens** (estilo banner, igual a primeira screenshot)
+- Quando uma categoria especifica esta selecionada: mostra a lista de itens daquela categoria (estilo lista com thumbnail pequena)
 
-### Correcao 3: Tornar a verificacao de onboarding mais robusta
-No `useOnboardingStatus`, diferenciar entre "dados ainda nao carregaram" (retornar `null`) e "onboarding nao completado" (retornar `false`). No `ProtectedRoute`, tratar `null` como "ainda carregando" em vez de "nao completou", evitando redirecionamentos falsos.
+### Remocao da rota /rituais duplicada
+- A rota `/rituais` (pagina Rituals.tsx) mostra o mesmo conteudo que a aba Rituais do Aprender, causando duplicidade
+- Os links dos cards de categoria na tela Aprender vao filtrar na propria pagina em vez de navegar para outra rota
+- A rota `/rituais/:id` para leitura individual sera mantida
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/components/BottomNav.tsx`
-- Linha 16: Adicionar `|| location.pathname === "/onboarding"` na condicao de ocultar o nav
+### Arquivo: `src/pages/Learn.tsx`
+- Importar `CATEGORY_BANNERS` de `@/lib/categories`
+- Na aba Rituais, quando `ritualFilter === ""` (Todos): renderizar os cards de categoria com imagens (CATEGORY_BANNERS) em vez da lista de rituais
+- Ao clicar em um card de categoria: chamar `setRitualFilter(banner.key)` para filtrar
+- Quando uma categoria esta selecionada: mostrar a lista de rituais filtrada (comportamento atual)
+- Aplicar a mesma logica para a aba Oferendas: cards de categoria quando "Todos", lista quando filtrado
+- Ajustar altura dos cards para `h-[90px]` com imagem `w-[100px]` no lado direito (igual ao design da screenshot)
 
-### Arquivo: `src/components/onboarding/OnboardingWizard.tsx`
-- Linhas 188 e 221: Mudar `z-10` para `z-50` nos botoes fixos
-- Adicionar `pb-[env(safe-area-inset-bottom)]` para compatibilidade com dispositivos com notch
+### Arquivo: `src/pages/Rituals.tsx`
+- Nenhuma alteracao -- a pagina continua existindo para acesso direto via URL ou deep links
+- Porem o BottomNav nao aponta mais para ela (ja aponta para `/aprender`)
 
-### Arquivo: `src/hooks/useOnboarding.ts`
-- Na `queryFn`, retornar `null` quando nao houver dados em vez de `false`:
-  - Se `data` for `null` (perfil nao encontrado), retornar `null`
-  - Se `data.onboarding_completed` existir, retornar seu valor
-  - Isso permite distinguir "sem dados" de "onboarding nao feito"
-
-### Arquivo: `src/components/ProtectedRoute.tsx`
-- Tratar `onboardingCompleted === null` como estado de carregamento (mostrar spinner)
-- Redirecionar para `/onboarding` apenas quando `onboardingCompleted === false` (dado confirmado do banco)
-
+### Nenhuma mudanca no banco de dados
