@@ -23,7 +23,7 @@ const SpiritualEnergyDashboard = () => {
 
   const { energies, mostUrgent } = data;
 
-  // Check if user has no journey data at all
+  // Check if user has no journey data at all (score 0 + total 0 = no data)
   const hasNoData = energies.every((e) => e.total === 0);
 
   if (hasNoData) {

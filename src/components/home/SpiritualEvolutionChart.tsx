@@ -1,15 +1,8 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { useSpiritualAnalysis } from "@/hooks/useSpiritualAnalysis";
-
-const LINES = [
-  { key: "ebo", label: "Ebó", color: "hsl(25, 60%, 35%)" },
-  { key: "ori", label: "Ori", color: "hsl(45, 90%, 52%)" },
-  { key: "iyami", label: "Iyami", color: "hsl(300, 100%, 25%)" },
-  { key: "egbe", label: "Egbé", color: "hsl(120, 40%, 38%)" },
-];
 
 const SpiritualEvolutionChart = () => {
   const { data, isLoading } = useSpiritualAnalysis();
@@ -17,9 +10,16 @@ const SpiritualEvolutionChart = () => {
 
   if (isLoading || !data) return null;
 
-  // Hide chart when user has no journey data
-  const hasNoData = data.energies.every((e) => e.total === 0);
-  if (hasNoData) return null;
+  // Only show energies that have data
+  const energiesWithData = data.energies.filter((e) => e.total > 0);
+  if (energiesWithData.length === 0) return null;
+
+  // Radar data: score inverted (100 = equilibrado, 0 = critico)
+  const radarData = energiesWithData.map((e) => ({
+    energy: e.label,
+    value: 100 - e.score,
+    fullMark: 100,
+  }));
 
   return (
     <Card className="border-0 shadow-card">
@@ -30,7 +30,7 @@ const SpiritualEvolutionChart = () => {
         <CardTitle className="text-lg flex items-center justify-between">
           <span className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-accent" />
-            Evolução Semanal
+            Mapa Espiritual
           </span>
           {open ? (
             <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -41,22 +41,19 @@ const SpiritualEvolutionChart = () => {
       </CardHeader>
       {open && (
         <CardContent>
-          <div className="h-[220px] -ml-2">
+          <div className="h-[260px] -ml-2">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis
-                  dataKey="semana"
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
+              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
+                <PolarGrid stroke="hsl(var(--border))" />
+                <PolarAngleAxis
+                  dataKey="energy"
+                  tick={{ fontSize: 12, fill: "hsl(var(--foreground))", fontWeight: 600 }}
                 />
-                <YAxis
+                <PolarRadiusAxis
+                  angle={90}
                   domain={[0, 100]}
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={30}
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                  tickCount={4}
                 />
                 <Tooltip
                   contentStyle={{
@@ -65,35 +62,23 @@ const SpiritualEvolutionChart = () => {
                     borderRadius: "0.75rem",
                     fontSize: 12,
                   }}
-                  labelStyle={{ fontWeight: 600 }}
+                  formatter={(value: number) => [`${value}%`, "Equilíbrio"]}
                 />
-                {LINES.map((l) => (
-                  <Line
-                    key={l.key}
-                    type="monotone"
-                    dataKey={l.key}
-                    name={l.label}
-                    stroke={l.color}
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: l.color }}
-                    activeDot={{ r: 6 }}
-                  />
-                ))}
-              </LineChart>
+                <Radar
+                  name="Equilíbrio"
+                  dataKey="value"
+                  stroke="hsl(var(--primary))"
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.25}
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: "hsl(var(--primary))" }}
+                />
+              </RadarChart>
             </ResponsiveContainer>
           </div>
-          {/* Legend */}
-          <div className="flex flex-wrap gap-3 mt-3 justify-center">
-            {LINES.map((l) => (
-              <div key={l.key} className="flex items-center gap-1.5">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: l.color }}
-                />
-                <span className="text-xs text-muted-foreground">{l.label}</span>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs text-center text-muted-foreground mt-1">
+            Quanto maior a área, mais equilibrado você está
+          </p>
         </CardContent>
       )}
     </Card>

@@ -25,11 +25,29 @@ interface WeeklyData {
 }
 
 const TASK_TYPE_MAP: Record<EnergyKey, string[]> = {
-  ebo: ["ebo"],
-  ori: ["ibori", "oracao_ori"],
-  iyami: ["iyami", "oracao_iyami"],
-  egbe: ["egbe_orun"],
+  ebo: ["ebo", "limpeza", "banho"],
+  ori: ["ibori", "oracao_ori", "oracao_manha", "oracao_noite", "meditacao"],
+  iyami: ["iyami", "oracao_iyami", "oferenda_iyami"],
+  egbe: ["egbe_orun", "oferenda_egbe"],
 };
+
+// Fallback keywords for unmapped task types
+const KEYWORD_FALLBACK: Record<EnergyKey, string[]> = {
+  ebo: ["ebo", "limpeza", "banho", "sacudimento"],
+  ori: ["ori", "oracao", "reza", "prece", "meditac"],
+  iyami: ["iyami", "mae", "mãe", "imule", "imulé"],
+  egbe: ["egbe", "egbé"],
+};
+
+function classifyByKeyword(taskType: string): EnergyKey | null {
+  const lower = taskType.toLowerCase();
+  for (const [key, keywords] of Object.entries(KEYWORD_FALLBACK)) {
+    if (keywords.some((kw) => lower.includes(kw))) {
+      return key as EnergyKey;
+    }
+  }
+  return null;
+}
 
 const LABELS: Record<EnergyKey, string> = {
   ebo: "Ebó",
@@ -69,7 +87,7 @@ const SUGGESTIONS: Record<EnergyKey, Record<string, string>> = {
 };
 
 function calcScore(total: number, completed: number): number {
-  if (total === 0) return 50;
+  if (total === 0) return 0; // No data = no score (avoids false alerts)
   return Math.round(((total - completed) / total) * 100);
 }
 
@@ -95,10 +113,27 @@ export const useSpiritualAnalysis = () => {
       if (error) throw error;
       const allTasks = tasks ?? [];
 
+      // Build a lookup: for each task, determine which energy it belongs to
+      const taskEnergyMap = new Map<string, EnergyKey>();
+
+      // First pass: direct mapping
+      for (const [key, types] of Object.entries(TASK_TYPE_MAP)) {
+        for (const t of types) {
+          taskEnergyMap.set(t, key as EnergyKey);
+        }
+      }
+
       // Calculate scores per energy
       const energies: EnergyScore[] = (["ebo", "ori", "iyami", "egbe"] as EnergyKey[]).map((key) => {
-        const types = TASK_TYPE_MAP[key];
-        const relevant = allTasks.filter((t) => types.includes(t.task_type));
+        const relevant = allTasks.filter((t) => {
+          // Direct match
+          if (taskEnergyMap.get(t.task_type) === key) return true;
+          // Fallback: keyword match for unmapped types
+          if (!taskEnergyMap.has(t.task_type)) {
+            return classifyByKeyword(t.task_type) === key;
+          }
+          return false;
+        });
         const total = relevant.length;
         const completed = relevant.filter((t) => t.completed).length;
         const score = calcScore(total, completed);
@@ -131,15 +166,23 @@ export const useSpiritualAnalysis = () => {
 
         const row: any = { semana: `Sem ${4 - i}` };
         for (const key of ["ebo", "ori", "iyami", "egbe"] as EnergyKey[]) {
-          const types = TASK_TYPE_MAP[key];
-          const relevant = weekTasks.filter((t) => types.includes(t.task_type));
+          const relevant = weekTasks.filter((t) => {
+            if (taskEnergyMap.get(t.task_type) === key) return true;
+            if (!taskEnergyMap.has(t.task_type)) {
+              return classifyByKeyword(t.task_type) === key;
+            }
+            return false;
+          });
           row[key] = calcScore(relevant.length, relevant.filter((t) => t.completed).length);
         }
         weeklyData.push(row as WeeklyData);
       }
 
-      // Most urgent energy
-      const mostUrgent = [...energies].sort((a, b) => b.score - a.score)[0];
+      // Most urgent energy (only consider energies with actual data)
+      const energiesWithData = energies.filter((e) => e.total > 0);
+      const mostUrgent = energiesWithData.length > 0
+        ? [...energiesWithData].sort((a, b) => b.score - a.score)[0]
+        : null;
 
       return { energies, weeklyData, mostUrgent };
     },
