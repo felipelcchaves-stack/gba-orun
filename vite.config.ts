@@ -38,10 +38,10 @@ export default defineConfig(({ mode }) => ({
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/(rituals|offerings|oracle_flow|ire_ibi_types|oracle_configs)/i,
-            handler: "CacheFirst",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "supabase-content-cache",
-              expiration: { maxEntries: 200, maxAgeSeconds: 86400 },
+              expiration: { maxEntries: 200, maxAgeSeconds: 3600 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

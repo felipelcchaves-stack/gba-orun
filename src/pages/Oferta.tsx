@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ExternalLink, CheckCircle, Star, Shield, BookOpen, Compass, Headphones, Zap, Eye, Heart, HelpCircle, ChevronRight } from "lucide-react";
 import { trackInitiateCheckout } from "@/lib/pixel";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -329,6 +329,10 @@ const OfertaPage = () => {
         <div className="max-w-2xl mx-auto text-center text-xs text-muted-foreground space-y-2">
           <p className="font-semibold text-foreground">Gba-Orun — Sabedoria Ancestral Yorubá</p>
           <p>Este produto não substitui orientação religiosa presencial.</p>
+          <div className="flex items-center justify-center gap-4 mt-2">
+            <Link to="/termos" className="underline hover:text-foreground">Termos de Uso</Link>
+            <Link to="/privacidade" className="underline hover:text-foreground">Política de Privacidade</Link>
+          </div>
           <p>© {new Date().getFullYear()} Gba-Orun. Todos os direitos reservados.</p>
         </div>
       </footer>

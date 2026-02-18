@@ -21,8 +21,11 @@ import Oferta from "./pages/Oferta";
 import Community from "./pages/Community";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Install from "./pages/Install";
 import Promotions from "./pages/Promotions";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { initPixelWithId, initGoogleAds } from "@/lib/pixel";
@@ -62,6 +65,9 @@ const AppContent = () => {
       <Routes>
         <Route path="/oferta" element={<Oferta />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/termos" element={<Terms />} />
+        <Route path="/privacidade" element={<Privacy />} />
         <Route path="/onboarding" element={<ProtectedRoute skipOnboardingCheck><OnboardingWizard /></ProtectedRoute>} />
         <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/oraculo" element={<ProtectedRoute><Oracle /></ProtectedRoute>} />
@@ -72,7 +78,7 @@ const AppContent = () => {
         <Route path="/aprender" element={<ProtectedRoute><Learn /></ProtectedRoute>} />
         <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/promocoes" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         <Route path="/instalar" element={<ProtectedRoute><Install /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
