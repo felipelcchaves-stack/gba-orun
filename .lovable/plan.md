@@ -1,24 +1,24 @@
 
-# Adicionar texto ao botao de nova consulta na Jornada
+
+# Corrigir botao de conclusao do Diagnostico
 
 ## Problema
 
-O botao no canto superior direito da pagina "Minha Jornada" e apenas um icone (Sparkles), sem texto. Nao fica claro para o usuario que ele pode iniciar uma nova consulta clicando ali.
+Apos completar o diagnostico, o botao diz "Salvar e Ir para Minha Rotina", o que confunde o usuario porque nao existe uma tela chamada "Minha Rotina". Alem disso, o redirecionamento vai para `/` (Home) em vez de ir para a pagina de Jornada (`/jornada`), onde o usuario pode acompanhar e marcar as tarefas como concluidas.
 
 ## Solucao
 
-Transformar o icone isolado em um botao com texto "Nova consulta" ao lado do icone, estilizado como um CTA (call-to-action) suave que combina com o design da pagina.
+Duas mudancas simples no arquivo `src/components/oracle/FlowStepRenderer.tsx`:
+
+1. **Renomear o botao**: de "Salvar e Ir para Minha Rotina" para **"Salvar e Ir para Minha Jornada"**
+2. **Corrigir o redirecionamento**: de `navigate("/")` para `navigate("/jornada")`, para que o usuario caia direto na pagina onde vera suas tarefas pendentes
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/pages/Journey.tsx` (linhas 96-98)
+### Arquivo: `src/components/oracle/FlowStepRenderer.tsx`
 
-Trocar o Link atual (icone sozinho) por um Link com texto:
+- Linha 648: trocar `navigate("/")` por `navigate("/jornada")`
+- Linha 748: trocar o texto "Salvar e Ir para Minha Rotina" por "Salvar e Ir para Minha Jornada"
 
-- Manter o icone `Sparkles` mas adicionar o texto **"Nova consulta"** ao lado
-- Estilo: `bg-accent/15` com `text-accent` (dourado), `rounded-2xl`, `px-4 py-2.5`, `font-semibold text-sm`
-- Usar `flex items-center gap-2` para alinhar icone e texto
-- Manter `shadow-card` e `hover:shadow-soft` para consistencia visual
-- O resultado sera um botao tipo "pill" dourado que convida o usuario a consultar o oraculo
+Mudanca de 2 linhas em um unico arquivo. A pagina de Jornada ja exibe as tarefas pendentes do dia com checklist, entao o usuario vai ver imediatamente o que precisa fazer.
 
-Mudanca de 3 linhas em um unico arquivo.
