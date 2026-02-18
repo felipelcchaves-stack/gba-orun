@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Flame, Bookmark, Sunrise, Moon } from "lucide-react";
+import { Flame, Bookmark, Sunrise, Moon, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserStats } from "@/hooks/useUserStats";
@@ -29,7 +29,7 @@ import ritualPlaceholder2 from "@/assets/ritual-placeholder-2.jpg";
 const FALLBACK_IMAGES = [ritualPlaceholder1, ritualPlaceholder2, eboCategory, iboriCategory, orikiCategory, dailyRoutine];
 
 const HomePage = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
   const { data: stats } = useUserStats();
   const { data: rituals } = useRituals();
@@ -66,6 +66,9 @@ const HomePage = () => {
               <span className="text-xs font-semibold">{stats.streak_days}</span>
             </div>
           }
+          <button onClick={signOut} className="p-2 rounded-full hover:bg-muted transition-colors" aria-label="Sair">
+            <LogOut className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+          </button>
         </div>
       </div>
 
