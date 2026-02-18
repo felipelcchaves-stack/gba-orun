@@ -104,17 +104,16 @@ const HomePage = () => {
       <div className="px-6 mb-6">
         <div className="max-w-lg mx-auto">
           <Link to="/jornada" className="block">
-            <div className="relative overflow-hidden rounded-2xl bg-secondary h-[160px] flex">
+            <div className="relative overflow-hidden rounded-2xl bg-black h-[160px] flex">
               <div className="flex-1 p-5 flex flex-col justify-center z-10">
-                <p className="text-secondary-foreground/70 text-[10px] uppercase tracking-[0.15em] mb-1.5 font-medium">Jornada Espiritual</p>
-                <h2 className="font-display text-lg font-bold text-secondary-foreground leading-snug mb-3">Seja guiado pelo Oluwo Ifatokun em sua jornada espiritual
-
+                <p className="text-white/70 text-[10px] uppercase tracking-[0.15em] mb-1.5 font-medium">Jornada Espiritual</p>
+                <h2 className="font-display text-lg font-bold text-white leading-snug mb-3">Seja guiado pelo Oluwo Ifatokun em sua jornada espiritual
                 </h2>
-                <span className="text-xs font-medium text-secondary-foreground/80">Começar →</span>
+                <span className="text-xs font-medium text-white/80">Começar →</span>
               </div>
               <div className="w-[140px] shrink-0 relative">
                 <img src={heroBanner} alt="Jornada" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-secondary via-secondary/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
               </div>
             </div>
           </Link>
