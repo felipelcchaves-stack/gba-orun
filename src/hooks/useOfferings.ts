@@ -63,3 +63,16 @@ export const useDeleteOffering = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["offerings"] }),
   });
 };
+
+export const useOfferingCategories = () => {
+  return useQuery({
+    queryKey: ["offering-categories"],
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("offerings" as any) as any).select("category");
+      if (error) throw error;
+      const unique = [...new Set((data || []).map((r: any) => r.category))];
+      return unique as string[];
+    },
+  });
+};
