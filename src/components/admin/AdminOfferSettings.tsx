@@ -3,7 +3,7 @@ import { useAppSettings, useUpdateAppSetting } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 
-const SETTINGS_FIELDS = [
+const OFFER_FIELDS = [
   { key: "offer_headline", label: "Headline da Oferta", type: "text" },
   { key: "offer_price", label: "Preço da Oferta (R$)", type: "text" },
   { key: "offer_original_price", label: "Preço Original (R$)", type: "text" },
@@ -16,6 +16,16 @@ const SETTINGS_FIELDS = [
   { key: "offer_guarantee_days", label: "Dias de Garantia", type: "text" },
 ];
 
+const SEO_FIELDS = [
+  { key: "seo_title", label: "Título do Site", type: "text" },
+  { key: "seo_description", label: "Descrição do Site", type: "text" },
+  { key: "seo_og_image", label: "URL da Imagem OG", type: "url" },
+  { key: "seo_canonical_url", label: "URL Canônica", type: "url" },
+  { key: "seo_twitter_card", label: "Twitter Card Type", type: "text" },
+];
+
+const ALL_FIELDS = [...OFFER_FIELDS, ...SEO_FIELDS];
+
 const AdminOfferSettings = () => {
   const { data: settings, isLoading } = useAppSettings();
   const updateSetting = useUpdateAppSetting();
@@ -27,7 +37,7 @@ const AdminOfferSettings = () => {
 
   const handleSave = async () => {
     try {
-      for (const field of SETTINGS_FIELDS) {
+      for (const field of ALL_FIELDS) {
         if (values[field.key] !== settings?.[field.key]) {
           await updateSetting.mutateAsync({ key: field.key, value: values[field.key] || "" });
         }
@@ -41,9 +51,11 @@ const AdminOfferSettings = () => {
   if (isLoading) return <div className="py-12 text-center text-muted-foreground">Carregando...</div>;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <p className="text-sm text-muted-foreground mb-4">Configure a landing page e os pixels de rastreamento.</p>
-      {SETTINGS_FIELDS.map(field => (
+
+      <h3 className="text-base font-bold border-b border-border pb-2">Oferta & Pixels</h3>
+      {OFFER_FIELDS.map(field => (
         <div key={field.key}>
           <label className="block text-sm font-semibold mb-1">{field.label}</label>
           <input
@@ -54,6 +66,21 @@ const AdminOfferSettings = () => {
           />
         </div>
       ))}
+
+      <h3 className="text-base font-bold border-b border-border pb-2 mt-8">SEO e Redes Sociais</h3>
+      <p className="text-xs text-muted-foreground">Esses dados atualizam as meta tags do site dinamicamente.</p>
+      {SEO_FIELDS.map(field => (
+        <div key={field.key}>
+          <label className="block text-sm font-semibold mb-1">{field.label}</label>
+          <input
+            type={field.type}
+            value={values[field.key] || ""}
+            onChange={e => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+            className="w-full px-4 py-3 rounded-xl bg-card border border-border focus:ring-2 focus:ring-primary outline-none text-sm"
+          />
+        </div>
+      ))}
+
       <button
         onClick={handleSave}
         disabled={updateSetting.isPending}
