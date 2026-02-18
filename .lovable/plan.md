@@ -1,58 +1,99 @@
 
 
-# Posts Fixados pelo Admin ("Recado do Oluwo")
+# Redesign da Pagina Jornada - UX Premium
 
-## O que sera implementado
+## Problemas identificados
 
-O admin podera fixar posts no topo do feed da comunidade. Posts fixados aparecem com visual diferenciado (borda dourada, icone de pin, label "Recado do Oluwo") e ficam sempre no topo, separados do feed cronologico.
+1. **Titulo "Plano de Vida"** - generico, nao transmite espiritualidade. Parece um app de produtividade.
+2. **Calendario ocupa 60% da tela** - e a primeira coisa que o usuario ve. Calendarios sao uteis para consultar historico, mas nao devem ser o elemento principal. Afasta o usuario da acao.
+3. **Stats cards monotonos** - tres caixinhas brancas identicas, sem hierarquia visual.
+4. **Estado vazio desanimador** - imagem opaca, texto passivo. Deveria motivar.
+5. **Falta de personalidade** - nao tem nada que remeta ao universo espiritual/Ioruba.
 
-## Mudancas no banco de dados
+## Novo conceito: "Minha Jornada"
 
-Adicionar coluna `is_pinned` na tabela `community_posts`:
+Inspirado em Duolingo + Headspace: foco na acao do dia (hoje), com historico acessivel mas nao dominante.
 
-```text
-ALTER TABLE community_posts ADD COLUMN is_pinned boolean NOT NULL DEFAULT false;
-```
+## Estrutura da nova pagina (de cima pra baixo)
 
-Nenhuma tabela nova. A policy de UPDATE existente ja permite que admins modifiquem posts (via RLS "Users can update own posts"). Porem, como o admin precisa fixar posts de OUTROS usuarios, sera necessario adicionar uma policy de UPDATE para admins:
+### 1. Header com saudacao contextual
+- Titulo: **"Minha Jornada"** (pessoal, afetivo)
+- Subtitulo contextual baseado na hora do dia: "Bom dia, [Nome]" / "Boa noite, [Nome]"
+- Botao de acesso rapido ao Oraculo (manter sparkles)
 
-```text
-CREATE POLICY "Admins can update any post"
-ON community_posts FOR UPDATE
-TO authenticated
-USING (has_role(auth.uid(), 'admin'::app_role));
-```
+### 2. Card Hero "Rotina de Hoje" (destaque principal)
+- Card grande com gradiente (earth/gold), bordas 3xl
+- Mostra o resumo do dia: "3 de 5 tarefas concluidas"
+- Barra de progresso circular ou semicircular estilizada
+- Se nao tem tarefas: CTA vibrante "Consultar o Obi" com icone animado
+- Frase motivacional contextual (ex: "Seu Ori agradece cada passo")
+
+### 3. Lista de tarefas do dia (scroll vertical)
+- Cards de tarefas com visual melhorado:
+  - Icones tematicos coloridos por periodo (Sunrise amarelo, Moon roxo)
+  - Checkbox com animacao de confete ao completar
+  - Progresso visual por secao (Manha / Rituais / Noite)
+- Se nao tem tarefas do dia: ilustracao com mascote Agemo e texto motivacional
+
+### 4. Streak / Consistencia (inline, compacto)
+- Faixa horizontal com os ultimos 7 dias como circulos
+- Dias ativos = circulo preenchido com cor leaf
+- Dia atual = circulo com borda dourada pulsante
+- Mostra streak atual em destaque
+
+### 5. Calendario (colapsavel, secundario)
+- Comeca FECHADO por padrao
+- Botao "Ver historico" abre/fecha o calendario
+- Quando aberto, mantem os dots de atividade
+- Ao selecionar um dia, mostra as consultas daquele dia abaixo
+
+### 6. Stats do mes (redesenhados)
+- Movidos para ABAIXO do calendario (so visiveis quando o calendario esta aberto)
+- Visual com icones maiores e cores diferenciadas por stat
+- Consultas = icone bussola, fundo amber
+- Tarefas = icone check, fundo leaf
+- Dias ativos = icone flame, fundo accent
 
 ## Mudancas nos arquivos
 
-### 1. `src/hooks/useCommunity.ts`
-- Adicionar `is_pinned` na interface `CommunityPost`
-- No `usePosts`, ordenar posts fixados primeiro (is_pinned DESC, created_at DESC)
-- Criar hook `useTogglePin` que faz UPDATE do campo `is_pinned` no post
+### `src/pages/Journey.tsx` (rewrite significativo)
+- Renomear titulo para "Minha Jornada"
+- Reorganizar layout: Hero card > Tarefas do dia > Streak > Calendario colapsavel > Stats
+- Adicionar saudacao contextual (hora do dia)
+- Adicionar state `calendarOpen` (default false)
+- Adicionar componente de streak semanal inline
+- Estado vazio redesenhado com CTA vibrante
 
-### 2. `src/components/community/CommunityPost.tsx`
-- Se `post.is_pinned === true`, renderizar visual diferenciado:
-  - Borda dourada (border-2 border-yellow-500/60)
-  - Badge "Recado do Oluwo" com icone Pin no topo
-  - Background levemente dourado (bg-yellow-50/30 dark:bg-yellow-900/10)
-- Se o usuario e admin, mostrar botao de pin/unpin ao lado do botao de deletar
+### `src/components/journey/TodayHeroCard.tsx` (novo)
+- Card hero com gradiente earth-to-dark
+- Progresso do dia (circular ou barra grande)
+- Frase motivacional
+- CTA quando vazio
 
-### 3. `src/pages/Community.tsx`
-- Separar posts fixados dos normais no feed
-- Posts fixados aparecem primeiro, em secao propria com label sutil
-- Posts normais aparecem abaixo
+### `src/components/journey/WeekStreak.tsx` (novo)
+- 7 circulos representando os ultimos 7 dias
+- Cores: leaf (completo), accent (parcial), muted (vazio)
+- Dia atual com ring dourado
 
-### 4. `src/components/admin/AdminCommunity.tsx`
-- Adicionar coluna "Fixado" na tabela
-- Adicionar botao de toggle pin (icone Pin) ao lado do botao de deletar
-- Posts fixados aparecem com indicador visual na tabela
+### `src/components/journey/MonthlyStats.tsx` (redesign)
+- Cards com cores diferenciadas (amber, leaf, accent)
+- Icones maiores com fundo colorido arredondado
+- Visivel apenas quando calendario esta aberto
+
+### `src/components/journey/JourneyEntryCard.tsx` (melhorias visuais)
+- Bordas mais suaves, sombras mais pronunciadas
+- Icones com fundos coloridos ao inves de icons soltos
+- Animacao sutil ao completar tarefa
+
+## Detalhes tecnicos
+
+- Nenhuma mudanca no banco de dados
+- Nenhum hook novo (reutiliza useJourneyByMonth, useCompleteJourney, useCompleteTask)
+- Componente Collapsible do Radix para o calendario
+- date-fns para calculo dos ultimos 7 dias no streak
+- Animacoes via Tailwind (transition, scale, pulse)
 
 ## Resultado esperado
 
-- Admin pode fixar/desfixar posts tanto pelo feed da comunidade quanto pelo painel admin
-- Posts fixados aparecem sempre no topo com visual dourado e label "Recado do Oluwo"
-- Maximo de posts fixados: sem limite tecnico, mas visualmente ficam destacados no topo
-- Usuarios comuns veem os posts fixados mas nao podem fixar/desfixar
-
-**Total: 1 coluna nova, 1 policy nova, 4 arquivos modificados**
+A pagina deixa de parecer um "Google Calendar espiritual" e passa a ser uma experiencia imersiva focada no HOJE, com historico acessivel mas nao intrusivo. Visual quente, motivacional e alinhado com a identidade Ioruba do app.
 
