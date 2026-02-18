@@ -645,7 +645,7 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
 
       addXP.mutate({ xp: 15, field: "oracle_throws" });
       setSaved(true);
-      setTimeout(() => navigate("/"), 1200);
+      setTimeout(() => navigate("/jornada"), 1200);
     } catch {
       setSaving(false);
     }
@@ -745,7 +745,7 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
               ) : saved ? (
                 <span className="flex items-center justify-center gap-2"><CheckCircle className="h-4 w-4" /> Salvo! Redirecionando...</span>
               ) : (
-                "Salvar e Ir para Minha Rotina"
+                "Salvar e Ir para Minha Jornada"
               )}
             </button>
           ) : (
