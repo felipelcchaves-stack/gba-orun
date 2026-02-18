@@ -2,10 +2,12 @@ import { Link } from "react-router-dom";
 import { CheckCircle, Circle, Compass, Sunrise, Moon } from "lucide-react";
 import { format } from "date-fns";
 import { useJourneyTasks } from "@/hooks/useJourney";
+import { useOracleConfigs } from "@/hooks/useOracleConfig";
 import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
 import { Progress } from "@/components/ui/progress";
 import GuidanceBubble from "@/components/GuidanceBubble";
 import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
+import { useMemo } from "react";
 
 const JourneyEntryCard = ({
   entry,
@@ -17,6 +19,12 @@ const JourneyEntryCard = ({
   onCompleteTask: (taskId: string) => void;
 }) => {
   const { data: tasks } = useJourneyTasks(entry.id);
+  const { data: oracleConfigs } = useOracleConfigs();
+  const oracleNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    oracleConfigs?.forEach((c) => { map[c.result_key] = c.name; });
+    return map;
+  }, [oracleConfigs]);
   const completedCount = tasks?.filter((t: any) => t.completed).length ?? 0;
   const totalCount = tasks?.length ?? 0;
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -35,8 +43,8 @@ const JourneyEntryCard = ({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[10px] bg-foreground text-background px-2 py-0.5 rounded-full font-medium">
-              {entry.oracle_result}
+             <span className="text-[10px] bg-foreground text-background px-2 py-0.5 rounded-full font-medium">
+              {oracleNameMap[entry.oracle_result] || entry.oracle_result}
             </span>
             <span className="text-[10px] text-muted-foreground">
               {format(new Date(entry.created_at), "HH:mm")}
