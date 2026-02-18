@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, ChevronDown, ChevronUp, MessageCircle } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp, MessageCircle, Pin } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ interface Post {
   user_id: string;
   content: string;
   created_at: string;
+  is_pinned: boolean;
   author_name: string;
 }
 
@@ -92,9 +93,20 @@ const AdminCommunity = () => {
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
   const { data: replies } = useAdminReplies(expandedPost);
 
+  const togglePin = useMutation({
+    mutationFn: async ({ id, pinned }: { id: string; pinned: boolean }) => {
+      const { error } = await supabase.from("community_posts").update({ is_pinned: pinned } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-community-posts"] });
+      toast.success("Post atualizado.");
+    },
+    onError: () => toast.error("Erro ao atualizar post."),
+  });
+
   const deletePost = useMutation({
     mutationFn: async (id: string) => {
-      // Delete replies first, then post
       await supabase.from("community_replies").delete().eq("post_id", id);
       const { error } = await supabase.from("community_posts").delete().eq("id", id);
       if (error) throw error;
@@ -133,17 +145,18 @@ const AdminCommunity = () => {
               <TableHead>Autor</TableHead>
               <TableHead>Conteúdo</TableHead>
               <TableHead>Data</TableHead>
+              <TableHead className="w-16">Fixado</TableHead>
               <TableHead className="w-16">Ação</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
               </TableRow>
             ) : !posts?.length ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum post encontrado.</TableCell>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum post encontrado.</TableCell>
               </TableRow>
             ) : (
               posts.map(post => (
@@ -163,6 +176,16 @@ const AdminCommunity = () => {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => togglePin.mutate({ id: post.id, pinned: !post.is_pinned })}
+                        className={post.is_pinned ? "text-yellow-600 hover:text-yellow-700" : "text-muted-foreground hover:text-yellow-600"}
+                      >
+                        <Pin className={`h-4 w-4 ${post.is_pinned ? "fill-yellow-500" : ""}`} />
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => { if (confirm("Excluir este post e todas as respostas?")) deletePost.mutate(post.id); }}
                         className="text-destructive hover:text-destructive"
                       >
@@ -172,7 +195,7 @@ const AdminCommunity = () => {
                   </TableRow>
                   {expandedPost === post.id && (
                     <TableRow key={`${post.id}-replies`}>
-                      <TableCell colSpan={5} className="bg-muted/30 p-4">
+                      <TableCell colSpan={6} className="bg-muted/30 p-4">
                         <div className="flex items-center gap-2 mb-3">
                           <MessageCircle className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm font-medium">Respostas</span>

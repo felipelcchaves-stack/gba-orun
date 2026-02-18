@@ -1,9 +1,9 @@
-import { CommunityPost as PostType, useDeletePost } from "@/hooks/useCommunity";
+import { CommunityPost as PostType, useDeletePost, useTogglePin } from "@/hooks/useCommunity";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MessageCircle, Trash2 } from "lucide-react";
+import { MessageCircle, Trash2, Pin } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import CommunityReplyList from "./CommunityReplyList";
 
@@ -14,10 +14,26 @@ interface Props {
 const CommunityPost = ({ post }: Props) => {
   const { isAdmin } = useAdmin();
   const deletePost = useDeletePost();
+  const togglePin = useTogglePin();
   const [showReplies, setShowReplies] = useState(false);
 
   return (
-    <div className="bg-card rounded-2xl shadow-card p-4">
+    <div
+      className={`bg-card rounded-2xl shadow-card p-4 ${
+        post.is_pinned
+          ? "border-2 border-yellow-500/60 bg-yellow-50/30 dark:bg-yellow-900/10"
+          : ""
+      }`}
+    >
+      {post.is_pinned && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <Pin className="h-3.5 w-3.5 text-yellow-600 fill-yellow-500" />
+          <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-400">
+            Recado do Oluwo
+          </span>
+        </div>
+      )}
+
       <div className="flex gap-3">
         <Avatar className="h-9 w-9">
           {post.author_avatar && <AvatarImage src={post.author_avatar} alt={post.author_name || ""} />}
@@ -35,12 +51,25 @@ const CommunityPost = ({ post }: Props) => {
           <p className="text-sm text-foreground/90 mt-1.5 whitespace-pre-wrap">{post.content}</p>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => deletePost.mutate(post.id)}
-            className="text-destructive/50 hover:text-destructive transition-colors shrink-0 self-start"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <div className="flex flex-col gap-1 shrink-0 self-start">
+            <button
+              onClick={() => togglePin.mutate({ postId: post.id, pinned: !post.is_pinned })}
+              className={`transition-colors ${
+                post.is_pinned
+                  ? "text-yellow-600 hover:text-yellow-700"
+                  : "text-muted-foreground/50 hover:text-yellow-600"
+              }`}
+              title={post.is_pinned ? "Desfixar post" : "Fixar post"}
+            >
+              <Pin className={`h-4 w-4 ${post.is_pinned ? "fill-yellow-500" : ""}`} />
+            </button>
+            <button
+              onClick={() => deletePost.mutate(post.id)}
+              className="text-destructive/50 hover:text-destructive transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         )}
       </div>
 

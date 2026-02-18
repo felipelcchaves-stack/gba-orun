@@ -9,6 +9,7 @@ export interface CommunityPost {
   user_id: string;
   content: string;
   created_at: string;
+  is_pinned: boolean;
   author_name: string | null;
   author_avatar: string | null;
   reply_count: number;
@@ -46,6 +47,7 @@ export const usePosts = () => {
       const { data: posts, error } = await supabase
         .from("community_posts")
         .select("*")
+        .order("is_pinned", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -176,6 +178,20 @@ export const useDeletePost = () => {
   return useMutation({
     mutationFn: async (postId: string) => {
       const { error } = await supabase.from("community_posts").delete().eq("id", postId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["community_posts"] }),
+  });
+};
+
+export const useTogglePin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ postId, pinned }: { postId: string; pinned: boolean }) => {
+      const { error } = await supabase
+        .from("community_posts")
+        .update({ is_pinned: pinned } as any)
+        .eq("id", postId);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["community_posts"] }),

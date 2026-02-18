@@ -70,7 +70,14 @@ const CommunityPage = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {posts.map((post) => (
+            {posts.filter(p => p.is_pinned).length > 0 && (
+              <div className="space-y-3">
+                {posts.filter(p => p.is_pinned).map((post) => (
+                  <CommunityPost key={post.id} post={post} />
+                ))}
+              </div>
+            )}
+            {posts.filter(p => !p.is_pinned).map((post) => (
               <CommunityPost key={post.id} post={post} />
             ))}
           </div>
