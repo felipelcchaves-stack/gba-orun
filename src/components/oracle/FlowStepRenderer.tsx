@@ -407,15 +407,16 @@ const ObiStep = ({ node, onNext }: { node: OracleFlowNode; onNext: (h: string, a
     accent: "bg-accent/15 text-accent-foreground",
   };
 
-  const configs = dbConfigs && dbConfigs.length > 0
-    ? dbConfigs.map(c => ({ key: c.result_key, name: c.name, meaning: c.meaning, color_type: c.color_type, guidance_message: c.guidance_message, guidance_audio_url: c.guidance_audio_url }))
-    : [
-        { key: "oyekun", name: "Oyekun", meaning: "Nenhum aberto — NÃO", color_type: "danger", guidance_message: "", guidance_audio_url: null },
-        { key: "okaran", name: "Okaran", meaning: "1 aberto — TALVEZ", color_type: "warning", guidance_message: "", guidance_audio_url: null },
-        { key: "ejife", name: "Ejife", meaning: "2 abertos — SIM", color_type: "success", guidance_message: "", guidance_audio_url: null },
-        { key: "etagun", name: "Etagun", meaning: "3 abertos — SIM FORTE", color_type: "success", guidance_message: "", guidance_audio_url: null },
-        { key: "alafia", name: "Alafia", meaning: "Todos abertos — PAZ", color_type: "accent", guidance_message: "", guidance_audio_url: null },
-      ];
+  if (!dbConfigs || dbConfigs.length === 0) {
+    return (
+      <div className="text-center space-y-4 py-12 animate-fade-up">
+        <p className="text-muted-foreground text-sm">Os Odus ainda não foram configurados.</p>
+        <p className="text-muted-foreground text-xs">Configure os Odus no painel admin para continuar.</p>
+      </div>
+    );
+  }
+
+  const configs = dbConfigs.map(c => ({ key: c.result_key, name: c.name, meaning: c.meaning, color_type: c.color_type, guidance_message: c.guidance_message, guidance_audio_url: c.guidance_audio_url }));
 
   const selectedConfig = selectedKey ? configs.find(c => c.key === selectedKey) : null;
   const hasGuidance = selectedConfig?.guidance_message && selectedConfig.guidance_message.trim().length > 0;
@@ -469,10 +470,12 @@ const IreIbiStep = ({ node, onNext, answers }: { node: OracleFlowNode; onNext: (
   const { data: types, isLoading } = useIreIbiTypes();
   const config = node.config || {};
 
-  // Try to determine default category from previous obi answer
-  const obiAnswer = Object.values(answers).find(a => ["alafia", "ejife", "etagun", "okaran", "oyekun"].includes(a));
-  const ireResults = ["alafia", "ejife", "etagun"];
-  const defaultCategory = obiAnswer && ireResults.includes(obiAnswer) ? "ire" : "ibi";
+  // Determine default category from previous obi answer using oracle_configs from DB
+  const { data: oracleConfigs } = useOracleConfigs();
+  const allResultKeys = oracleConfigs?.map(c => c.result_key) || [];
+  const obiAnswer = Object.values(answers).find(a => allResultKeys.includes(a));
+  const obiConfig = obiAnswer ? oracleConfigs?.find(c => c.result_key === obiAnswer) : null;
+  const defaultCategory = obiConfig?.default_ire_ibi === "ire" ? "ire" : "ibi";
 
   const filteredTypes = types?.filter(t => t.category === defaultCategory) || [];
 
@@ -605,6 +608,7 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
 
   const config = node.config || {};
   const configTasks: DiagnosisTask[] = config.tasks || [];
+  const oracleConfigKeys = obiConfigs?.map(c => c.result_key) || [];
 
   // Filter tasks by condition
   const tasks = configTasks.filter(t => evaluateCondition(t.condition, answers));
@@ -614,7 +618,7 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
     setSaving(true);
     try {
       const notes = `Diagnóstico via fluxo. Respostas: ${JSON.stringify(answers)}`;
-      const obiResult = Object.values(answers).find(a => ["alafia", "ejife", "etagun", "okaran", "oyekun"].includes(a)) || "consulta";
+      const obiResult = Object.values(answers).find(a => oracleConfigKeys.includes(a)) || "consulta";
 
       const entry = await addJourneyEntry.mutateAsync({
         oracle_result: obiResult,
