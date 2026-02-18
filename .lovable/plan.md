@@ -1,31 +1,24 @@
 
-
-# Melhorar Visual do Modal de Avaliacao no Mobile
+# Adicionar texto ao botao de nova consulta na Jornada
 
 ## Problema
 
-O Drawer esta funcionando tecnicamente, mas o visual esta sem personalidade:
-- As estrelas vazias sao cinza claro demais, quase invisiveis
-- Nao ha hierarquia visual clara entre os elementos
-- Falta a identidade vibrante do app (cores douradas, marrom terra)
-- O formulario parece generico e "frio"
+O botao no canto superior direito da pagina "Minha Jornada" e apenas um icone (Sparkles), sem texto. Nao fica claro para o usuario que ele pode iniciar uma nova consulta clicando ali.
 
 ## Solucao
 
-Ajustes visuais no `src/components/ReviewModal.tsx` para trazer a identidade do Gba-Orun ao modal.
+Transformar o icone isolado em um botao com texto "Nova consulta" ao lado do icone, estilizado como um CTA (call-to-action) suave que combina com o design da pagina.
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/components/ReviewModal.tsx`
+### Arquivo: `src/pages/Journey.tsx` (linhas 96-98)
 
-1. **Estrelas maiores e mais visiveis**: aumentar de `h-10 w-10` para `h-12 w-12` no mobile, e trocar a cor vazia de `text-muted-foreground/30` para `text-[#FFD700]/30` (dourado transparente) -- assim mesmo vazias elas ja comunicam que sao estrelas douradas
-2. **Estrelas preenchidas**: manter `fill-accent text-accent` (dourado) mas adicionar um leve `drop-shadow` para brilho
-3. **Gap entre estrelas**: aumentar de `gap-1` para `gap-2` no mobile para facilitar o toque
-4. **Titulo mais destacado**: adicionar cor `text-[#8B4513]` (marrom terra) ao titulo do Drawer
-5. **Botao Enviar**: garantir que use o amarelo ouro com texto escuro e cantos arredondados gordos (`rounded-2xl`)
-6. **Botao Agora nao**: bordas mais suaves (`rounded-2xl`)
-7. **Textarea**: borda com foco dourado (`focus:ring-accent`)
-8. **Espacamento geral**: aumentar `space-y-5` para `space-y-6` no mobile para mais respiro
+Trocar o Link atual (icone sozinho) por um Link com texto:
 
-### Nenhum outro arquivo precisa ser alterado
+- Manter o icone `Sparkles` mas adicionar o texto **"Nova consulta"** ao lado
+- Estilo: `bg-accent/15` com `text-accent` (dourado), `rounded-2xl`, `px-4 py-2.5`, `font-semibold text-sm`
+- Usar `flex items-center gap-2` para alinhar icone e texto
+- Manter `shadow-card` e `hover:shadow-soft` para consistencia visual
+- O resultado sera um botao tipo "pill" dourado que convida o usuario a consultar o oraculo
 
+Mudanca de 3 linhas em um unico arquivo.
