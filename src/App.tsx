@@ -28,6 +28,7 @@ import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { initPixelWithId, initGoogleAds } from "@/lib/pixel";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useDynamicSEO } from "@/hooks/useDynamicSEO";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +48,7 @@ try { localStorage.removeItem("gba-orun-cache"); } catch {}
 
 const AppContent = () => {
   const { data: settings } = useAppSettings();
+  useDynamicSEO();
 
   useEffect(() => {
     if (!settings) return;
