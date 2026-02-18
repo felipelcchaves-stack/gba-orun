@@ -1,33 +1,31 @@
 
-# Melhorar o Modal de Avaliacao para Mobile
+
+# Melhorar Visual do Modal de Avaliacao no Mobile
 
 ## Problema
 
-O modal de avaliacao usa um Dialog centralizado que no mobile:
-- Flutua no meio da tela, desperdicando espaco
-- As estrelas ficam pequenas para toque
-- O textarea fica apertado
-- Quando o teclado abre, o conteudo pode ficar escondido
+O Drawer esta funcionando tecnicamente, mas o visual esta sem personalidade:
+- As estrelas vazias sao cinza claro demais, quase invisiveis
+- Nao ha hierarquia visual clara entre os elementos
+- Falta a identidade vibrante do app (cores douradas, marrom terra)
+- O formulario parece generico e "frio"
 
 ## Solucao
 
-Usar o padrao **Drawer (bottom sheet)** no mobile e manter o Dialog no desktop. O projeto ja tem o componente `Drawer` (vaul) instalado e configurado.
+Ajustes visuais no `src/components/ReviewModal.tsx` para trazer a identidade do Gba-Orun ao modal.
 
 ## Detalhes Tecnicos
 
 ### Arquivo: `src/components/ReviewModal.tsx`
 
-1. Importar `useIsMobile` de `@/hooks/use-mobile`
-2. Importar `Drawer`, `DrawerContent`, `DrawerHeader`, `DrawerTitle`, `DrawerDescription` de `@/components/ui/drawer`
-3. Extrair o conteudo do formulario (estrelas, textarea, botoes) para um componente interno `ReviewForm`
-4. Renderizar condicionalmente:
-   - **Mobile** (`isMobile = true`): usar `Drawer` com o conteudo dentro de `DrawerContent`
-   - **Desktop** (`isMobile = false`): manter o `Dialog` atual
-5. Aumentar o tamanho das estrelas no mobile: de `h-8 w-8` para `h-10 w-10`
-6. Aumentar a area de toque dos botoes de estrela: de `p-1` para `p-2`
-7. Ajustar o padding geral para dar mais respiro no mobile
+1. **Estrelas maiores e mais visiveis**: aumentar de `h-10 w-10` para `h-12 w-12` no mobile, e trocar a cor vazia de `text-muted-foreground/30` para `text-[#FFD700]/30` (dourado transparente) -- assim mesmo vazias elas ja comunicam que sao estrelas douradas
+2. **Estrelas preenchidas**: manter `fill-accent text-accent` (dourado) mas adicionar um leve `drop-shadow` para brilho
+3. **Gap entre estrelas**: aumentar de `gap-1` para `gap-2` no mobile para facilitar o toque
+4. **Titulo mais destacado**: adicionar cor `text-[#8B4513]` (marrom terra) ao titulo do Drawer
+5. **Botao Enviar**: garantir que use o amarelo ouro com texto escuro e cantos arredondados gordos (`rounded-2xl`)
+6. **Botao Agora nao**: bordas mais suaves (`rounded-2xl`)
+7. **Textarea**: borda com foco dourado (`focus:ring-accent`)
+8. **Espacamento geral**: aumentar `space-y-5` para `space-y-6` no mobile para mais respiro
 
 ### Nenhum outro arquivo precisa ser alterado
-- O hook `useIsMobile` ja existe
-- O componente `Drawer` ja existe
-- As props do `ReviewModal` nao mudam
+
