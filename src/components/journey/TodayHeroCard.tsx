@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { Flame, Sun } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import ConfettiCelebration from "./ConfettiCelebration";
 
 interface TodayHeroCardProps {
   completedCount: number;
@@ -21,6 +23,16 @@ const TodayHeroCard = ({ completedCount, totalCount, greeting }: TodayHeroCardPr
   const strokeDashoffset = circumference - (progress / 100) * circumference;
   const allDone = totalCount > 0 && completedCount === totalCount;
 
+  const [showConfetti, setShowConfetti] = useState(false);
+  const prevAllDoneRef = useRef(allDone);
+
+  useEffect(() => {
+    if (allDone && !prevAllDoneRef.current) {
+      setShowConfetti(true);
+    }
+    prevAllDoneRef.current = allDone;
+  }, [allDone]);
+
   if (totalCount === 0) {
     return (
       <div className="rounded-3xl p-6 gradient-sacred text-primary-foreground shadow-sacred mb-6">
@@ -39,7 +51,8 @@ const TodayHeroCard = ({ completedCount, totalCount, greeting }: TodayHeroCardPr
   }
 
   return (
-    <div className="rounded-3xl p-6 gradient-sacred text-primary-foreground shadow-sacred mb-6">
+    <div className="relative rounded-3xl p-6 gradient-sacred text-primary-foreground shadow-sacred mb-6 overflow-hidden">
+      <ConfettiCelebration show={showConfetti} />
       <p className="text-sm opacity-80 mb-1">{greeting}</p>
       <div className="flex items-center gap-5">
         <div className="relative shrink-0">
