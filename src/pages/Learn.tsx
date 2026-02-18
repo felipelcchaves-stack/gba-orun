@@ -1,5 +1,5 @@
-import { useRituals } from "@/hooks/useRituals";
-import { useOfferings, type Offering } from "@/hooks/useOfferings";
+import { useRituals, useRitualCategories } from "@/hooks/useRituals";
+import { useOfferings, useOfferingCategories, type Offering } from "@/hooks/useOfferings";
 import { usePremium } from "@/hooks/usePremium";
 import { useCategories, getCategoryImageFromList, getCategoryLabelFromList } from "@/hooks/useCategories";
 import { Link } from "react-router-dom";
@@ -23,6 +23,8 @@ const LearnPage = () => {
   const { data: rituals, isLoading: loadingRituals } = useRituals(ritualFilter || undefined);
   const { data: offerings, isLoading: loadingOfferings } = useOfferings(offeringFilter || undefined);
   const { data: categories } = useCategories();
+  const { data: ritualCatKeys } = useRitualCategories();
+  const { data: offeringCatKeys } = useOfferingCategories();
   const { isPremium } = usePremium();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [selectedOffering, setSelectedOffering] = useState<Offering | null>(null);
@@ -58,27 +60,31 @@ const LearnPage = () => {
     </div>
   );
 
-  const CategoryCards = ({ onSelect }: { onSelect: (key: string) => void }) => (
-    <div className="space-y-3">
-      {categories?.map(c => (
-        <button
-          key={c.key}
-          onClick={() => onSelect(c.key)}
-          className="w-full flex items-center rounded-2xl overflow-hidden bg-card shadow-card h-[90px] text-left transition-transform active:scale-[0.98]"
-        >
-          <div className="flex-1 min-w-0 px-4">
-            <h3 className="font-display font-bold text-sm truncate">{c.label}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{c.description}</p>
-          </div>
-          <img
-            src={c.image_url || getCategoryImageFromList(categories, c.key)}
-            alt={c.label}
-            className="w-[100px] h-full object-cover shrink-0"
-          />
-        </button>
-      ))}
-    </div>
-  );
+  const CategoryCards = ({ onSelect, validKeys }: { onSelect: (key: string) => void; validKeys?: string[] }) => {
+    const filtered = validKeys ? categories?.filter(c => validKeys.includes(c.key)) : categories;
+    if (!filtered || filtered.length === 0) return <EmptyState icon={BookOpen} text="Nenhuma categoria com conteúdo disponível." />;
+    return (
+      <div className="space-y-3">
+        {filtered.map(c => (
+          <button
+            key={c.key}
+            onClick={() => onSelect(c.key)}
+            className="w-full flex items-center rounded-2xl overflow-hidden bg-card shadow-card h-[90px] text-left transition-transform active:scale-[0.98]"
+          >
+            <div className="flex-1 min-w-0 px-4">
+              <h3 className="font-display font-bold text-sm truncate">{c.label}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{c.description}</p>
+            </div>
+            <img
+              src={c.image_url || getCategoryImageFromList(categories, c.key)}
+              alt={c.label}
+              className="w-[100px] h-full object-cover shrink-0"
+            />
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   const BackHeader = ({ label, onBack }: { label: string; onBack: () => void }) => (
     <button onClick={onBack} className="flex items-center gap-2 mb-4 text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -159,7 +165,7 @@ const LearnPage = () => {
           {/* ===== ABA RITUAIS ===== */}
           <TabsContent value="rituais">
             {ritualFilter === "" ? (
-              <CategoryCards onSelect={setRitualFilter} />
+              <CategoryCards onSelect={setRitualFilter} validKeys={ritualCatKeys} />
             ) : (
               <>
                 <BackHeader label={selectedRitualCat?.label || ritualFilter} onBack={() => setRitualFilter("")} />
@@ -179,7 +185,7 @@ const LearnPage = () => {
           {/* ===== ABA OFERENDAS ===== */}
           <TabsContent value="oferendas">
             {offeringFilter === "" ? (
-              <CategoryCards onSelect={setOfferingFilter} />
+              <CategoryCards onSelect={setOfferingFilter} validKeys={offeringCatKeys} />
             ) : (
               <>
                 <BackHeader label={selectedOfferingCat?.label || offeringFilter} onBack={() => setOfferingFilter("")} />

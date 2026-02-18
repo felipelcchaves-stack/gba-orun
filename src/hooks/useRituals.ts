@@ -89,3 +89,16 @@ export const useDeleteRitual = () => {
     },
   });
 };
+
+export const useRitualCategories = () => {
+  return useQuery({
+    queryKey: ["ritual-categories"],
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("rituals").select("category");
+      if (error) throw error;
+      const unique = [...new Set((data || []).map((r: any) => r.category))];
+      return unique as string[];
+    },
+  });
+};
