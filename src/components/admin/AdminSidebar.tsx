@@ -1,8 +1,8 @@
-import { LayoutDashboard, Users, BookOpen, Settings, FileJson, LogOut, Link2, ArrowLeft, MessageCircle, CreditCard, Tag, UtensilsCrossed, Star, GitBranch } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, Settings, FileJson, LogOut, Link2, ArrowLeft, MessageCircle, CreditCard, Tag, UtensilsCrossed, Star, GitBranch, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
-export type AdminSection = "dashboard" | "users" | "plans" | "rituals" | "offerings" | "flows" | "links" | "community" | "promotions" | "guidance" | "reviews" | "settings" | "import";
+export type AdminSection = "dashboard" | "users" | "plans" | "categories" | "rituals" | "offerings" | "flows" | "links" | "community" | "promotions" | "guidance" | "reviews" | "settings" | "import";
 
 interface AdminSidebarProps {
   active: AdminSection;
@@ -14,6 +14,7 @@ const NAV_ITEMS: { key: AdminSection; label: string; icon: React.ElementType }[]
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "users", label: "Usuários", icon: Users },
   { key: "plans", label: "Planos", icon: CreditCard },
+  { key: "categories", label: "Categorias", icon: FolderOpen },
   { key: "rituals", label: "Rituais e Orações", icon: BookOpen },
   { key: "offerings", label: "Oferendas", icon: UtensilsCrossed },
   { key: "flows", label: "Fluxos do Oráculo", icon: GitBranch },
