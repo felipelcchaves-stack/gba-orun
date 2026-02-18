@@ -1,32 +1,10 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Download, Share, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 const InstallPage = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
-
-  useEffect(() => {
-    const ua = navigator.userAgent;
-    setIsIOS(/iPad|iPhone|iPod/.test(ua));
-    setIsInstalled(window.matchMedia("(display-mode: standalone)").matches);
-
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-  };
+  const { deferredPrompt, isIOS, isInstalled, triggerInstall } = useInstallPrompt();
 
   if (isInstalled) {
     return (
@@ -53,7 +31,7 @@ const InstallPage = () => {
         </div>
 
         {deferredPrompt ? (
-          <Button onClick={handleInstall} className="w-full" size="lg">
+          <Button onClick={() => triggerInstall()} className="w-full" size="lg">
             <Download className="h-5 w-5 mr-2" /> Instalar agora
           </Button>
         ) : isIOS ? (
