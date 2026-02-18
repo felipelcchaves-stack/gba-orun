@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ExternalLink, CheckCircle, Star, Shield, BookOpen, Compass, Headphones, Zap, Eye, Heart, HelpCircle, ChevronRight } from "lucide-react";
 import { trackInitiateCheckout } from "@/lib/pixel";
+import { sendCAPIEvent } from "@/lib/capi";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useAuth } from "@/hooks/useAuth";
 import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { usePublicReviews } from "@/hooks/usePublicReviews";
@@ -40,6 +42,7 @@ const OfertaPage = () => {
   const { data: plans } = useActivePlans();
   const { data: realReviews } = usePublicReviews();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Build testimonials: real 5-star reviews first, fallback if < 4
   const realTestimonials = (realReviews || []).map(r => ({
@@ -87,6 +90,7 @@ const OfertaPage = () => {
 
   const handleCheckout = (url?: string) => {
     trackInitiateCheckout();
+    if (user?.email) sendCAPIEvent("InitiateCheckout", user.email);
     const targetUrl = url || checkoutUrl;
     if (targetUrl && targetUrl !== "#") window.open(targetUrl, "_blank");
   };
