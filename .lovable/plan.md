@@ -1,99 +1,36 @@
 
 
-# Redesign da Pagina Jornada - UX Premium
+# Remover duplicacao e melhorar textos da Jornada
 
-## Problemas identificados
+## Problema
 
-1. **Titulo "Plano de Vida"** - generico, nao transmite espiritualidade. Parece um app de produtividade.
-2. **Calendario ocupa 60% da tela** - e a primeira coisa que o usuario ve. Calendarios sao uteis para consultar historico, mas nao devem ser o elemento principal. Afasta o usuario da acao.
-3. **Stats cards monotonos** - tres caixinhas brancas identicas, sem hierarquia visual.
-4. **Estado vazio desanimador** - imagem opaca, texto passivo. Deveria motivar.
-5. **Falta de personalidade** - nao tem nada que remeta ao universo espiritual/Ioruba.
+Quando o usuario nao tem tarefas no dia, dois blocos quase identicos aparecem na tela:
+1. O **TodayHeroCard** com "Consultar o Obi"
+2. Um card separado logo abaixo, tambem com "Consultar Obi"
 
-## Novo conceito: "Minha Jornada"
+Isso polui a tela e confunde o usuario.
 
-Inspirado em Duolingo + Headspace: foco na acao do dia (hoje), com historico acessivel mas nao dominante.
+## Solucao
 
-## Estrutura da nova pagina (de cima pra baixo)
+### 1. Remover bloco duplicado em `src/pages/Journey.tsx`
 
-### 1. Header com saudacao contextual
-- Titulo: **"Minha Jornada"** (pessoal, afetivo)
-- Subtitulo contextual baseado na hora do dia: "Bom dia, [Nome]" / "Boa noite, [Nome]"
-- Botao de acesso rapido ao Oraculo (manter sparkles)
+Eliminar o bloco de estado vazio (linhas 124-137) que renderiza o segundo CTA "Nenhuma consulta hoje / Consultar Obi". O TodayHeroCard ja cumpre essa funcao sozinho.
 
-### 2. Card Hero "Rotina de Hoje" (destaque principal)
-- Card grande com gradiente (earth/gold), bordas 3xl
-- Mostra o resumo do dia: "3 de 5 tarefas concluidas"
-- Barra de progresso circular ou semicircular estilizada
-- Se nao tem tarefas: CTA vibrante "Consultar o Obi" com icone animado
-- Frase motivacional contextual (ex: "Seu Ori agradece cada passo")
+### 2. Atualizar textos no `src/components/journey/TodayHeroCard.tsx`
 
-### 3. Lista de tarefas do dia (scroll vertical)
-- Cards de tarefas com visual melhorado:
-  - Icones tematicos coloridos por periodo (Sunrise amarelo, Moon roxo)
-  - Checkbox com animacao de confete ao completar
-  - Progresso visual por secao (Manha / Rituais / Noite)
-- Se nao tem tarefas do dia: ilustracao com mascote Agemo e texto motivacional
+Trocar os textos para algo mais espiritual e menos generico:
 
-### 4. Streak / Consistencia (inline, compacto)
-- Faixa horizontal com os ultimos 7 dias como circulos
-- Dias ativos = circulo preenchido com cor leaf
-- Dia atual = circulo com borda dourada pulsante
-- Mostra streak atual em destaque
+- **Titulo (estado vazio):** "Comece sua rotina espiritual" -> "Hoje e dia de cultuar seu Orisa"
+- **Subtitulo:** "Consulte o Obi para receber suas orientacoes do dia." -> "Descubra o que a ancestralidade preparou para voce."
+- **Botao CTA:** "Consultar o Obi" -> "Iniciar meu Ritual"
+- **Icone do botao:** Trocar Compass por um icone mais tematico (ex: Flame ou Sparkles)
 
-### 5. Calendario (colapsavel, secundario)
-- Comeca FECHADO por padrao
-- Botao "Ver historico" abre/fecha o calendario
-- Quando aberto, mantem os dots de atividade
-- Ao selecionar um dia, mostra as consultas daquele dia abaixo
+### Resumo das mudancas
 
-### 6. Stats do mes (redesenhados)
-- Movidos para ABAIXO do calendario (so visiveis quando o calendario esta aberto)
-- Visual com icones maiores e cores diferenciadas por stat
-- Consultas = icone bussola, fundo amber
-- Tarefas = icone check, fundo leaf
-- Dias ativos = icone flame, fundo accent
+| Arquivo | Mudanca |
+|---|---|
+| `src/pages/Journey.tsx` | Remover bloco de estado vazio duplicado (linhas 124-137) |
+| `src/components/journey/TodayHeroCard.tsx` | Atualizar textos do CTA e do estado vazio |
 
-## Mudancas nos arquivos
-
-### `src/pages/Journey.tsx` (rewrite significativo)
-- Renomear titulo para "Minha Jornada"
-- Reorganizar layout: Hero card > Tarefas do dia > Streak > Calendario colapsavel > Stats
-- Adicionar saudacao contextual (hora do dia)
-- Adicionar state `calendarOpen` (default false)
-- Adicionar componente de streak semanal inline
-- Estado vazio redesenhado com CTA vibrante
-
-### `src/components/journey/TodayHeroCard.tsx` (novo)
-- Card hero com gradiente earth-to-dark
-- Progresso do dia (circular ou barra grande)
-- Frase motivacional
-- CTA quando vazio
-
-### `src/components/journey/WeekStreak.tsx` (novo)
-- 7 circulos representando os ultimos 7 dias
-- Cores: leaf (completo), accent (parcial), muted (vazio)
-- Dia atual com ring dourado
-
-### `src/components/journey/MonthlyStats.tsx` (redesign)
-- Cards com cores diferenciadas (amber, leaf, accent)
-- Icones maiores com fundo colorido arredondado
-- Visivel apenas quando calendario esta aberto
-
-### `src/components/journey/JourneyEntryCard.tsx` (melhorias visuais)
-- Bordas mais suaves, sombras mais pronunciadas
-- Icones com fundos coloridos ao inves de icons soltos
-- Animacao sutil ao completar tarefa
-
-## Detalhes tecnicos
-
-- Nenhuma mudanca no banco de dados
-- Nenhum hook novo (reutiliza useJourneyByMonth, useCompleteJourney, useCompleteTask)
-- Componente Collapsible do Radix para o calendario
-- date-fns para calculo dos ultimos 7 dias no streak
-- Animacoes via Tailwind (transition, scale, pulse)
-
-## Resultado esperado
-
-A pagina deixa de parecer um "Google Calendar espiritual" e passa a ser uma experiencia imersiva focada no HOJE, com historico acessivel mas nao intrusivo. Visual quente, motivacional e alinhado com a identidade Ioruba do app.
+Nenhuma mudanca no banco de dados. Apenas ajustes de texto e remocao de codigo redundante.
 
