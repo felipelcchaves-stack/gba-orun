@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +9,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ReviewModalProps {
   open: boolean;
@@ -19,6 +21,7 @@ const ReviewModal = ({ open, onClose, onDismiss }: ReviewModalProps) => {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
 
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -60,6 +63,94 @@ const ReviewModal = ({ open, onClose, onDismiss }: ReviewModalProps) => {
     onClose();
   };
 
+  const starSize = isMobile ? "h-10 w-10" : "h-8 w-8";
+  const starPadding = isMobile ? "p-2" : "p-1";
+
+  const formContent = (
+    <div className={`space-y-5 ${isMobile ? "px-5 pb-6" : "pt-2"}`}>
+      {/* Name */}
+      <div>
+        <label className="text-xs text-muted-foreground font-medium">Seu nome</label>
+        <p className="text-sm font-semibold text-foreground mt-1">{displayName}</p>
+      </div>
+
+      {/* Stars */}
+      <div>
+        <label className="text-xs text-muted-foreground font-medium mb-2 block">Nota</label>
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onMouseEnter={() => setHoverRating(star)}
+              onMouseLeave={() => setHoverRating(0)}
+              onClick={() => { setRating(star); setRatingError(false); }}
+              className={`${starPadding} transition-transform hover:scale-110`}
+            >
+              <Star
+                className={`${starSize} transition-colors ${
+                  star <= (hoverRating || rating)
+                    ? "fill-accent text-accent"
+                    : "text-muted-foreground/30"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+        {ratingError && <p className="text-xs text-destructive mt-1">Selecione uma nota</p>}
+      </div>
+
+      {/* Text */}
+      <div>
+        <label className="text-xs text-muted-foreground font-medium mb-2 block">
+          Sua avaliação <span className="text-muted-foreground/60">(mínimo 20 caracteres)</span>
+        </label>
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Conte como tem sido sua experiência com o Gba-Orun..."
+          className="min-h-[100px] rounded-xl"
+          maxLength={500}
+        />
+        <p className={`text-xs mt-1 ${textLength < 20 ? "text-muted-foreground" : "text-primary"}`}>
+          {textLength}/500 {textLength < 20 && `(faltam ${20 - textLength})`}
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-2">
+        <Button
+          variant="outline"
+          onClick={handleDismiss}
+          className="flex-1 rounded-xl"
+        >
+          Agora não
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={!isValid || submitting}
+          className="flex-1 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90"
+        >
+          {submitting ? "Enviando..." : "Enviar"}
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={(o) => { if (!o) handleDismiss(); }}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle className="font-display text-xl">Como você avalia o Gba-Orun?</DrawerTitle>
+            <DrawerDescription>Sua opinião nos ajuda a melhorar!</DrawerDescription>
+          </DrawerHeader>
+          {formContent}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleDismiss(); }}>
       <DialogContent className="max-w-md mx-4 rounded-2xl">
@@ -67,75 +158,7 @@ const ReviewModal = ({ open, onClose, onDismiss }: ReviewModalProps) => {
           <DialogTitle className="font-display text-xl">Como você avalia o Gba-Orun?</DialogTitle>
           <DialogDescription>Sua opinião nos ajuda a melhorar!</DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-5 pt-2">
-          {/* Name */}
-          <div>
-            <label className="text-xs text-muted-foreground font-medium">Seu nome</label>
-            <p className="text-sm font-semibold text-foreground mt-1">{displayName}</p>
-          </div>
-
-          {/* Stars */}
-          <div>
-            <label className="text-xs text-muted-foreground font-medium mb-2 block">Nota</label>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(0)}
-                  onClick={() => { setRating(star); setRatingError(false); }}
-                  className="p-1 transition-transform hover:scale-110"
-                >
-                  <Star
-                    className={`h-8 w-8 transition-colors ${
-                      star <= (hoverRating || rating)
-                        ? "fill-accent text-accent"
-                        : "text-muted-foreground/30"
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-            {ratingError && <p className="text-xs text-destructive mt-1">Selecione uma nota</p>}
-          </div>
-
-          {/* Text */}
-          <div>
-            <label className="text-xs text-muted-foreground font-medium mb-2 block">
-              Sua avaliação <span className="text-muted-foreground/60">(mínimo 20 caracteres)</span>
-            </label>
-            <Textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Conte como tem sido sua experiência com o Gba-Orun..."
-              className="min-h-[100px] rounded-xl"
-              maxLength={500}
-            />
-            <p className={`text-xs mt-1 ${textLength < 20 ? "text-muted-foreground" : "text-primary"}`}>
-              {textLength}/500 {textLength < 20 && `(faltam ${20 - textLength})`}
-            </p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              onClick={handleDismiss}
-              className="flex-1 rounded-xl"
-            >
-              Agora não
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!isValid || submitting}
-              className="flex-1 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90"
-            >
-              {submitting ? "Enviando..." : "Enviar"}
-            </Button>
-          </div>
-        </div>
+        {formContent}
       </DialogContent>
     </Dialog>
   );
