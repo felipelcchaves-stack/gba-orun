@@ -1,37 +1,20 @@
 
-# Corrigir categorias vazias na tela Aprender
+# Corrigir navegacao do botao Voltar no RitualReader
 
 ## Problema
 
-A aba "Oferendas" mostra todas as 11 categorias, mas so existem oferendas em 3 delas (ebo, iyami, geral). Ao clicar numa categoria sem oferendas, o usuario ve "Nenhuma oferenda disponivel" -- o que parece um bug.
-
-O mesmo pode acontecer na aba Rituais se alguma categoria nao tiver rituais cadastrados.
+O botao "Voltar" na pagina de leitura de rituais (`RitualReader.tsx`, linha 62) usa um link fixo para `/rituais`. Quando o usuario chega ali vindo da tela "Aprender" (`/aprender`), o botao leva para a pagina errada ("Rituais Sagrados" com chips de filtro), em vez de voltar para a tela "Aprender".
 
 ## Solucao
 
-Filtrar os cards de categoria para mostrar **apenas as que possuem conteudo**. Cada aba mostra so as categorias relevantes.
+Trocar o `<Link to="/rituais">` por um botao que usa `navigate(-1)` do React Router. Isso faz o botao voltar sempre para a pagina anterior no historico, seja ela `/aprender`, `/rituais`, ou qualquer outra origem.
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/pages/Learn.tsx`
+### Arquivo: `src/pages/RitualReader.tsx`
 
-1. Buscar as categorias distintas que existem em `rituals` e `offerings` usando queries auxiliares
-2. No componente `CategoryCards`, receber uma lista de keys validas e filtrar as categorias exibidas
-3. Duas abordagens possiveis (vamos com a mais simples):
-   - Fazer um SELECT DISTINCT de `category` nas tabelas `rituals` e `offerings`
-   - Usar esses resultados para filtrar os cards
+1. Importar `useNavigate` do `react-router-dom` (no lugar de ou alem de `Link`)
+2. Na linha 62, trocar o `<Link to="/rituais">` por um `<button onClick={() => navigate(-1)}>` com os mesmos estilos
+3. Manter a mesma aparencia visual (icone ArrowLeft + texto "Voltar")
 
-Mudancas especificas:
-- Adicionar duas queries: uma para buscar categorias distintas de `rituals` e outra de `offerings`
-- O componente `CategoryCards` recebe um prop `validKeys: string[]` e filtra `categories` por ele
-- Quando `validKeys` esta vazio (carregando), mostra skeleton ou todas as categorias
-
-### Arquivo: `src/hooks/useRituals.ts`
-
-- Adicionar um hook `useRitualCategories()` que faz `SELECT DISTINCT category FROM rituals`
-
-### Arquivo: `src/hooks/useOfferings.ts`
-
-- Adicionar um hook `useOfferingCategories()` que faz `SELECT DISTINCT category FROM offerings`
-
-### Nenhuma mudanca no banco de dados
+Mudanca pontual de 3 linhas -- sem impacto em nenhum outro arquivo.
