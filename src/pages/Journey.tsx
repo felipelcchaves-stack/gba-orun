@@ -121,20 +121,6 @@ const JourneyPage = () => {
               />
             ))}
           </div>
-        ) : showingToday ? (
-          <div className="text-center py-8 mb-6 bg-card rounded-3xl shadow-card">
-            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3">
-              <Compass className="h-7 w-7 text-accent" strokeWidth={1.5} />
-            </div>
-            <p className="text-sm font-medium mb-1">Nenhuma consulta hoje</p>
-            <p className="text-xs text-muted-foreground mb-4">Consulte o Oráculo para começar sua rotina</p>
-            <Link
-              to="/oraculo"
-              className="inline-flex items-center gap-2 bg-foreground text-background px-5 py-2.5 rounded-2xl text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              <Compass className="h-4 w-4" /> Consultar Obi
-            </Link>
-          </div>
         ) : null}
 
         {/* Week Streak */}

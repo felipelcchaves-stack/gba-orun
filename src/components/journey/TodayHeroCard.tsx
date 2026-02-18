@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Compass, Sun } from "lucide-react";
+import { Flame, Sun } from "lucide-react";
 
 interface TodayHeroCardProps {
   completedCount: number;
@@ -24,14 +24,14 @@ const TodayHeroCard = ({ completedCount, totalCount, greeting }: TodayHeroCardPr
     return (
       <div className="rounded-3xl p-6 gradient-sacred text-primary-foreground shadow-sacred mb-6">
         <p className="text-sm opacity-80 mb-1">{greeting}</p>
-        <h2 className="text-xl font-display font-bold mb-3">Comece sua rotina espiritual</h2>
-        <p className="text-sm opacity-70 mb-5">Consulte o Obi para receber suas orientações do dia.</p>
+        <h2 className="text-xl font-display font-bold mb-3">Hoje é dia de cultuar seu Orisá</h2>
+        <p className="text-sm opacity-70 mb-5">Descubra o que a ancestralidade preparou para você.</p>
         <Link
           to="/oraculo"
           className="inline-flex items-center gap-2.5 bg-accent text-accent-foreground px-6 py-3 rounded-2xl font-bold text-sm shadow-gold hover:scale-[1.02] transition-transform animate-pulse-gold"
         >
-          <Compass className="h-5 w-5" strokeWidth={2} />
-          Consultar o Obi
+          <Flame className="h-5 w-5" strokeWidth={2} />
+          Iniciar meu Ritual
         </Link>
       </div>
     );
