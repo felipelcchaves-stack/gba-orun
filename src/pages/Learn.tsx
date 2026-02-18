@@ -8,7 +8,7 @@ import PremiumLockModal from "@/components/PremiumLockModal";
 import OfferingCard from "@/components/learn/OfferingCard";
 import OfferingDetailModal from "@/components/learn/OfferingDetailModal";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { FILTER_CATEGORIES, getCategoryLabel } from "@/lib/categories";
+import { FILTER_CATEGORIES, CATEGORY_BANNERS, getCategoryLabel } from "@/lib/categories";
 
 import ritualPlaceholder1 from "@/assets/ritual-placeholder-1.jpg";
 import ritualPlaceholder2 from "@/assets/ritual-placeholder-2.jpg";
@@ -89,7 +89,23 @@ const LearnPage = () => {
           <TabsContent value="rituais">
             <CategoryChips value={ritualFilter} onChange={setRitualFilter} />
             <div className="mt-4">
-              {loadingRituals ? <ListSkeleton /> : rituals && rituals.length > 0 ? (
+              {ritualFilter === "" ? (
+                <div className="space-y-3">
+                  {CATEGORY_BANNERS.map((b) => (
+                    <button
+                      key={b.key}
+                      onClick={() => setRitualFilter(b.key)}
+                      className="w-full flex items-center rounded-2xl overflow-hidden bg-card shadow-card h-[90px] text-left transition-transform active:scale-[0.98]"
+                    >
+                      <div className="flex-1 min-w-0 px-4">
+                        <h3 className="font-display font-bold text-sm truncate">{b.label}</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{b.desc}</p>
+                      </div>
+                      <img src={b.image} alt={b.label} className="w-[100px] h-full object-cover shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              ) : loadingRituals ? <ListSkeleton /> : rituals && rituals.length > 0 ? (
                 <div className="space-y-1">
                   {rituals.map((ritual: any, i: number) => (
                     <Link
@@ -132,7 +148,23 @@ const LearnPage = () => {
           <TabsContent value="oferendas">
             <CategoryChips value={offeringFilter} onChange={setOfferingFilter} />
             <div className="mt-4">
-              {loadingOfferings ? <ListSkeleton /> : offerings && offerings.length > 0 ? (
+              {offeringFilter === "" ? (
+                <div className="space-y-3">
+                  {CATEGORY_BANNERS.map((b) => (
+                    <button
+                      key={b.key}
+                      onClick={() => setOfferingFilter(b.key)}
+                      className="w-full flex items-center rounded-2xl overflow-hidden bg-card shadow-card h-[90px] text-left transition-transform active:scale-[0.98]"
+                    >
+                      <div className="flex-1 min-w-0 px-4">
+                        <h3 className="font-display font-bold text-sm truncate">{b.label}</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{b.desc}</p>
+                      </div>
+                      <img src={b.image} alt={b.label} className="w-[100px] h-full object-cover shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              ) : loadingOfferings ? <ListSkeleton /> : offerings && offerings.length > 0 ? (
                 <div className="space-y-1">
                   {offerings.map((offering, i) => (
                     <OfferingCard
