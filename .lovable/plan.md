@@ -1,70 +1,53 @@
 
+# Melhorar UX da Pagina de Login (Mobile-First)
 
-# Plano: Bloqueio de Navegacao Offline + Verificacao do Salvar Fluxo
+## O que muda
 
-## 1. Bloqueio de Navegacao quando Offline
+### 1. Remover toda logica de registro
+- Remover o tipo `"signup"` do `AuthMode` (fica so `"login" | "forgot"`)
+- Remover estado `name` e import de `signUp`, `trackLead`
+- Remover o bloco "Nao tem conta? Registre-se" (linhas 127-133)
+- Remover o bloco "Ja tem conta? Entrar" (linhas 134-140)
+- Remover o input de nome (linhas 70-78)
+- Remover o branch de signup do `handleSubmit` (linhas 38-44)
+- Simplificar os dicionarios `titles` e `subtitles` (remover entrada "signup")
 
-**Problema:** Quando o usuario perde conexao, ele ainda pode clicar nos links do BottomNav e navegar para paginas que dependem de dados online (Comunidade, Oraculo, etc.), resultando em erros ou telas vazias.
+### 2. Mascote Agemo e saudacao
+- Adicionar emoji de camaleao acima do titulo com saudacao: "Axe! Bem-vindo de volta."
+- Visual leve e acolhedor, alinhado ao conceito "Duolingo Espiritual"
 
-**Solucao:** Criar um wrapper no BottomNav que intercepta cliques quando offline. Paginas que ja funcionam offline (Rituais, Home com cache) continuam acessiveis. Paginas que exigem conexao (Comunidade, Oraculo, Perfil) mostram um toast de aviso.
+### 3. Inputs maiores com icones
+- Adicionar icone `Mail` dentro do campo de email e `Lock` dentro do campo de senha
+- Aumentar padding dos inputs de `py-3` para `py-4` (alvo de toque minimo 48px)
+- Adicionar toggle de visibilidade da senha com icone `Eye` / `EyeOff`
+- Novo estado `showPassword` para controlar tipo do input (text/password)
 
-### Mudancas:
+### 4. Botao "gordinho" (Soft UI)
+- Aumentar padding do botao para `py-4`
+- Bordas mais arredondadas: `rounded-2xl`
+- Efeito de pressionar: `active:scale-[0.98] transition-transform`
+- Sombra suave
 
-**Arquivo: `src/components/BottomNav.tsx`**
-- Importar `useOnlineStatus` de `@/hooks/useOnlineStatus`
-- Importar `toast` de `sonner`
-- Definir lista de rotas que funcionam offline: `/`, `/rituais`, `/aprender`, `/jornada`
-- No clique de cada link, verificar:
-  - Se esta online: navega normalmente
-  - Se esta offline E a rota precisa de internet: bloqueia navegacao e mostra toast "Voce esta offline. Esta pagina precisa de conexao."
-  - Se esta offline E a rota funciona offline: navega normalmente (dados do cache)
-- Trocar `<Link>` por `<button>` + `useNavigate()` para controlar a navegacao programaticamente
+### 5. Layout mobile otimizado
+- Botao "Voltar" vira icone-only no canto superior esquerdo (posicao absoluta)
+- Safe-area padding para dispositivos com notch: `pb-[env(safe-area-inset-bottom)]`
+- Animacao `animate-fade-in` nos elementos do formulario
 
-**Arquivo: `src/components/OfflineBanner.tsx`**
-- Nenhuma mudanca. O banner ja funciona corretamente.
-
-### Rotas offline vs online:
-
-| Rota | Offline? | Motivo |
-|------|----------|--------|
-| `/` (Home) | Sim | Dados em cache |
-| `/rituais` | Sim | Dados em cache |
-| `/aprender` | Sim | Dados em cache |
-| `/jornada` | Sim | Dados em cache |
-| `/comunidade` | Nao | Requer realtime |
-| `/perfil` | Nao | Requer auth ativa |
-| `/promocoes` | Nao | Requer dados atualizados |
-| `/oraculo` | Nao | Requer fluxo + gravacao |
-| `/admin` | Nao | Requer auth + escrita |
-
----
-
-## 2. Verificacao do Salvar Fluxo
-
-**Status: Ja esta corrigido.** Apos analise do codigo atual:
-
-- `useSaveFlowCanvas` (useOracleFlows.ts linhas 143-214) ja possui:
-  - Verificacao de sessao ativa antes de salvar (linha 156)
-  - Tratamento de erro explicito nos DELETEs (linhas 160-164)
-  - Limpeza de _tempId antes de inserir (linhas 170-171)
-  - Mapeamento correto de IDs temporarios para UUIDs do banco (linhas 184-188)
-  - Invalidacao completa de cache no onSuccess (linhas 207-211)
-
-- `useFlowAutoSave` (useFlowAutoSave.ts) ja possui:
-  - Deteccao de dirty via snapshot JSON
-  - Cooldown de 5s apos markClean para evitar falso-positivo
-  - Salvamento de draft no localStorage como backup
-  - Dialogo de restauracao de rascunho
-
-**Nao e necessario nenhuma mudanca adicional no fluxo de salvamento.**
+### 6. Rodape simplificado
+- No modo "login": so mostra "Esqueci minha senha"
+- No modo "forgot": so mostra "Voltar ao login"
+- Sem nenhuma mencao a registro
 
 ---
 
-## Resumo
+## Detalhes tecnicos
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/components/BottomNav.tsx` | Interceptar navegacao offline com toast |
+**Arquivo unico:** `src/pages/Auth.tsx`
 
-**Total: 1 arquivo modificado**
-
+- `AuthMode` passa de `"login" | "signup" | "forgot"` para `"login" | "forgot"`
+- Remover imports: `signUp` do useAuth, `trackLead`
+- Remover estado: `name`
+- Adicionar imports: `Mail`, `Lock`, `Eye`, `EyeOff` do lucide-react
+- Adicionar estado: `showPassword` (boolean)
+- Inputs com wrapper `div relative` para posicionar icones internos
+- Botao Voltar: `Link` com classe `absolute top-6 left-5` renderizando so o icone `ArrowLeft`
