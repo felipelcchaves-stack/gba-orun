@@ -3,9 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { Compass, CalendarHeart, AlertTriangle, Sparkles } from "lucide-react";
-import { startOfWeek, endOfWeek, differenceInDays, format } from "date-fns";
-import { pt } from "date-fns/locale";
+import { CalendarHeart, AlertTriangle, Sparkles, CheckCircle, Clock } from "lucide-react";
+import { startOfWeek, endOfWeek, differenceInDays } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 
 const DAY_NAMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -14,10 +13,10 @@ const SpiritualCareCard = () => {
   const { user } = useAuth();
   const { data: profile } = useProfile();
 
-  // Fetch this week's journey entries
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
   const weekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
 
+  // Fetch this week's journey entries
   const { data: weekEntries } = useQuery({
     queryKey: ["week_journey", user?.id, weekStart.toISOString()],
     queryFn: async () => {
@@ -34,91 +33,126 @@ const SpiritualCareCard = () => {
     enabled: !!user,
   });
 
-  if (!user || !profile || profile.care_day === null || profile.care_day === undefined) {
-    return (
-      <Link to="/perfil" className="block">
-        <div className="bg-card rounded-2xl p-5 shadow-card border border-dashed border-border">
-          <div className="flex items-center gap-3">
-            <CalendarHeart className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-            <div>
-              <h3 className="font-display font-bold text-sm">Defina seu dia de cuidado</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Configure no perfil para receber lembretes personalizados.</p>
-            </div>
-          </div>
-        </div>
-      </Link>
-    );
-  }
+  // Fetch last activity ever (for users without care day)
+  const { data: lastActivity } = useQuery({
+    queryKey: ["last_activity", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from("user_journey")
+        .select("id, created_at, oracle_result")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  if (!user || !profile) return null;
 
   const today = new Date();
-  const todayDay = today.getDay(); // 0=Sun
-  const careDay = profile.care_day;
-  const isToday = todayDay === careDay;
-
-  // Calculate days until care day
-  let daysUntil = (careDay - todayDay + 7) % 7;
-  if (daysUntil === 0 && !isToday) daysUntil = 7;
-
-  // Check if care day already passed this week without activity
-  const careDayPassed = todayDay > careDay;
-  const hadActivityOnCareDay = weekEntries?.some(e => {
-    const d = new Date(e.created_at);
-    return d.getDay() === careDay;
-  });
+  const todayDay = today.getDay();
+  const hasCareDay = profile.care_day !== null && profile.care_day !== undefined;
 
   // Weekly active days
   const activeDays = new Set(weekEntries?.map(e => new Date(e.created_at).getDay()) ?? []);
   const activeDaysCount = activeDays.size;
 
-  // Last consultation
-  const lastEntry = weekEntries?.[0];
-  const lastDate = lastEntry ? new Date(lastEntry.created_at) : null;
+  // Days since last activity (any)
+  const lastDate = lastActivity ? new Date(lastActivity.created_at) : null;
   const daysSinceLast = lastDate ? differenceInDays(today, lastDate) : null;
 
-  // Determine card state
-  let variant: "gold" | "alert" | "neutral" = "neutral";
+  let variant: "gold" | "success" | "warn" | "alert" | "neutral" = "neutral";
+  let icon: React.ReactNode;
   let message = "";
   let subMessage = "";
+  let showConsultButton = false;
 
-  if (isToday) {
-    variant = "gold";
-    message = "Hoje é seu dia de cuidado! 🌟";
-    subMessage = hadActivityOnCareDay ? "Você já consultou o Oráculo hoje. Axé!" : "Já consultou o Oráculo?";
-  } else if (careDayPassed && !hadActivityOnCareDay) {
-    variant = "alert";
-    message = `Você perdeu seu cuidado de ${DAY_NAMES[careDay]}`;
-    subMessage = "Que tal consultar o Oráculo agora?";
+  if (hasCareDay) {
+    // === CENÁRIO 1: TEM dia de cuidado ===
+    const careDay = profile.care_day!;
+    const isToday = todayDay === careDay;
+    const hadActivityToday = weekEntries?.some(e => {
+      const d = new Date(e.created_at);
+      return d.getDay() === careDay;
+    });
+
+    let daysUntil = (careDay - todayDay + 7) % 7;
+    if (daysUntil === 0 && !isToday) daysUntil = 7;
+
+    if (isToday && hadActivityToday) {
+      variant = "success";
+      icon = <CheckCircle className="h-6 w-6 text-emerald-500" />;
+      message = "Você já cuidou do seu Ori hoje. Axé! ✨";
+      subMessage = "Continue assim, seu Ori agradece.";
+    } else if (isToday) {
+      variant = "gold";
+      icon = <Sparkles className="h-6 w-6 text-accent" />;
+      message = "Hoje é seu dia de cuidado! 🌟";
+      subMessage = "Cuide do seu Ori — consulte o Oráculo.";
+      showConsultButton = true;
+    } else {
+      variant = "neutral";
+      icon = <CalendarHeart className="h-6 w-6 text-primary" />;
+      message = `Próximo cuidado: ${DAY_NAMES[careDay]}`;
+      subMessage = daysUntil === 1 ? "Amanhã! 🙏" : `Faltam ${daysUntil} dias`;
+    }
   } else {
-    variant = "neutral";
-    message = `Próximo cuidado: ${DAY_NAMES[careDay]}`;
-    subMessage = daysUntil === 1 ? "Amanhã!" : `Faltam ${daysUntil} dias`;
+    // === CENÁRIO 2: NÃO tem dia de cuidado ===
+    if (daysSinceLast === null) {
+      // Never used oracle
+      variant = "neutral";
+      icon = <Sparkles className="h-6 w-6 text-primary" />;
+      message = "Comece sua jornada espiritual";
+      subMessage = "Consulte o Oráculo pela primeira vez!";
+      showConsultButton = true;
+    } else if (daysSinceLast === 0) {
+      variant = "success";
+      icon = <Sparkles className="h-6 w-6 text-emerald-500" />;
+      message = "Você está em dia! ✨";
+      subMessage = "Última consulta: hoje";
+    } else if (daysSinceLast <= 2) {
+      variant = "success";
+      icon = <Sparkles className="h-6 w-6 text-emerald-500" />;
+      message = "Você está em dia! ✨";
+      subMessage = daysSinceLast === 1 ? "Última consulta: ontem" : `Última consulta: há ${daysSinceLast} dias`;
+    } else if (daysSinceLast <= 6) {
+      variant = "warn";
+      icon = <Clock className="h-6 w-6 text-yellow-500" />;
+      message = `Você está há ${daysSinceLast} dias sem cuidar da sua espiritualidade`;
+      subMessage = "Que tal consultar o Oráculo?";
+      showConsultButton = true;
+    } else {
+      variant = "alert";
+      icon = <AlertTriangle className="h-6 w-6 text-orange-500" />;
+      message = `Seu Ori sente sua falta… (${daysSinceLast} dias)`;
+      subMessage = "Volte a cuidar da sua espiritualidade.";
+      showConsultButton = true;
+    }
   }
 
-  const bgClass = variant === "gold"
-    ? "bg-gradient-to-r from-accent/20 to-accent/5 border-accent/30"
-    : variant === "alert"
-    ? "bg-gradient-to-r from-destructive/10 to-destructive/5 border-destructive/20"
-    : "bg-card border-border/50";
-
-  const iconClass = variant === "gold" ? "text-accent" : variant === "alert" ? "text-destructive" : "text-primary";
+  const bgClass =
+    variant === "gold" ? "bg-gradient-to-r from-accent/20 to-accent/5 border-accent/30" :
+    variant === "success" ? "bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border-emerald-500/20" :
+    variant === "warn" ? "bg-gradient-to-r from-yellow-500/10 to-yellow-500/5 border-yellow-500/20" :
+    variant === "alert" ? "bg-gradient-to-r from-orange-500/10 to-orange-500/5 border-orange-500/20" :
+    "bg-card border-border/50";
 
   return (
     <div className={`rounded-2xl p-5 shadow-card border ${bgClass}`}>
       <div className="flex items-start gap-3 mb-4">
-        <div className="mt-0.5">
-          {variant === "gold" ? <Sparkles className={`h-6 w-6 ${iconClass}`} /> :
-           variant === "alert" ? <AlertTriangle className={`h-6 w-6 ${iconClass}`} /> :
-           <CalendarHeart className={`h-6 w-6 ${iconClass}`} />}
-        </div>
+        <div className="mt-0.5">{icon}</div>
         <div className="flex-1">
           <h3 className="font-display font-bold text-sm">{message}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">{subMessage}</p>
         </div>
-        {(isToday && !hadActivityOnCareDay) || (careDayPassed && !hadActivityOnCareDay) ? (
+        {showConsultButton && (
           <Link to="/oraculo" className="shrink-0 bg-primary text-primary-foreground text-xs font-medium px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity">
             Consultar
           </Link>
-        ) : null}
+        )}
       </div>
 
       {/* Weekly progress */}
@@ -129,14 +163,6 @@ const SpiritualCareCard = () => {
         </div>
         <Progress value={(activeDaysCount / 7) * 100} className="h-2" />
       </div>
-
-      {/* Last consultation */}
-      {daysSinceLast !== null && (
-        <p className="text-xs text-muted-foreground mt-3">
-          Última consulta: {daysSinceLast === 0 ? "hoje" : daysSinceLast === 1 ? "ontem" : `há ${daysSinceLast} dias`}
-          {lastEntry && ` — ${lastEntry.oracle_result}`}
-        </p>
-      )}
     </div>
   );
 };
