@@ -190,7 +190,7 @@ const LinkedOfferingButton = ({ offeringId }: { offeringId: string }) => {
 // Interpolate {{variable_name}} in text with answers
 function interpolateVars(text: string, answers: Record<string, string>): string {
   if (!text) return text;
-  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => answers[key] || `{{${key}}}`);
+  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => answers[key] || "");
 }
 
 // Common header for all steps
@@ -535,6 +535,31 @@ const IreIbiTypeCard = ({ type, onSelect }: { type: any; onSelect: () => void })
   );
 };
 
+// ── Helper: format answer for display ──
+function formatAnswerDisplay(value: string, nodeType: string, obiConfigs?: any[]): string {
+  // Ire/Ibi: "ire:uuid:Ire Aiku" -> "Ire Aiku"
+  if (value.match(/^(ire|ibi):.+:.+$/)) return value.split(":").slice(2).join(":");
+  // Sim/Nao
+  if (value === "sim") return "Sim";
+  if (value === "nao") return "Não";
+  // Obi results: lookup readable name
+  if (nodeType === "obi" && obiConfigs) {
+    const cfg = obiConfigs.find((c: any) => c.result_key === value);
+    if (cfg) return `${cfg.name} — ${cfg.meaning}`;
+  }
+  return value;
+}
+
+function getAnswerIcon(value: string, nodeType: string): string {
+  if (value.match(/^ire:.+:.+$/)) return "✨";
+  if (value.match(/^ibi:.+:.+$/)) return "⚠️";
+  if (value === "sim") return "✅";
+  if (value === "nao") return "❌";
+  if (nodeType === "obi") return "🥥";
+  if (nodeType === "open_question") return "✏️";
+  return "📿";
+}
+
 // ── DIAGNOSIS STEP ──
 interface DiagnosisTask {
   task_title: string;
@@ -568,6 +593,7 @@ function evaluateCondition(condition: string, answers: Record<string, string>): 
 
 const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answers: Record<string, string>; allNodes: OracleFlowNode[] }) => {
   const { user } = useAuth();
+  const { data: obiConfigs } = useOracleConfigs();
   const addXP = useAddXP();
   const addJourneyEntry = useAddJourneyEntry();
   const createTasks = useCreateJourneyTasks();
@@ -628,15 +654,30 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
       {/* Summary of answers */}
       <div className="bg-card rounded-2xl p-5 shadow-card mb-6">
         <h3 className="font-display font-bold text-lg mb-3">Resumo da Consulta</h3>
-        <div className="space-y-1.5 text-xs text-muted-foreground">
-          {Object.entries(answers).map(([key, answer]) => {
-            // key is now variable_name or nodeId; try to find a readable label
-            const srcNode = allNodes.find(n => n.id === key || (n.config as any)?.variable_name === key);
-            const label = srcNode?.label || srcNode?.config?.question || key;
-            return (
-              <p key={key}>📿 <strong>{interpolateVars(label as string, answers)}:</strong> {answer}</p>
-            );
-          })}
+        <div className="space-y-2">
+          {Object.entries(answers)
+            .filter(([key]) => {
+              const srcNode = allNodes.find(n => n.id === key || (n.config as any)?.variable_name === key);
+              if (!srcNode) return true;
+              const skipTypes = ["start", "message", "timer", "media", "conditional"];
+              return !skipTypes.includes(srcNode.node_type);
+            })
+            .map(([key, answer]) => {
+              const srcNode = allNodes.find(n => n.id === key || (n.config as any)?.variable_name === key);
+              const label = srcNode?.config?.question || srcNode?.label || key;
+              const nodeType = srcNode?.node_type || "";
+              const displayValue = formatAnswerDisplay(answer, nodeType, obiConfigs);
+              const icon = getAnswerIcon(answer, nodeType);
+              return (
+                <div key={key} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-muted/50">
+                  <span className="text-base mt-0.5 shrink-0">{icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-foreground leading-tight">{interpolateVars(label as string, answers)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{displayValue}</p>
+                  </div>
+                </div>
+              );
+            })}
         </div>
       </div>
 
@@ -700,7 +741,7 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
               ) : saved ? (
                 <span className="flex items-center justify-center gap-2"><CheckCircle className="h-4 w-4" /> Salvo! Redirecionando...</span>
               ) : (
-                "Iniciar Rotina"
+                "Salvar e Ir para Minha Rotina"
               )}
             </button>
           ) : (
