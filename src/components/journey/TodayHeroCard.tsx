@@ -19,6 +19,7 @@ const TodayHeroCard = ({ completedCount, totalCount, greeting }: TodayHeroCardPr
   const phrase = motivationalPhrases[Math.floor(new Date().getHours() / 6) % motivationalPhrases.length];
   const circumference = 2 * Math.PI * 40;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const allDone = totalCount > 0 && completedCount === totalCount;
 
   if (totalCount === 0) {
     return (
@@ -46,7 +47,7 @@ const TodayHeroCard = ({ completedCount, totalCount, greeting }: TodayHeroCardPr
             <circle cx="48" cy="48" r="40" fill="none" stroke="hsl(0 0% 100% / 0.15)" strokeWidth="6" />
             <circle
               cx="48" cy="48" r="40" fill="none"
-              stroke="hsl(var(--accent))"
+              stroke={allDone ? "hsl(var(--leaf))" : "hsl(var(--accent))"}
               strokeWidth="6"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -55,16 +56,32 @@ const TodayHeroCard = ({ completedCount, totalCount, greeting }: TodayHeroCardPr
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <Sun className="h-4 w-4 mb-0.5 opacity-70" strokeWidth={1.5} />
-            <span className="text-lg font-bold leading-none">{progress}%</span>
+            {allDone ? (
+              <span className="text-lg font-bold leading-none">Asé!</span>
+            ) : (
+              <>
+                <Sun className="h-4 w-4 mb-0.5 opacity-70" strokeWidth={1.5} />
+                <span className="text-lg font-bold leading-none">{progress}%</span>
+              </>
+            )}
           </div>
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-display font-bold mb-1">Rotina de Hoje</h2>
-          <p className="text-sm opacity-80 mb-2">
-            {completedCount} de {totalCount} tarefa{totalCount !== 1 ? "s" : ""} concluída{completedCount !== 1 ? "s" : ""}
-          </p>
-          <p className="text-xs opacity-60 italic">{phrase}</p>
+          {allDone ? (
+            <>
+              <h2 className="text-lg font-display font-bold mb-1">Rotina concluída! 🎉</h2>
+              <p className="text-sm opacity-80 mb-2">Todas as {totalCount} tarefa{totalCount !== 1 ? "s" : ""} feita{totalCount !== 1 ? "s" : ""}</p>
+              <p className="text-xs opacity-60 italic">Ori agradece sua dedicação 🙏</p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-display font-bold mb-1">Rotina de Hoje</h2>
+              <p className="text-sm opacity-80 mb-2">
+                {completedCount} de {totalCount} tarefa{totalCount !== 1 ? "s" : ""} concluída{completedCount !== 1 ? "s" : ""}
+              </p>
+              <p className="text-xs opacity-60 italic">{phrase}</p>
+            </>
+          )}
         </div>
       </div>
     </div>
