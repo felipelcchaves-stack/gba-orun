@@ -1,36 +1,90 @@
 
 
-# Remover duplicacao e melhorar textos da Jornada
+# Redesign da Pagina Aprender - Sem Duplicacoes + Aba Oferendas
 
-## Problema
+## Problemas identificados
 
-Quando o usuario nao tem tarefas no dia, dois blocos quase identicos aparecem na tela:
-1. O **TodayHeroCard** com "Consultar o Obi"
-2. Um card separado logo abaixo, tambem com "Consultar Obi"
-
-Isso polui a tela e confunde o usuario.
+1. **Duplicacao massiva**: A pagina Aprender (`/aprender`) e a pagina Rituais (`/rituais`) sao quase identicas - mesma fonte de dados (`useRituals`), mesmos filtros, mesmo layout de cards. O usuario ve a mesma coisa em dois lugares.
+2. **Duas navegacoes sobrepostas na mesma pagina**: Os icones tematicos (THEMED_ICONS) e os chips de filtro (FILTER_CATEGORIES) fazem a mesma coisa - filtrar por categoria. Isso polui a tela.
+3. **Icone "Obi" fora de contexto**: Um atalho para o Oraculo dentro de uma pagina de estudo nao faz sentido.
+4. **Oferendas ausentes**: O sistema de oferendas (`useOfferings`) existe no codigo mas nao tem aba na pagina.
+5. **Visual monotono**: Lista simples sem hierarquia, sem destaque visual por categoria.
 
 ## Solucao
 
-### 1. Remover bloco duplicado em `src/pages/Journey.tsx`
+Transformar o Aprender em um hub de conteudo com **duas abas** (Rituais e Oferendas), remover duplicacoes internas, e melhorar o visual.
 
-Eliminar o bloco de estado vazio (linhas 124-137) que renderiza o segundo CTA "Nenhuma consulta hoje / Consultar Obi". O TodayHeroCard ja cumpre essa funcao sozinho.
+## Estrutura da nova pagina
 
-### 2. Atualizar textos no `src/components/journey/TodayHeroCard.tsx`
+### 1. Header
+- Titulo: **"Aprender"**
+- Subtitulo: "Sabedoria ancestral ao seu alcance"
 
-Trocar os textos para algo mais espiritual e menos generico:
+### 2. Tabs (Rituais | Oferendas)
+- Usar o componente Tabs do Radix ja instalado
+- Visual com fundo suave e indicador ativo em foreground
+- Aba "Rituais" como padrao
 
-- **Titulo (estado vazio):** "Comece sua rotina espiritual" -> "Hoje e dia de cultuar seu Orisa"
-- **Subtitulo:** "Consulte o Obi para receber suas orientacoes do dia." -> "Descubra o que a ancestralidade preparou para voce."
-- **Botao CTA:** "Consultar o Obi" -> "Iniciar meu Ritual"
-- **Icone do botao:** Trocar Compass por um icone mais tematico (ex: Flame ou Sparkles)
+### 3. Aba Rituais
+- **Remover** os THEMED_ICONS (duplicam os chips)
+- **Manter** apenas os chips de filtro por categoria (FILTER_CATEGORIES) - simplificados
+- Lista de rituais com visual melhorado:
+  - Imagem arredondada
+  - Titulo, categoria, badges (Premium, Audio)
+  - Sem icone Bookmark solto (nao tem funcionalidade de favoritos implementada)
 
-### Resumo das mudancas
+### 4. Aba Oferendas (NOVA)
+- Mesmos chips de filtro por categoria (reutilizar)
+- Lista de oferendas usando `useOfferings`
+- Card similar ao de rituais mas com icone de UtensilsCrossed
+- Cada oferenda linka para um reader (por enquanto, abre um dialog/modal com detalhes em Markdown)
+
+### 5. Pagina Rituais (`/rituais`)
+- Manter como esta, pois serve como ponto de entrada direto (links do Oraculo apontam para `/rituais?cat=X`)
+- Nenhuma mudanca necessaria nela
+
+## Mudancas nos arquivos
 
 | Arquivo | Mudanca |
 |---|---|
-| `src/pages/Journey.tsx` | Remover bloco de estado vazio duplicado (linhas 124-137) |
-| `src/components/journey/TodayHeroCard.tsx` | Atualizar textos do CTA e do estado vazio |
+| `src/pages/Learn.tsx` | Rewrite: adicionar Tabs (Rituais/Oferendas), remover THEMED_ICONS, remover chips duplicados, adicionar aba Oferendas |
+| `src/components/learn/OfferingCard.tsx` | Novo: card para exibir oferenda na lista |
+| `src/components/learn/OfferingDetailModal.tsx` | Novo: modal para exibir detalhes da oferenda (ingredientes, instrucoes em Markdown) |
 
-Nenhuma mudanca no banco de dados. Apenas ajustes de texto e remocao de codigo redundante.
+## Detalhes tecnicos
+
+### Learn.tsx - Nova estrutura
+
+```text
++---------------------------+
+|  Aprender                 |
+|  Sabedoria ancestral...   |
++---------------------------+
+| [Rituais]  [Oferendas]    |  <-- Tabs
++---------------------------+
+| Todos | Oriki | Ibori |.. |  <-- Chips filtro
++---------------------------+
+| [img] Titulo do Ritual    |
+|       Categoria  Premium  |
++---------------------------+
+| [img] Titulo do Ritual 2  |
+|       Categoria  Audio    |
++---------------------------+
+```
+
+### OfferingCard.tsx
+- Exibe: imagem, titulo, categoria, badge premium
+- Ao clicar: abre OfferingDetailModal (se free) ou PremiumLockModal (se premium e usuario free)
+
+### OfferingDetailModal.tsx
+- Dialog com scroll
+- Mostra: titulo, descricao, ingredientes (Markdown), instrucoes (Markdown)
+- Player de audio se disponivel
+
+### Hooks reutilizados
+- `useRituals` (ja existe)
+- `useOfferings` (ja existe)
+- `usePremium` (ja existe)
+
+### Nenhuma mudanca no banco de dados
 
