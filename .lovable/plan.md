@@ -1,70 +1,90 @@
 
 
-# Eliminar Cache Offline e Corrigir Persistencia do Flow Builder
+# Remodelar a Tela de Diagnostico (Resumo da Consulta)
 
-## Problema
+## Problemas identificados
 
-Existem **3 camadas de cache** causando dados obsoletos:
+1. **"Vamos assuntar" mostra codigos como "BIQ"**: O resumo exibe as chaves brutas das respostas (IDs de nos ou variable_names como "escolha_1") e valores internos (como "ejife", "sim", "ire:uuid:nome") em vez de texto legivel para o assinante.
 
-1. **Service Worker (PWA)** -- intercepta chamadas ao backend e serve respostas antigas do cache do navegador, mesmo quando ha dados novos no servidor
-2. **React Query Persister** -- salva TODO o cache de dados no localStorage com validade de 24h. Quando voce recarrega a pagina, os dados velhos do localStorage aparecem antes do servidor responder
-3. **staleTime de 5 minutos** -- o React Query considera os dados "frescos" por 5 minutos e nao refaz a consulta ao servidor nesse periodo
+2. **"horas sao da manha"**: Texto vindo da descricao configurada no admin com variaveis nao resolvidas (ex: `{{hora}}`). A correcao aqui e no conteudo do admin, mas o sistema pode tratar variaveis ausentes de forma mais elegante.
 
-Isso explica porque a descricao da mensagem "volta" apos salvar: o fluxo salva corretamente no banco, mas ao recarregar, o cache local (localStorage ou Service Worker) serve a versao antiga antes que o servidor responda.
+3. **Botao "Iniciar Rotina" confuso**: O botao salva a jornada e redireciona para a Home, mas o texto sugere que algo novo vai comecar. Precisa de um texto mais claro.
 
 ## O que sera feito
 
-### 1. Remover cache do Service Worker para rotas do backend
+### 1. Reescrever o bloco "Resumo da Consulta"
 
-Eliminar as regras `runtimeCaching` do `vite.config.ts` que interceptam chamadas de API. O PWA continuara funcionando para instalar o app e cachear arquivos estaticos (HTML, CSS, JS, imagens), mas **nao vai mais interferir nas chamadas de dados**.
+Transformar o resumo de uma lista tecnica de chave/valor em um resumo visual com icones e nomes legiveis:
 
-### 2. Remover persistencia do React Query no localStorage
+- **Para respostas do Obi** (valores como "ejife", "alafia"): Buscar o nome legivel na tabela `oracle_configs` e exibir o significado (ex: "Ejife -- SIM").
+- **Para respostas Ire/Ibi** (valores como "ire:uuid:Ire Aiku"): Extrair o nome humano da propria string (apos o segundo `:`) e mostrar com o icone adequado.
+- **Para respostas Sim/Nao**: Exibir "Sim" ou "Nao" com icone verde/vermelho.
+- **Para escolha multipla**: Mostrar a opcao selecionada com o label legivel.
+- **Para a label de cada pergunta**: Usar `node.label` ou `config.question` do no de origem, nunca o ID tecnico.
 
-Trocar o `PersistQueryClientProvider` por um `QueryClientProvider` normal no `App.tsx`. Isso elimina o cache de 24h que guarda dados velhos entre sessoes. Remover tambem as dependencias `@tanstack/query-sync-storage-persister` e `@tanstack/react-query-persist-client`.
+### 2. Filtrar respostas irrelevantes do resumo
 
-### 3. Reduzir staleTime para dados administrativos
+Nao exibir no resumo:
+- Nos do tipo "start" (Inicio)
+- Nos do tipo "message" (Mensagens informativas que nao pedem resposta)
+- Nos do tipo "timer" ou "media"
 
-Reduzir o `staleTime` global de 5 minutos para 30 segundos. Isso garante que o React Query consulte o servidor com mais frequencia, especialmente importante no painel admin.
+Mostrar apenas nos que representam decisoes do usuario (obi, yes_no, multiple_choice, ire_ibi, open_question).
 
-### 4. Invalidar cache do Flow Builder apos salvar
+### 3. Melhorar o botao de acao
 
-Apos o `useSaveFlowCanvas` completar com sucesso, forcar `refetchType: "all"` nas invalidacoes (ja esta parcialmente implementado) e tambem remover queries inativas para evitar dados fantasma.
+Trocar o texto de "Iniciar Rotina" para "Salvar e Ir para Minha Rotina", comunicando claramente o que acontece ao clicar.
+
+### 4. Tratar variaveis nao resolvidas
+
+Na funcao `interpolateVars`, quando uma variavel `{{nome}}` nao for encontrada nas respostas, exibir uma string vazia em vez de manter `{{nome}}` visivel na tela.
 
 ---
 
 ## Detalhes tecnicos
 
-### Arquivo: `vite.config.ts`
+### Arquivo: `src/components/oracle/FlowStepRenderer.tsx`
 
-Remover todo o bloco `runtimeCaching` do plugin VitePWA. Manter apenas o `navigateFallbackDenylist`. O PWA continuara pre-cacheando assets estaticos normalmente.
+**Mudanca 1 -- Funcao `formatAnswerDisplay`** (nova):
 
-### Arquivo: `src/App.tsx`
+Funcao auxiliar que recebe o valor bruto da resposta e o tipo do no, retornando texto legivel:
 
-- Trocar `PersistQueryClientProvider` por `QueryClientProvider` do `@tanstack/react-query`
-- Remover imports de `createSyncStoragePersister` e `PersistQueryClientProvider`
-- Remover a constante `persister`
-- Reduzir `staleTime` de `1000 * 60 * 5` para `1000 * 30` (30 segundos)
-- Reduzir `gcTime` de 24h para 1h
+```text
+function formatAnswerDisplay(value: string, nodeType?: string): string {
+  // Ire/Ibi: "ire:uuid:Ire Aiku" -> "Ire Aiku"
+  if (value.match(/^(ire|ibi):.+:.+$/)) return value.split(":").slice(2).join(":");
+  
+  // Sim/Nao
+  if (value === "sim") return "Sim";
+  if (value === "nao") return "Nao";
+  
+  // Obi results: lookup readable name from oracle_configs (passed as prop)
+  // "ejife" -> "Ejife (SIM)"
+  
+  return value;
+}
+```
 
-### Limpeza de localStorage existente
+**Mudanca 2 -- Reescrever bloco "Resumo da Consulta"** (linhas 628-641):
 
-Adicionar um `useEffect` no `App.tsx` que remove a chave `gba-orun-cache` do localStorage na primeira carga, para limpar dados antigos que ja estao salvos.
+- Filtrar `Object.entries(answers)` para excluir nos informativos
+- Usar `formatAnswerDisplay` para cada valor
+- Exibir icones contextuais (emoji de obi para resultado obi, check/x para sim/nao, estrela para ire/ibi)
+- Cada item como card pequeno em vez de texto simples
 
----
+**Mudanca 3 -- Texto do botao** (linha 703):
 
-## Resumo de arquivos
+Trocar `"Iniciar Rotina"` por `"Salvar e Ir para Minha Rotina"`
+
+**Mudanca 4 -- `interpolateVars`** (linha 191-193):
+
+Trocar `answers[key] || {{key}}` por `answers[key] || ""` para nao exibir variaveis nao resolvidas.
+
+### Resumo de arquivos
 
 | Arquivo | Acao |
 |---------|------|
-| `vite.config.ts` | Remover runtimeCaching do Service Worker |
-| `src/App.tsx` | Remover persistencia localStorage, reduzir staleTime |
+| `src/components/oracle/FlowStepRenderer.tsx` | Reescrever resumo, formatar respostas, melhorar botao, tratar variaveis |
 
-**Total: 2 arquivos modificados**
-
-## O que NAO muda
-
-- O app continua instalavel como PWA
-- Icones, splash screen e modo standalone continuam funcionando
-- O Flow Builder continua salvando da mesma forma
-- Nenhuma tabela ou funcao backend e alterada
+**Total: 1 arquivo modificado**
 
