@@ -70,6 +70,28 @@ interface FlowBuilderProps {
   flowId: string;
 }
 
+const NODE_TYPE_LABELS: Record<string, string> = {
+  start: "Início",
+  message: "Mensagem",
+  yes_no: "Sim/Não",
+  multiple_choice: "Escolha Múltipla",
+  obi: "Lançamento de Obi",
+  ire_ibi: "Iré/Ibi",
+  open_question: "Pergunta Aberta",
+  diagnosis: "Diagnóstico",
+  media: "Mídia",
+  timer: "Timer",
+  conditional: "Condicional",
+};
+
+function getNodeDisplayName(node: Node): string {
+  const label = (node.data as any)?.label;
+  if (label && typeof label === "string" && label.trim()) return label;
+  const varName = (node.data as any)?.config?.variable_name;
+  if (varName && typeof varName === "string" && varName.trim()) return varName;
+  return NODE_TYPE_LABELS[node.type || ""] || node.type || node.id;
+}
+
 const VARIABLE_PREFIXES: Record<string, string> = {
   obi: "resultado_obi",
   ire_ibi: "tipo_ire_ibi",
@@ -248,7 +270,7 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
   // Dead-end validation
   const findDeadEndNodes = useCallback(() => {
     return nodes.filter((n) => {
-      if (n.type === "diagnosis") return false;
+      if (n.type === "diagnosis" || n.type === "message") return false;
       const hasOutgoing = edges.some((e) => e.source === n.id);
       return !hasOutgoing;
     });
@@ -258,7 +280,7 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
     // Warn about dead-end nodes
     const deadEnds = findDeadEndNodes();
     if (deadEnds.length > 0) {
-      const names = deadEnds.map((n) => (n.data as any)?.label || n.type || n.id).join(", ");
+      const names = deadEnds.map((n) => getNodeDisplayName(n)).join(", ");
       toast.warning(`Atenção: os nós [${names}] não têm conexão de saída. Eles não serão alcançados no fluxo.`, { duration: 6000 });
     }
 
