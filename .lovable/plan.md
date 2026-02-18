@@ -1,24 +1,28 @@
 
-
-# Corrigir botao de conclusao do Diagnostico
+# Corrigir dados desatualizados ao voltar para Jornada
 
 ## Problema
 
-Apos completar o diagnostico, o botao diz "Salvar e Ir para Minha Rotina", o que confunde o usuario porque nao existe uma tela chamada "Minha Rotina". Alem disso, o redirecionamento vai para `/` (Home) em vez de ir para a pagina de Jornada (`/jornada`), onde o usuario pode acompanhar e marcar as tarefas como concluidas.
+Quando o diagnostico salva e redireciona para `/jornada`, a rotina recem-criada nao aparece. O usuario precisa fazer refresh manual. Isso acontece porque:
+
+1. O hook `useAddJourneyEntry` invalida a query key `["journey"]`
+2. O hook `useCreateJourneyTasks` invalida `["journey-tasks"]`
+3. Porem, a pagina Jornada usa as query keys `["journey-month", ...]` e `["journey-month-tasks", ...]`
+4. Como as keys nao batem, o React Query nao recarrega os dados
 
 ## Solucao
 
-Duas mudancas simples no arquivo `src/components/oracle/FlowStepRenderer.tsx`:
-
-1. **Renomear o botao**: de "Salvar e Ir para Minha Rotina" para **"Salvar e Ir para Minha Jornada"**
-2. **Corrigir o redirecionamento**: de `navigate("/")` para `navigate("/jornada")`, para que o usuario caia direto na pagina onde vera suas tarefas pendentes
+Corrigir as invalidacoes no `src/hooks/useJourney.ts` para incluir as query keys corretas que a pagina de Jornada usa.
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/components/oracle/FlowStepRenderer.tsx`
+### Arquivo: `src/hooks/useJourney.ts`
 
-- Linha 648: trocar `navigate("/")` por `navigate("/jornada")`
-- Linha 748: trocar o texto "Salvar e Ir para Minha Rotina" por "Salvar e Ir para Minha Jornada"
+1. No `useAddJourneyEntry` (onSuccess): adicionar invalidacao de `["journey-month"]` e `["journey-month-tasks"]`
+2. No `useCompleteJourney` (onSuccess): adicionar invalidacao de `["journey-month"]`
+3. No `useCreateJourneyTasks` (onSuccess): adicionar invalidacao de `["journey-month-tasks"]`
+4. No `useCompleteTask` (onSuccess): adicionar invalidacao de `["journey-month-tasks"]`
 
-Mudanca de 2 linhas em um unico arquivo. A pagina de Jornada ja exibe as tarefas pendentes do dia com checklist, entao o usuario vai ver imediatamente o que precisa fazer.
+Cada `onSuccess` passara a invalidar tanto a key antiga (para compatibilidade) quanto as keys usadas pela pagina de Jornada. Isso garante que ao navegar para `/jornada`, o React Query busque os dados frescos automaticamente.
 
+Mudancas em um unico arquivo, 4 blocos de `onSuccess` ajustados.
