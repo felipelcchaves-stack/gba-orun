@@ -1,49 +1,68 @@
 
-# Corrigir: Cascata de Obi (Etaiwa) Nao Avanca para o Proximo Lancamento
+# Corrigir: Cascata de Obi usa resultado errado para determinar Ire/Ibi
 
-## Diagnostico
+## Problema
 
-O banco de dados esta 100% correto -- todas as conexoes dos 3 nos de Obi estao configuradas adequadamente:
-- 1o Obi: etagun -> 2o Obi
-- 2o Obi: etagun -> 3o Obi  
-- 3o Obi: todos os resultados -> Ire/Ibi
+O fluxo no banco de dados esta 100% correto -- as 3 etapas de Obi estao conectadas conforme a logica tradicional. O bug esta no codigo.
 
-O problema esta no React: quando o usuario seleciona "Etaiwa" no 1o Obi e avanca para o 2o Obi, o React **reutiliza a mesma instancia** do componente `ObiStep` porque o tipo do componente nao mudou (continua sendo `ObiStep`). Isso faz com que o estado interno (`selectedKey`) nao seja resetado, e o componente pode exibir a tela de orientacao do Etaiwa anterior ou nao renderizar o novo lancamento corretamente.
+No componente `IreIbiStep` (arquivo `FlowStepRenderer.tsx`, linha 495), o sistema usa `Object.values(answers).find(...)` para localizar qual resultado de Obi determina se e Ire ou Ibi. O `.find()` retorna o **primeiro** resultado encontrado.
+
+Numa cascata de Etaiwa, as respostas acumuladas ficam assim:
+- 1o Obi: "etagun" (Etaiwa)
+- 2o Obi: "etagun" (Etaiwa de novo)
+- 3o Obi: "okaran" (caida negativa = Ibi)
+
+O `.find()` retorna "etagun" (1o resultado), que tem `default_ire_ibi: "ire"`. Mas o resultado decisivo e "okaran" (o ultimo), que deveria resultar em Ibi. Assim o sistema mostra os tipos de Ire quando deveria mostrar Ibi.
 
 ## Solucao
 
-Adicionar uma prop `key={node.id}` no `FlowStepRenderer` (dentro do `DynamicFlowRunner`) para forcar o React a destruir e recriar o componente sempre que o no mudar. Isso garante que o estado interno de cada step (como `selectedKey` do ObiStep) comece limpo.
+Trocar `.find()` por `.findLast()` (ou equivalente) para pegar o **ultimo** resultado de Obi -- que e sempre o lancamento decisivo na cascata.
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/components/oracle/DynamicFlowRunner.tsx` (linha ~118-124)
+### Arquivo: `src/components/oracle/FlowStepRenderer.tsx` (linha 495)
 
 Alterar de:
 
 ```text
-<div className="animate-fade-up">
-  <FlowStepRenderer
-    node={currentNode}
-    onNext={handleNext}
-    answers={answers}
-    allNodes={nodes}
-  />
-</div>
+const obiAnswer = Object.values(answers).find(a => allResultKeys.includes(a));
 ```
 
 Para:
 
 ```text
-<div className="animate-fade-up" key={currentNode.id}>
-  <FlowStepRenderer
-    node={currentNode}
-    onNext={handleNext}
-    answers={answers}
-    allNodes={nodes}
-  />
-</div>
+const obiValues = Object.values(answers).filter(a => allResultKeys.includes(a));
+const obiAnswer = obiValues.length > 0 ? obiValues[obiValues.length - 1] : undefined;
 ```
 
-A `key` no `div` envolvente forca o React a desmontar e remontar todo o conteudo quando o `currentNode.id` muda -- garantindo que o ObiStep (e qualquer outro step) comece com estado limpo.
+Isso garante que em qualquer cascata (1, 2 ou 3 lancamentos), o resultado usado para determinar Ire/Ibi sera sempre o do ultimo Obi jogado -- que e exatamente o lancamento decisivo.
 
-Uma unica linha alterada em 1 arquivo. Nenhuma mudanca no banco de dados.
+### Resumo das conexoes (confirmadas como corretas):
+
+```text
+1o Obi (Consulta com Obi)
+  alafia  -> Ire/Ibi (positivo)
+  ejife   -> Ire/Ibi (positivo)
+  etagun  -> 2o Obi  (joga novamente)
+  okaran  -> Ire/Ibi (negativo)
+  oyekun  -> Ire/Ibi (negativo)
+
+2o Obi (Etaiwa! Ou seja, precisamos assuntar)
+  alafia  -> Ire/Ibi (positivo = ire)
+  ejife   -> Ire/Ibi (positivo = ire)
+  etagun  -> 3o Obi  (joga pela terceira vez)
+  okaran  -> Ire/Ibi (negativo = ibi)
+  oyekun  -> Ire/Ibi (negativo = ibi)
+
+3o Obi (Etaiwa! Hunnn vamos continuar)
+  alafia  -> Ire/Ibi (positivo = ire)
+  ejife   -> Ire/Ibi (positivo = ire)
+  etagun  -> Ire/Ibi (etaiwa na 3a vez = ire)
+  okaran  -> Ire/Ibi (negativo = ibi)
+  oyekun  -> Ire/Ibi (negativo = ibi)
+```
+
+### Arquivos modificados:
+- `src/components/oracle/FlowStepRenderer.tsx`: correcao de 1 linha (find -> findLast)
+
+Nenhuma mudanca no banco de dados -- o fluxo esta correto.
