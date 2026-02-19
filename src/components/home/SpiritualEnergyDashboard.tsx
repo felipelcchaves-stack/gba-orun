@@ -43,8 +43,8 @@ const SpiritualEnergyDashboard = () => {
         <CardContent>
           <div className="text-center py-6">
             <Compass className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-muted-foreground mb-1">Você ainda não iniciou sua jornada</p>
-            <p className="text-xs text-muted-foreground/70 mb-4">Consulte o Oráculo para ver seu equilíbrio espiritual aqui.</p>
+            <p className="text-sm text-muted-foreground mb-1">Você ainda não começou!</p>
+            <p className="text-xs text-muted-foreground/70 mb-4">Use o Oráculo e veja aqui como está sua espiritualidade.</p>
             <Link
               to="/oraculo"
               className="inline-block text-xs font-semibold py-2 px-5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
@@ -78,7 +78,7 @@ const SpiritualEnergyDashboard = () => {
                 <span className="text-sm font-semibold">{e.label}</span>
               </div>
               <span className="text-xs text-muted-foreground">
-                {e.completed}/{e.total} concluídos
+                {e.completed} de {e.total} feitos
               </span>
             </div>
             <div className="relative">
@@ -119,7 +119,7 @@ const SpiritualEnergyDashboard = () => {
               {levelIcon[mostUrgent.level]}
               <div className="flex-1">
                 <p className="text-sm font-semibold">
-                  {mostUrgent.label} precisa de atenção
+                  {mostUrgent.label} precisa de um cuidado
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {mostUrgent.suggestion}
