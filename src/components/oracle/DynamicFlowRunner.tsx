@@ -42,8 +42,32 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
 
   const isDiagnosis = currentNode?.node_type === "diagnosis";
 
-  const totalNodes = nodes?.length || 1;
+  const estimateRemainingSteps = useMemo(() => {
+    if (!nodes || !edges || !currentNodeId) return 0;
+    let count = 0;
+    let nodeId: string | null = currentNodeId;
+    const visited = new Set<string>();
+    while (nodeId && count < 20) {
+      if (visited.has(nodeId)) break;
+      visited.add(nodeId);
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node || node.node_type === "diagnosis") break;
+      const defaultEdge = edges.find(
+        e => e.source_node_id === nodeId && (e.source_handle === "default" || e.source_handle === "")
+      );
+      const anyEdge = defaultEdge || edges.find(e => e.source_node_id === nodeId);
+      if (anyEdge) {
+        nodeId = anyEdge.target_node_id;
+        count++;
+      } else {
+        break;
+      }
+    }
+    return count;
+  }, [nodes, edges, currentNodeId]);
+
   const visitedCount = history.length + 1;
+  const totalSteps = visitedCount + estimateRemainingSteps;
 
   const handleNext = (handleId: string, answer?: string) => {
     if (!edges || !currentNodeId) return;
@@ -112,7 +136,7 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
       )}
 
       {!isDiagnosis && (
-        <OracleProgressBar currentStep={visitedCount} totalSteps={totalNodes} />
+        <OracleProgressBar currentStep={visitedCount} totalSteps={totalSteps} />
       )}
 
       <div className="animate-fade-up" key={currentNode.id}>
