@@ -3,12 +3,65 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { startOfWeek, subWeeks, isAfter, isBefore, addWeeks } from "date-fns";
 
-type EnergyKey = "ebo" | "ori" | "iyami" | "egbe" | "egungun" | "orixa";
+export type EnergyKey = "ebo" | "ori" | "iyami" | "egbe" | "egungun" | "orixa";
+
+export const MIN_JOURNEYS = 15;
+
+export const RITUAL_GUIDANCE: Record<EnergyKey, {
+  ritual: string;
+  intro: string;
+  question: string;
+  answerYes: string;
+  answerNo: string;
+}> = {
+  ebo: {
+    ritual: "consultar um Awó",
+    intro: "O oráculo percebe que seu caminho pode se beneficiar de uma consulta com um Awó (Babalawó/Ìyánífá).",
+    question: "Você já teve a oportunidade de consultar um Awó?",
+    answerYes: "Que bom! Considere uma nova consulta quando sentir necessidade.",
+    answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que é o momento, busque a orientação de um Awó.",
+  },
+  ori: {
+    ritual: "Ìborí",
+    intro: "O oráculo percebe que seu Orí pode se beneficiar de um Ìborí (fortalecimento da cabeça).",
+    question: "Você já teve a oportunidade de fazer Ìborí?",
+    answerYes: "Que bom! Considere conversar com um Awó para fortalecer esse vínculo quando sentir necessidade.",
+    answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que é o momento, um Awó pode te orientar sobre o Ìborí.",
+  },
+  iyami: {
+    ritual: "Ìmùlẹ̀",
+    intro: "O oráculo percebe que sua relação com Ìyàmi pode se beneficiar de um Ìmùlẹ̀ (pacto com as Mães).",
+    question: "Você já teve a oportunidade de fazer Ìmùlẹ̀?",
+    answerYes: "Que bom! Considere conversar com um Awó para fortalecer seu Ìmùlẹ̀ quando sentir necessidade.",
+    answerNo: "Cada jornada tem seu tempo. Quando sentir que é o momento, um Awó pode te orientar sobre esse caminho.",
+  },
+  egbe: {
+    ritual: "assentar Ẹgbẹ́ Ọ̀run",
+    intro: "O oráculo percebe que sua conexão com Ẹgbẹ́ Ọ̀run pode se beneficiar de um assentamento.",
+    question: "Você já teve a oportunidade de assentar Ẹgbẹ́ Ọ̀run?",
+    answerYes: "Que bom! Considere conversar com um Awó para cuidar do seu Ẹgbẹ́ quando sentir necessidade.",
+    answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que é o momento, um Awó pode te orientar.",
+  },
+  egungun: {
+    ritual: "assentar Egúngún",
+    intro: "O oráculo percebe que seus ancestrais pedem atenção. Assentar Egúngún pode fortalecer esse vínculo.",
+    question: "Você já teve a oportunidade de assentar Egúngún?",
+    answerYes: "Que bom! Considere conversar com um Awó para cuidar dos seus Egúngún quando sentir necessidade.",
+    answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que é o momento, um Awó pode te orientar.",
+  },
+  orixa: {
+    ritual: "assentar seu Òrìṣà",
+    intro: "O oráculo percebe que sua devoção ao Òrìṣà pode se beneficiar de um assentamento.",
+    question: "Você já teve a oportunidade de assentar seu Òrìṣà?",
+    answerYes: "Que bom! Considere conversar com um Awó para fortalecer seu Òrìṣà quando sentir necessidade.",
+    answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que é o momento, um Awó pode te orientar.",
+  },
+};
 
 interface EnergyScore {
   key: EnergyKey;
   label: string;
-  score: number; // 0-100, higher = needs more attention
+  score: number;
   level: "equilibrado" | "atencao" | "critico";
   suggestion: string;
   color: string;
@@ -27,7 +80,7 @@ interface WeeklyData {
 }
 
 const TASK_TYPE_MAP: Record<EnergyKey, string[]> = {
-  ebo: ["ebo", "limpeza", "banho", "cuidado_espiritual", "sacudimento"],
+  ebo: ["ebo", "cuidado_espiritual"],
   ori: ["ibori", "oracao_ori", "oracao_manha", "oracao_noite", "meditacao"],
   iyami: ["iyami", "oracao_iyami", "oferenda_iyami", "imule"],
   egbe: ["egbe_orun", "oferenda_egbe"],
@@ -35,9 +88,8 @@ const TASK_TYPE_MAP: Record<EnergyKey, string[]> = {
   orixa: ["orixa", "oriki", "cantiga", "oferenda_orixa", "orunmila"],
 };
 
-// Fallback keywords for unmapped task types
 const KEYWORD_FALLBACK: Record<EnergyKey, string[]> = {
-  ebo: ["ebo", "limpeza", "banho", "sacudimento", "cuidado"],
+  ebo: ["ebo", "cuidado"],
   ori: ["ori", "oracao", "reza", "prece", "meditac", "ibori"],
   iyami: ["iyami", "mae", "mãe", "imule", "imulé"],
   egbe: ["egbe", "egbé"],
@@ -107,12 +159,12 @@ const SUGGESTIONS: Record<EnergyKey, Record<string, string>> = {
 };
 
 function calcScore(total: number, completed: number): number {
-  if (total === 0) return 50; // Neutro (sem dados = não sabemos)
+  if (total === 0) return 50;
   return Math.round(((total - completed) / total) * 100);
 }
 
 function getLevel(score: number, total: number): "equilibrado" | "atencao" | "critico" {
-  if (total === 0) return "equilibrado"; // Sem dados = não alarmar
+  if (total === 0) return "equilibrado";
   if (score > 70) return "critico";
   if (score >= 40) return "atencao";
   return "equilibrado";
@@ -126,30 +178,32 @@ export const useSpiritualAnalysis = () => {
     queryFn: async () => {
       if (!user) return null;
 
-      const { data: tasks, error } = await supabase
-        .from("journey_tasks")
-        .select("task_type, completed, created_at")
-        .eq("user_id", user.id);
+      // Fetch tasks and journey count in parallel
+      const [tasksResult, journeyCountResult] = await Promise.all([
+        supabase
+          .from("journey_tasks")
+          .select("task_type, completed, created_at")
+          .eq("user_id", user.id),
+        supabase
+          .from("user_journey")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id),
+      ]);
 
-      if (error) throw error;
-      const allTasks = tasks ?? [];
+      if (tasksResult.error) throw tasksResult.error;
+      const allTasks = tasksResult.data ?? [];
+      const totalJourneys = journeyCountResult.count ?? 0;
 
-      // Build a lookup: for each task, determine which energy it belongs to
       const taskEnergyMap = new Map<string, EnergyKey>();
-
-      // First pass: direct mapping
       for (const [key, types] of Object.entries(TASK_TYPE_MAP)) {
         for (const t of types) {
           taskEnergyMap.set(t, key as EnergyKey);
         }
       }
 
-      // Calculate scores per energy
       const energies: EnergyScore[] = (["ebo", "ori", "iyami", "egbe", "egungun", "orixa"] as EnergyKey[]).map((key) => {
         const relevant = allTasks.filter((t) => {
-          // Direct match
           if (taskEnergyMap.get(t.task_type) === key) return true;
-          // Fallback: keyword match for unmapped types
           if (!taskEnergyMap.has(t.task_type)) {
             return classifyByKeyword(t.task_type) === key;
           }
@@ -172,7 +226,6 @@ export const useSpiritualAnalysis = () => {
         };
       });
 
-      // Weekly evolution (last 4 weeks)
       const now = new Date();
       const weeklyData: WeeklyData[] = [];
 
@@ -199,13 +252,12 @@ export const useSpiritualAnalysis = () => {
         weeklyData.push(row as WeeklyData);
       }
 
-      // Most urgent energy (only consider energies with actual data)
       const energiesWithData = energies.filter((e) => e.total > 0);
       const mostUrgent = energiesWithData.length > 0
         ? [...energiesWithData].sort((a, b) => b.score - a.score)[0]
         : null;
 
-      return { energies, weeklyData, mostUrgent };
+      return { energies, weeklyData, mostUrgent, totalJourneys };
     },
     enabled: !!user,
   });
