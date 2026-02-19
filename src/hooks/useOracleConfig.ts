@@ -140,6 +140,33 @@ export const useDeleteOracleTaskTemplate = () => {
   });
 };
 
+export const useCreateOracleConfig = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (config: Omit<OracleConfig, "id">) => {
+      const { error } = await supabase
+        .from("oracle_configs" as any)
+        .insert(config as any);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["oracle_configs"] }),
+  });
+};
+
+export const useDeleteOracleConfig = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("oracle_configs" as any)
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["oracle_configs"] }),
+  });
+};
+
 export const useUpdateOracleStepText = () => {
   const qc = useQueryClient();
   return useMutation({
