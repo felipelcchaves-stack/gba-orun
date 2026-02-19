@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { MessageCircle, Trash2, Pin } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import CommunityReplyList from "./CommunityReplyList";
+import AuthorBadges from "./AuthorBadges";
 
 interface Props {
   post: PostType;
@@ -42,8 +43,9 @@ const CommunityPost = ({ post }: Props) => {
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-sm font-semibold truncate">{post.author_name}</span>
+            <AuthorBadges badges={post.author_badges} level={post.author_level} />
             <span className="text-[11px] text-muted-foreground">
               {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR })}
             </span>

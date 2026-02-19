@@ -1,7 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./useAuth";
-import { useAdmin } from "./useAdmin";
 import { useEffect } from "react";
 
 export interface CommunityPost {
@@ -13,6 +12,8 @@ export interface CommunityPost {
   author_name: string | null;
   author_avatar: string | null;
   reply_count: number;
+  author_badges: string[];
+  author_level: number;
 }
 
 export interface CommunityReply {
@@ -23,6 +24,33 @@ export interface CommunityReply {
   created_at: string;
   author_name: string | null;
   author_avatar: string | null;
+  author_badges: string[];
+  author_level: number;
+}
+
+// Shared helper: fetch badges & levels for a set of user IDs
+async function fetchAuthorMeta(userIds: string[]) {
+  const badgeMap: Record<string, string[]> = {};
+  const levelMap: Record<string, number> = {};
+  if (userIds.length === 0) return { badgeMap, levelMap };
+
+  const [{ data: achievements }, { data: stats }] = await Promise.all([
+    supabase.from("user_achievements").select("user_id, achievement_key").in("user_id", userIds),
+    supabase.from("user_stats").select("user_id, xp_total").in("user_id", userIds),
+  ]);
+
+  if (achievements) {
+    for (const a of achievements) {
+      if (!badgeMap[a.user_id]) badgeMap[a.user_id] = [];
+      badgeMap[a.user_id].push(a.achievement_key);
+    }
+  }
+  if (stats) {
+    for (const s of stats) {
+      levelMap[s.user_id] = Math.floor((s.xp_total || 0) / 100) + 1;
+    }
+  }
+  return { badgeMap, levelMap };
 }
 
 export const usePosts = () => {
@@ -54,32 +82,33 @@ export const usePosts = () => {
       const userIds = [...new Set((posts || []).map((p: any) => p.user_id))];
       let profileMap: Record<string, string> = {};
       let avatarMap: Record<string, string | null> = {};
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, display_name, avatar_url")
-          .in("user_id", userIds);
-        
-        if (profiles) {
-          for (const p of profiles) {
-            profileMap[p.user_id] = p.display_name || "Anônimo";
-            avatarMap[p.user_id] = (p as any).avatar_url || null;
-          }
+
+      const profilePromise = userIds.length > 0
+        ? supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", userIds)
+        : Promise.resolve({ data: null });
+
+      const postIds = (posts || []).map((p: any) => p.id);
+      const replyCountPromise = postIds.length > 0
+        ? supabase.from("community_replies").select("post_id").in("post_id", postIds)
+        : Promise.resolve({ data: null });
+
+      const metaPromise = fetchAuthorMeta(userIds);
+
+      const [{ data: profiles }, { data: replies }, { badgeMap, levelMap }] = await Promise.all([
+        profilePromise, replyCountPromise, metaPromise,
+      ]);
+
+      if (profiles) {
+        for (const p of profiles) {
+          profileMap[p.user_id] = p.display_name || "Anônimo";
+          avatarMap[p.user_id] = (p as any).avatar_url || null;
         }
       }
 
-      // Get reply counts
-      const postIds = (posts || []).map((p: any) => p.id);
       let replyCounts: Record<string, number> = {};
-      if (postIds.length > 0) {
-        const { data: replies } = await supabase
-          .from("community_replies")
-          .select("post_id")
-          .in("post_id", postIds);
-        if (replies) {
-          for (const r of replies) {
-            replyCounts[r.post_id] = (replyCounts[r.post_id] || 0) + 1;
-          }
+      if (replies) {
+        for (const r of replies) {
+          replyCounts[r.post_id] = (replyCounts[r.post_id] || 0) + 1;
         }
       }
 
@@ -88,6 +117,8 @@ export const usePosts = () => {
         author_name: profileMap[p.user_id] || "Anônimo",
         author_avatar: avatarMap[p.user_id] || null,
         reply_count: replyCounts[p.id] || 0,
+        author_badges: badgeMap[p.user_id] || [],
+        author_level: levelMap[p.user_id] || 1,
       }));
     },
   });
@@ -121,19 +152,23 @@ export const useReplies = (postId: string | null) => {
       if (error) throw error;
 
       const userIds = [...new Set((data || []).map((r: any) => r.user_id))];
+
+      const profilePromise = userIds.length > 0
+        ? supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", userIds)
+        : Promise.resolve({ data: null });
+
+      const metaPromise = fetchAuthorMeta(userIds);
+
+      const [{ data: profiles }, { badgeMap, levelMap }] = await Promise.all([
+        profilePromise, metaPromise,
+      ]);
+
       let profileMap: Record<string, string> = {};
       let avatarMap: Record<string, string | null> = {};
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, display_name, avatar_url")
-          .in("user_id", userIds);
-        
-        if (profiles) {
-          for (const p of profiles) {
-            profileMap[p.user_id] = p.display_name || "Anônimo";
-            avatarMap[p.user_id] = (p as any).avatar_url || null;
-          }
+      if (profiles) {
+        for (const p of profiles) {
+          profileMap[p.user_id] = p.display_name || "Anônimo";
+          avatarMap[p.user_id] = (p as any).avatar_url || null;
         }
       }
 
@@ -141,6 +176,8 @@ export const useReplies = (postId: string | null) => {
         ...r,
         author_name: profileMap[r.user_id] || "Anônimo",
         author_avatar: avatarMap[r.user_id] || null,
+        author_badges: badgeMap[r.user_id] || [],
+        author_level: levelMap[r.user_id] || 1,
       }));
     },
   });

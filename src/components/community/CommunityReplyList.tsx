@@ -7,6 +7,7 @@ import { Trash2, Send } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import AuthorBadges from "./AuthorBadges";
 
 interface Props {
   postId: string;
@@ -39,8 +40,9 @@ const CommunityReplyList = ({ postId }: Props) => {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs font-medium truncate">{r.author_name}</span>
+                <AuthorBadges badges={r.author_badges} level={r.author_level} maxBadges={2} />
                 <span className="text-[10px] text-muted-foreground">
                   {formatDistanceToNow(new Date(r.created_at), { addSuffix: true, locale: ptBR })}
                 </span>
