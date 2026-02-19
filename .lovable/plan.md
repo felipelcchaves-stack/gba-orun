@@ -1,95 +1,163 @@
 
 
-# Mapa Espiritual Expandido: 6 Eixos de Equilibrio
+# Sugestoes Inteligentes com Questionamento Interativo
 
 ## Resumo
 
-Expandir o radar de 4 para **6 eixos** com grafia ioruba correta, cobrindo as grandes areas da pratica espiritual.
+Transformar as sugestoes estaticas do Mapa Espiritual em orientacoes inteligentes e acolhedoras que:
+1. So aparecem apos **15 jornadas** (maturidade minima de dados)
+2. Sugerem o ritual correto por eixo (Ibori, Imule, assentar Egungun, etc.)
+3. Fazem uma **pergunta interativa**: "Voce ja fez esse ritual?" com respostas Sim/Nao
+4. Usam tom de **orientacao espiritual**, nunca de venda
 
-## Novo Modelo: 6 Eixos (Hexagono)
+## Tom de Comunicacao (Diretriz Principal)
+
+O aplicativo e um **orientador espiritual**, nao uma vitrine de servicos. Toda comunicacao deve:
+
+- Usar linguagem acolhedora e respeitosa ("O oraculo sugere que...", "Pode ser um bom momento para...")
+- **Nunca** usar imperativos comerciais ("Compre", "Adquira", "Contrate")
+- **Nunca** mencionar precos, pacotes ou links de compra nesse contexto
+- Apresentar as sugestoes como **caminhos possiveis**, nao obrigacoes
+- Deixar claro que o usuario tem autonomia ("Quando sentir que e o momento certo...")
+- Usar o tom do Agemo (mascote): gentil, sabio, sem pressa
+
+**Exemplos de tom correto:**
+- "O oraculo percebe que seu Ori pode se beneficiar de um Ibori. Voce ja teve a oportunidade de fazer esse ritual?"
+- "Seus ancestrais pedem atencao. Quando sentir que e o momento, considere conversar com um Awo sobre assentar Egungun."
+- "Tudo no seu tempo. O importante e voce saber que esse caminho existe."
+
+**Exemplos de tom ERRADO (nunca usar):**
+- "Voce PRECISA fazer Ibori urgentemente!"
+- "Faca Imule agora para resolver seus problemas"
+- "Clique aqui para contratar o ritual"
+
+## Logica do Questionamento
+
+Quando um eixo estiver fragil (atencao ou critico) **e** o usuario tiver 15+ jornadas, o dashboard mostra uma orientacao suave:
 
 ```text
-          Ori
-         /    \
-   Orixa      Ebo
-      |        |
-  Egungun    Iyami
-         \    /
-        Egbe Orun
+  Iyami [atencao]
+  "O oraculo percebe que sua relacao com Iyami pode se beneficiar
+   de um Imule (pacto com as Maes)."
+
+  "Voce ja teve a oportunidade de fazer Imule?"
+    [Ja fiz] -> "Que bom! Considere conversar com um Awo para
+                 fortalecer esse vinculo quando sentir necessidade."
+    [Ainda nao] -> "Tudo bem, cada jornada tem seu tempo. Quando sentir
+                    que e o momento, um Awo pode te orientar sobre esse caminho."
 ```
 
-| Eixo | Label exibido | O que mede | Task types mapeados |
-|------|---------------|-----------|---------------------|
-| **Ebo** | Ẹbọ | Limpezas e cuidados | ebo, limpeza, banho, cuidado_espiritual, sacudimento |
-| **Ori** | Orí | Cabeca e destino pessoal | ibori, oracao_ori, oracao_manha, oracao_noite, meditacao |
-| **Iyami** | Ìyàmi | Maes ancestrais | iyami, oracao_iyami, oferenda_iyami, imule |
-| **Egbe** | Ẹgbẹ́ Ọ̀run | Comunidade espiritual | egbe_orun, oferenda_egbe |
-| **Egungun** | Egúngún | Ancestrais / Eguns | egungun, egupaka, egun, oferenda_egun, oracao_egun |
-| **Orixa** | Òrìṣà | Devocao aos Orixas | orixa, oriki, cantiga, oferenda_orixa, orunmila |
+### Mapeamento por eixo (tom acolhedor)
 
-## Sugestoes por eixo (com grafia correta)
+| Eixo | Orientacao principal | Se ja fez | Se nao fez |
+|------|---------------------|-----------|------------|
+| Ebo | "...pode se beneficiar de uma consulta com um Awo" | "Considere uma nova consulta quando sentir necessidade" | "Quando sentir que e o momento, busque a orientacao de um Awo (Babalawo/Iyanifa)" |
+| Ori | "...pode se beneficiar de um Ibori" | "Considere conversar com um Awo para fortalecer seu Ibori" | "Quando sentir que e o momento, um Awo pode te orientar sobre o Ibori" |
+| Iyami | "...pode se beneficiar de um Imule" | "Considere conversar com um Awo para fortalecer seu Imule" | "Cada jornada tem seu tempo. Quando sentir que e o momento, um Awo pode te orientar" |
+| Egbe Orun | "...pode se beneficiar de assentar Egbe Orun" | "Considere conversar com um Awo para cuidar do seu Egbe" | "Quando sentir que e o momento, um Awo pode te orientar sobre assentar Egbe Orun" |
+| Egungun | "...pode se beneficiar de assentar Egungun" | "Considere conversar com um Awo para cuidar dos seus Egungun" | "Quando sentir que e o momento, um Awo pode te orientar sobre assentar Egungun" |
+| Orixa | "...pode se beneficiar de assentar seu Orixa" | "Considere conversar com um Awo para fortalecer seu Orixa" | "Quando sentir que e o momento, um Awo pode te orientar sobre assentar seu Orixa" |
 
-| Eixo | Critico | Atencao | Equilibrado |
-|------|---------|---------|-------------|
-| Ẹbọ | "Consulte um Awó (Babalawó/Ìyánífá)" | "Faca um Ẹbọ de manutencao" | "Ẹbọ em dia! " |
-| Orí | "Precisa de um Igbá Orí (assento de Orí)" | "Faca um Ìborí de fortalecimento" | "Orí fortalecido! " |
-| Ìyàmi | "Considere fazer Ìmùlẹ̀ (pacto com as Maes)" | "Faca oracoes para Ìyàmi" | "Ìyàmi em paz! " |
-| Ẹgbẹ́ Ọ̀run | "Considere fazer Ìdí Ẹgbẹ́ (1a mao de Ẹgbẹ́)" | "Faca uma oferenda ao Ẹgbẹ́ Ọ̀run" | "Ẹgbẹ́ Ọ̀run satisfeito! " |
-| Egúngún | "Cuide dos seus Egúngún com urgencia" | "Faca uma oferenda aos ancestrais" | "Egúngún em paz! " |
-| Òrìṣà | "Fortaleca sua conexao com seu Òrìṣà" | "Faca um Oríkì ou Orin" | "Devocao aos Òrìṣà em dia! " |
+## O que muda visualmente
 
-## Mudanca importante: oriki e cantiga
+**Antes de 15 jornadas:** apenas barras de progresso com sugestoes simples. Sem alarme, sem questionamento.
 
-`oríkì` e `orin` (cantiga) migram de **Orí** para **Òrìṣà**, pois sao devocoes direcionadas aos Orixas. Orí fica focado em ìborí, oracoes pessoais e meditacao.
+**Apos 15 jornadas, para eixos frageis:** aparece um card suave com:
+- Texto orientativo em tom acolhedor (nunca imperativo)
+- Pergunta gentil: "Voce ja teve a oportunidade de fazer [ritual]?"
+- Dois botoes suaves: "Ja fiz" / "Ainda nao"
+- Resposta correspondente aparece inline, sempre tranquilizadora
+- Estado local (useState) -- nao persiste, e apenas orientativo
 
 ## Arquivos alterados
 
 ```text
 src/hooks/useSpiritualAnalysis.ts
-  - Expandir EnergyKey de 4 para 6 ("egungun" | "orixa")
-  - Reorganizar TASK_TYPE_MAP (oriki/cantiga saem de ori, vao para orixa)
-  - Adicionar novos grupos: egungun e orixa
-  - Expandir KEYWORD_FALLBACK, LABELS, COLORS, SUGGESTIONS com grafia ioruba
-  - Atualizar WeeklyData interface com os 2 novos campos
+  - Remover "limpeza", "banho", "sacudimento" do TASK_TYPE_MAP e KEYWORD_FALLBACK de ebo
+  - Adicionar campo "totalJourneys" no retorno (contagem de jornadas do usuario)
+  - Exportar constante RITUAL_GUIDANCE com textos acolhedores por eixo
+  - Exportar threshold MIN_JOURNEYS = 15
 
-src/components/home/SpiritualEvolutionChart.tsx
-  - Ajustar outerRadius de 75% para 68% (6 labels precisam de mais espaco)
-  - Reduzir fontSize de 12 para 11 nos labels do radar
+src/components/home/SpiritualEnergyDashboard.tsx
+  - Importar RITUAL_GUIDANCE e MIN_JOURNEYS
+  - Adicionar estado local para respostas do usuario
+  - Para eixos frageis com 15+ jornadas: renderizar card com orientacao e botoes
+  - Tom visual suave: cores claras, sem icones de alerta agressivos, texto menor
 ```
 
 ## Detalhes tecnicos
 
-**Cores dos novos eixos:**
+**Nova constante RITUAL_GUIDANCE:**
+
 ```text
-ebo:     hsl(25, 60%, 35%)   -- marrom terra (mantem)
-ori:     hsl(45, 90%, 52%)   -- amarelo ouro (mantem)
-iyami:   hsl(300, 100%, 25%) -- roxo (mantem)
-egbe:    hsl(120, 40%, 38%)  -- verde (mantem)
-egungun: hsl(0, 0%, 40%)    -- cinza ancestral (novo)
-orixa:   hsl(210, 70%, 45%)  -- azul celeste (novo)
+ebo: {
+  ritual: "consultar um Awo",
+  intro: "O oraculo percebe que seu caminho pode se beneficiar de uma consulta com um Awo (Babalawo/Iyanifa).",
+  question: "Voce ja teve a oportunidade de consultar um Awo?",
+  answerYes: "Que bom! Considere uma nova consulta quando sentir necessidade.",
+  answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que e o momento, busque a orientacao de um Awo."
+}
+ori: {
+  ritual: "Ibori",
+  intro: "O oraculo percebe que seu Ori pode se beneficiar de um Ibori (fortalecimento da cabeca).",
+  question: "Voce ja teve a oportunidade de fazer Ibori?",
+  answerYes: "Que bom! Considere conversar com um Awo para fortalecer esse vinculo quando sentir necessidade.",
+  answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que e o momento, um Awo pode te orientar sobre o Ibori."
+}
+iyami: {
+  ritual: "Imule",
+  intro: "O oraculo percebe que sua relacao com Iyami pode se beneficiar de um Imule (pacto com as Maes).",
+  question: "Voce ja teve a oportunidade de fazer Imule?",
+  answerYes: "Que bom! Considere conversar com um Awo para fortalecer seu Imule quando sentir necessidade.",
+  answerNo: "Cada jornada tem seu tempo. Quando sentir que e o momento, um Awo pode te orientar sobre esse caminho."
+}
+egbe: {
+  ritual: "assentar Egbe Orun",
+  intro: "O oraculo percebe que sua conexao com Egbe Orun pode se beneficiar de um assentamento.",
+  question: "Voce ja teve a oportunidade de assentar Egbe Orun?",
+  answerYes: "Que bom! Considere conversar com um Awo para cuidar do seu Egbe quando sentir necessidade.",
+  answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que e o momento, um Awo pode te orientar."
+}
+egungun: {
+  ritual: "assentar Egungun",
+  intro: "O oraculo percebe que seus ancestrais pedem atencao. Assentar Egungun pode fortalecer esse vinculo.",
+  question: "Voce ja teve a oportunidade de assentar Egungun?",
+  answerYes: "Que bom! Considere conversar com um Awo para cuidar dos seus Egungun quando sentir necessidade.",
+  answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que e o momento, um Awo pode te orientar."
+}
+orixa: {
+  ritual: "assentar seu Orixa",
+  intro: "O oraculo percebe que sua devocao ao Orixa pode se beneficiar de um assentamento.",
+  question: "Voce ja teve a oportunidade de assentar seu Orixa?",
+  answerYes: "Que bom! Considere conversar com um Awo para fortalecer seu Orixa quando sentir necessidade.",
+  answerNo: "Tudo bem, cada jornada tem seu tempo. Quando sentir que e o momento, um Awo pode te orientar."
+}
 ```
 
-**TASK_TYPE_MAP completo:**
+**Query para contar jornadas:**
+
 ```text
-ebo:     ["ebo", "limpeza", "banho", "cuidado_espiritual", "sacudimento"]
-ori:     ["ibori", "oracao_ori", "oracao_manha", "oracao_noite", "meditacao"]
-iyami:   ["iyami", "oracao_iyami", "oferenda_iyami", "imule"]
-egbe:    ["egbe_orun", "oferenda_egbe"]
-egungun: ["egungun", "egupaka", "egun", "oferenda_egun", "oracao_egun"]
-orixa:   ["orixa", "oriki", "cantiga", "oferenda_orixa", "orunmila"]
+const { count } = await supabase
+  .from("user_journey")
+  .select("id", { count: "exact", head: true })
+  .eq("user_id", user.id);
 ```
 
-**KEYWORD_FALLBACK completo:**
+**TASK_TYPE_MAP atualizado (ebo limpo):**
+
 ```text
-ebo:     ["ebo", "limpeza", "banho", "sacudimento", "cuidado"]
-ori:     ["ori", "oracao", "reza", "prece", "meditac", "ibori"]
-iyami:   ["iyami", "mae", "mãe", "imule", "imulé"]
-egbe:    ["egbe", "egbé"]
-egungun: ["egun", "ancestr", "egupaka", "oriodu", "ofé"]
-orixa:   ["orixa", "orunmila", "oriki", "cantiga", "orin"]
+ebo: ["ebo", "cuidado_espiritual"]
+// Removidos: "limpeza", "banho", "sacudimento"
 ```
 
-**SpiritualEnergyDashboard.tsx** ja itera dinamicamente sobre `data.energies`, entao mostrara 6 barras automaticamente sem alteracoes.
+**KEYWORD_FALLBACK atualizado (ebo limpo):**
 
-**Nenhuma migracao necessaria**: o campo `task_type` em `oracle_task_templates` e texto livre -- o admin pode criar templates com `egungun`, `orixa`, etc. pelo painel e o mapeamento reconhece automaticamente.
+```text
+ebo: ["ebo", "cuidado"]
+// Removidos: "limpeza", "banho", "sacudimento"
+```
+
+**Visual dos cards de orientacao:**
+
+Os cards usam fundo suave (bg do nivel correspondente com opacidade baixa), sem bordas agressivas. Os botoes "Ja fiz" e "Ainda nao" sao discretos (outline style), nao chamativos. A resposta aparece com transicao suave ao clicar. Nenhum link de compra, nenhum cadeado, nenhum CTA comercial aparece nesse contexto.
 
