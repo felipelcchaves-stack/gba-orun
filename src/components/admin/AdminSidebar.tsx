@@ -1,8 +1,8 @@
-import { LayoutDashboard, Users, BookOpen, Settings, FileJson, LogOut, Link2, ArrowLeft, MessageCircle, CreditCard, Tag, UtensilsCrossed, Star, GitBranch, FolderOpen } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, Settings, FileJson, LogOut, Link2, ArrowLeft, MessageCircle, CreditCard, Tag, UtensilsCrossed, Star, GitBranch, FolderOpen, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
-export type AdminSection = "dashboard" | "users" | "plans" | "categories" | "rituals" | "offerings" | "flows" | "links" | "community" | "promotions" | "guidance" | "reviews" | "settings" | "import";
+export type AdminSection = "dashboard" | "users" | "plans" | "categories" | "rituals" | "offerings" | "flows" | "ire_ibi" | "links" | "community" | "promotions" | "guidance" | "reviews" | "settings" | "import";
 
 interface AdminSidebarProps {
   active: AdminSection;
@@ -18,6 +18,7 @@ const NAV_ITEMS: { key: AdminSection; label: string; icon: React.ElementType }[]
   { key: "rituals", label: "Rituais e Orações", icon: BookOpen },
   { key: "offerings", label: "Oferendas", icon: UtensilsCrossed },
   { key: "flows", label: "Fluxos do Oráculo", icon: GitBranch },
+  { key: "ire_ibi", label: "Tipos Iré / Ibi", icon: ArrowUpDown },
   { key: "links", label: "Links de Ajuda", icon: Link2 },
   { key: "community", label: "Comunidade", icon: MessageCircle },
   { key: "promotions", label: "Promoções", icon: Tag },
