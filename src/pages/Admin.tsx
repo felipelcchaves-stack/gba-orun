@@ -20,6 +20,7 @@ import AdminReviews from "@/components/admin/AdminReviews";
 import AdminFlows from "@/components/admin/AdminFlows";
 import AdminCategories from "@/components/admin/AdminCategories";
 import AdminIreIbiTypes from "@/components/admin/AdminIreIbiTypes";
+import AdminOracleConfigs from "@/components/admin/AdminOracleConfigs";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -204,6 +205,7 @@ const AdminPage = () => {
         )}
 
         {activeSection === "offerings" && <AdminOfferings />}
+        {activeSection === "oracle_configs" && <AdminOracleConfigs />}
         {activeSection === "ire_ibi" && <AdminIreIbiTypes />}
         {activeSection === "flows" && <AdminFlows />}
         {activeSection === "links" && <AdminRitualLinks />}
