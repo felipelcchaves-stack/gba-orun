@@ -1,21 +1,34 @@
 
 
-# Separar Usuarios Cortesia dos Assinantes Reais
+# Corrigir: Admin nao consegue salvar "Cortesia"
 
-## Problema
+## Problema encontrado
 
-Usuarios criados manualmente e marcados como "premium/ativo" estao sendo contados na previsao de receita (R$ 59,80), mesmo sem terem passado pelo checkout da Guru.
+A coluna `is_courtesy` existe no banco e o codigo frontend esta correto, mas o campo nunca e salvo porque a tabela `profiles` **nao tem politica RLS permitindo que admins facam UPDATE**. A unica politica de UPDATE exige `auth.uid() = user_id`, entao quando o admin tenta atualizar o perfil de outro usuario, a operacao falha silenciosamente.
 
-## O que sera feito
+Confirmacao: os dois usuarios ativos no banco estao com `is_courtesy = false` mesmo apos tentativa de edicao.
 
-1. **Banco de dados**: Adicionar coluna `is_courtesy` (boolean, default false) na tabela `profiles`
-2. **RPCs**: Atualizar `admin_list_profiles` (incluir `is_courtesy` no SELECT) e `admin_get_stats` (excluir cortesia de `active_subscribers` e `overdue_users`)
-3. **Hook** (`src/hooks/useAdminData.ts`): Adicionar `is_courtesy` ao tipo `AdminProfile`
-4. **Dashboard** (`src/components/admin/AdminDashboard.tsx`): Filtrar cortesia fora da previsao de receita e adicionar card KPI "Cortesia"
-5. **Gestao de Usuarios** (`src/components/admin/AdminUsers.tsx`): Adicionar toggle "Cortesia" no formulario e badge na listagem
+## Solucao
+
+Adicionar uma politica RLS na tabela `profiles` permitindo que admins facao UPDATE em qualquer perfil.
+
+## Alteracoes
+
+### 1. Migracao SQL
+Criar uma nova politica RLS na tabela `profiles`:
+
+```text
+CREATE POLICY "Admins can update any profile"
+  ON public.profiles FOR UPDATE
+  USING (has_role(auth.uid(), 'admin'::app_role));
+```
+
+Isso permitira que o admin salve `is_courtesy`, `subscription_status` e qualquer outro campo ao editar usuarios no painel.
+
+### 2. Notificar PostgREST
+Executar `NOTIFY pgrst, 'reload schema'` para garantir que o cache seja atualizado.
 
 ## Resumo
 
-- 1 migracao SQL (nova coluna + atualizacao das 2 RPCs)
-- 3 arquivos de codigo editados
-
+- 1 migracao SQL (1 politica RLS)
+- 0 arquivos de codigo alterados (o frontend ja esta correto)
