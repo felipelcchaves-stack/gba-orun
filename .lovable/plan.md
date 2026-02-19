@@ -1,97 +1,102 @@
 
 
-# Dashboard Profissional com Graficos de Evolucao
-
-## Objetivo
-
-Transformar o dashboard admin de um painel apenas com cards de KPI e graficos de pizza em um painel profissional com graficos de linha mostrando a evolucao temporal de assinantes, cancelamentos, inadimplencia e cortesia.
-
-## O que muda
-
-### 1. Nova funcao SQL: `admin_get_subscription_history`
-
-Uma funcao no banco que agrupa os perfis por mes e retorna uma serie temporal com:
-- `month` (data no formato YYYY-MM-01)
-- `new_users` (novos cadastros no mes)
-- `active_subscribers` (assinantes ativos pagantes no mes)
-- `courtesy_users` (usuarios cortesia no mes)
-- `overdue_users` (inadimplentes no mes)
-- `cancelled_users` (cancelados no mes)
-- `revenue_estimate` (receita estimada: ativos x preco do plano)
-
-A funcao usa as colunas `created_at`, `subscription_status`, `subscription_started_at`, `subscription_expires_at` e `is_courtesy` que ja existem na tabela `profiles`, cruzando com `subscription_plans` para calcular receita.
-
-### 2. Novo hook: `useSubscriptionHistory`
-
-Hook React Query que chama a funcao RPC acima e retorna os dados formatados para os graficos.
-
-### 3. Reorganizacao do AdminDashboard
-
-O dashboard sera reorganizado em secoes visuais claras:
-
-**Secao 1 - KPI Cards (mantida, sem alteracoes)**
-Os cards ja existentes continuam no topo.
-
-**Secao 2 - Grafico de Linha: Evolucao de Assinantes**
-- Eixo X: meses
-- Linhas: Assinantes Ativos (verde), Cortesia (roxo), Inadimplentes (vermelho), Cancelados (amarelo)
-- Tooltip com valores detalhados
-
-**Secao 3 - Grafico de Area: Previsao de Receita Mensal**
-- Eixo X: meses
-- Area preenchida mostrando a evolucao da receita estimada
-- Cor dourada (accent)
-
-**Secao 4 - Grafico de Linha: Crescimento de Usuarios**
-- Eixo X: meses
-- Linha mostrando novos cadastros por mes
-
-**Secao 5 - Graficos existentes (mantidos)**
-- Distribuicao por Genero (pizza)
-- Distribuicao por Religiao (pizza)
-- Status em Ifa (pizza)
-- Lacunas de Conhecimento (barras)
-- Tabela de Ultimos Usuarios
-
-### 4. Arquivos alterados
-
-```text
-Novo:   supabase/migrations/XXXX_subscription_history_fn.sql  (funcao RPC)
-Editar: src/hooks/useAdminData.ts                              (novo hook)
-Editar: src/components/admin/AdminDashboard.tsx                 (novos graficos)
-```
-
-## Detalhes Tecnicos
-
-### Funcao SQL
-
-A funcao gera uma serie de meses (do primeiro cadastro ate hoje) e para cada mes faz contagem dos perfis usando os campos existentes. Logica:
-
-- **new_users**: `profiles.created_at` dentro do mes
-- **active_subscribers**: `subscription_status = 'active' AND NOT is_courtesy` com `subscription_started_at <= fim_do_mes`
-- **courtesy_users**: `is_courtesy = true` com `created_at <= fim_do_mes`
-- **overdue_users**: `subscription_status = 'overdue'` no periodo
-- **cancelled_users**: `subscription_status = 'cancelled'` no periodo
-- **revenue_estimate**: soma dos precos dos planos dos ativos pagantes
-
-A funcao e protegida pela mesma verificacao `has_role(auth.uid(), 'admin')`.
-
-### Componente de Graficos
-
-Usa Recharts (ja instalado) com `LineChart`, `AreaChart`, `Line`, `Area`, `XAxis`, `YAxis`, `CartesianGrid`, `Tooltip`, `Legend`.
-
-Cores das linhas:
-- Ativos Pagantes: verde (#22c55e)
-- Cortesia: roxo (#8b5cf6)
-- Inadimplentes: vermelho (#ef4444)
-- Cancelados: amarelo (#eab308)
-- Receita: dourado (#FFD700)
-- Novos Usuarios: azul (#3b82f6)
+# Gamificacao Avancada + Conquistas na Comunidade
 
 ## Resumo
 
-- 1 migracao SQL (funcao RPC para serie temporal)
-- 1 hook novo no useAdminData
-- 1 arquivo editado (AdminDashboard com 3 novos graficos de linha/area)
-- 0 novas dependencias (Recharts ja instalado)
+Expandir o sistema de conquistas com mais recompensas e niveis intermediarios para manter o usuario engajado, e exibir as conquistas (badges) ao lado do nome de cada usuario nos posts e respostas da comunidade, junto com o nivel (XP).
+
+## O que muda
+
+### 1. Banco de Dados: Tornar conquistas visiveis para todos
+
+Hoje a tabela `user_achievements` so permite SELECT pelo proprio usuario (`auth.uid() = user_id`). Para exibir badges na comunidade, e necessario que usuarios autenticados possam ler conquistas de outros usuarios.
+
+**Migracao SQL:**
+- Adicionar politica RLS de SELECT em `user_achievements` para usuarios autenticados
+
+### 2. Mais Conquistas (Retencao)
+
+Expandir a lista de 7 para ~15 conquistas, com marcos intermediarios que mantem o usuario sempre proximo da proxima recompensa:
+
+- **Primeiros passos**: Primeira consulta (ja existe), Primeiro ritual lido, Primeiro post na comunidade
+- **Marcos de Obi**: 5, 15, 50, 100 consultas
+- **Marcos de Leitura**: 3, 10, 25, 50 rituais lidos
+- **Marcos de Streak**: 3, 7, 14, 30 dias seguidos
+- **Marcos de XP**: 50, 100, 250, 500 XP
+- **Marcos de Comunidade**: 1 post, 5 posts, 10 respostas (requer contagem -- sera feita client-side via contagem dos posts do usuario)
+
+Para os marcos de comunidade, os contadores serao obtidos consultando `community_posts` e `community_replies` do usuario no momento do check.
+
+### 3. Hook de Conquistas para outros usuarios
+
+Criar um hook `useUserBadges(userId)` que busca as conquistas de um usuario especifico para exibir na comunidade.
+
+Para performance, a comunidade ja busca os user_ids dos autores. Faremos uma unica query buscando as conquistas de todos os autores dos posts visiveis, e criaremos um mapa `userId -> badges[]`.
+
+### 4. Exibicao na Comunidade
+
+**CommunityPost.tsx:**
+- Ao lado do nome do autor, exibir os icones das conquistas desbloqueadas (max 3 mais recentes) como mini-badges
+- Exibir o nivel do usuario (calculado: `Math.floor(xp / 100) + 1`) como um badge colorido ao lado do nome
+
+**CommunityReplyList.tsx:**
+- Mesma logica: mini-badges ao lado do nome nas respostas
+
+O layout sera: `[Avatar] [Nome] [Nivel badge] [conquista1] [conquista2] [conquista3] | tempo`
+
+### 5. Arquivos Alterados
+
+```text
+Migracao:  supabase/migrations/XXXX_achievements_public_read.sql (1 politica RLS)
+Editar:    src/hooks/useAchievements.ts           (mais conquistas + hook useUserBadges)
+Editar:    src/hooks/useCommunity.ts               (buscar conquistas e stats dos autores)
+Editar:    src/components/community/CommunityPost.tsx  (exibir badges e nivel)
+Editar:    src/components/community/CommunityReplyList.tsx (exibir badges e nivel)
+```
+
+### 6. Detalhes Tecnicos
+
+**Politica RLS:**
+```text
+CREATE POLICY "Authenticated users can read achievements"
+  ON public.user_achievements FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+```
+
+**Busca de conquistas na comunidade:**
+O hook `usePosts` ja coleta os `userIds` dos autores. Adicionaremos uma query extra:
+```text
+SELECT user_id, achievement_key FROM user_achievements WHERE user_id IN (...)
+```
+E tambem buscaremos o `xp_total` de `user_stats` para calcular o nivel:
+```text
+SELECT user_id, xp_total FROM user_stats WHERE user_id IN (...)
+```
+
+Isso adiciona os campos `author_badges` (string[]) e `author_level` (number) ao tipo `CommunityPost` e `CommunityReply`.
+
+**Novas conquistas (lista completa):**
+| Key | Nome | Descricao | Icone | Condicao |
+|-----|------|-----------|-------|----------|
+| ase | Ase! | Primeira consulta ao Obi | spark | oracle >= 1 |
+| leitor | Leitor | Primeiro ritual lido | book | rituals >= 1 |
+| ire | Ire | 5 consultas ao Obi | star | oracle >= 5 |
+| estudioso | Estudioso | 3 rituais lidos | books | rituals >= 3 |
+| constante | Constante | 3 dias seguidos | fire | streak >= 3 |
+| ogbon | Ogbon | Leu 10 rituais | scroll | rituals >= 10 |
+| devoto | Devoto | 7 dias seguidos | calendar | streak >= 7 |
+| obi_mestre | Obi Mestre | 15 consultas | eye | oracle >= 15 |
+| alafia | Alafia | 14 dias seguidos | sun | streak >= 14 |
+| sabio | Sabio | 25 rituais lidos | brain | rituals >= 25 |
+| awo | Awo | 50 consultas | crystal | oracle >= 50 |
+| iwa_pele | Iwa Pele | 30 dias de pratica | crown | streak >= 30 |
+| mestre | Mestre | 50 rituais lidos | trophy | rituals >= 50 |
+| babalawo | Babalawo | 100 XP | medal | xp >= 100 |
+| iluminado | Iluminado | 250 XP | sparkles | xp >= 250 |
+| ancestral | Ancestral | 500 XP | diamond | xp >= 500 |
+
+**Exibicao visual:** Os badges aparecerao como pequenos emojis ao lado do nome. O nivel aparecera como um badge colorido compacto (ex: "Nv.3").
+
+**Politica de stats para leitura publica:** Tambem sera necessario adicionar uma politica SELECT em `user_stats` para usuarios autenticados, pois hoje so o proprio usuario pode ler seus stats.
 
