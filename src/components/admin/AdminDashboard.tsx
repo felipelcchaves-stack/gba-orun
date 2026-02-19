@@ -61,11 +61,19 @@ const AdminDashboard = () => {
     return total;
   })();
 
+  const hasAnySubscriber = profiles?.some(p =>
+    p.subscription_status === "active" ||
+    p.subscription_status === "overdue" ||
+    p.subscription_status === "cancelled"
+  ) ?? false;
+
   const KPI_CARDS = [
     { label: "Total de Usuários", value: stats?.total_users ?? 0, icon: Users, color: "text-primary" },
     { label: "Assinantes Ativos", value: stats?.active_subscribers ?? 0, icon: UserCheck, color: "text-green-600" },
-    { label: "Inadimplentes", value: stats?.overdue_users ?? 0, icon: AlertTriangle, color: "text-destructive" },
-    { label: "Previsão Receita/Mês", value: `R$ ${revenueForecast.toFixed(2)}`, icon: DollarSign, color: "text-accent" },
+    ...(hasAnySubscriber ? [
+      { label: "Inadimplentes", value: stats?.overdue_users ?? 0, icon: AlertTriangle, color: "text-destructive" },
+      { label: "Previsão Receita/Mês", value: `R$ ${revenueForecast.toFixed(2)}`, icon: DollarSign, color: "text-accent" },
+    ] : []),
     { label: "Premium (Pagantes)", value: stats?.premium_users ?? 0, icon: Crown, color: "text-accent" },
     { label: "Gratuitos", value: stats?.free_users ?? 0, icon: UserX, color: "text-muted-foreground" },
     { label: "Consultas Hoje", value: stats?.consultations_today ?? 0, icon: CalendarDays, color: "text-primary" },

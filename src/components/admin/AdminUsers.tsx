@@ -164,7 +164,9 @@ const AdminUsers = () => {
   // ─── TOGGLE PREMIUM ───
   const togglePremium = async (userId: string, currentPremium: boolean) => {
     const newPremium = !currentPremium;
-    const newStatus = newPremium ? "active" : "overdue";
+    const profile = profiles?.find(p => p.user_id === userId);
+    const hadSubscription = profile?.subscription_plan_id || profile?.guru_subscription_id;
+    const newStatus = newPremium ? "active" : (hadSubscription ? "overdue" : "free");
     const { error } = await supabase
       .from("profiles")
       .update({ is_premium: newPremium, subscription_status: newStatus } as any)

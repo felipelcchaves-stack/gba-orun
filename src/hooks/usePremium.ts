@@ -11,13 +11,19 @@ export const usePremium = () => {
       if (!user) return { isPremium: false, status: "free" as string, expiresAt: null as string | null };
       const { data } = await supabase
         .from("profiles")
-        .select("is_premium, subscription_status, subscription_expires_at")
+        .select("is_premium, subscription_status, subscription_expires_at, subscription_plan_id, guru_subscription_id")
         .eq("user_id", user.id)
         .maybeSingle();
       
       let isPremium = data?.is_premium ?? false;
       const expiresAt = (data as any)?.subscription_expires_at as string | null;
-      const status = (data as any)?.subscription_status ?? "free";
+      const hadSubscription = !!(data as any)?.subscription_plan_id || !!(data as any)?.guru_subscription_id;
+      let status = (data as any)?.subscription_status ?? "free";
+      
+      // Protect against false overdue: if user never had a subscription, treat as free
+      if (status === "overdue" && !hadSubscription) {
+        status = "free";
+      }
       
       // Double-check: if expires_at is in the past, treat as not premium
       if (isPremium && expiresAt && new Date(expiresAt) < new Date()) {
