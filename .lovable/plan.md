@@ -1,46 +1,55 @@
 
 
-# Cadastro Completo das Caidas do Obi (CRUD)
+# Separar Usuarios Cortesia dos Assinantes Reais
 
-## O que sera feito
+## Problema
 
-Criar uma tela completa no painel admin para gerenciar as caidas do Obi (tabela `oracle_configs`), permitindo visualizar, editar, criar novas e excluir. As 5 caidas existentes (Apotaku, Okaran, Ejikorere, Etaiwa, Alafia) serao preservadas com os nomes que voce ja alterou.
+Usuarios criados manualmente e marcados como "premium/ativo" estao sendo contados na previsao de receita (R$ 59,80), mesmo sem terem passado pelo checkout da Guru. A previsao de receita so deveria considerar assinantes reais (que pagam).
+
+## Solucao
+
+Adicionar um campo `is_courtesy` (booleano) na tabela `profiles`. Usuarios marcados como cortesia terao acesso premium, mas serao excluidos dos calculos financeiros (previsao de receita, contagem de assinantes ativos, inadimplentes).
 
 ## Alteracoes
 
-### 1. Hook: `src/hooks/useOracleConfig.ts`
-Adicionar duas mutations que estao faltando:
-- `useCreateOracleConfig` -- insere um novo registro na tabela `oracle_configs`
-- `useDeleteOracleConfig` -- deleta um registro pelo `id`
+### 1. Banco de dados
+Nova coluna na tabela `profiles`:
+- `is_courtesy` (boolean, default false) -- indica que o usuario recebeu acesso manualmente, sem pagamento
 
-### 2. Novo componente: `src/components/admin/AdminOracleConfigs.tsx`
-Tela CRUD completa com:
-- **Lista** de todas as caidas, ordenadas por `display_order`, mostrando nome, result_key, cor e ordem
-- **Botao "Nova Caida"** que abre formulario de criacao
-- **Botao de Editar** em cada item, abrindo formulario preenchido
-- **Botao de Excluir** em cada item, com confirmacao
+### 2. Dashboard Admin (`src/components/admin/AdminDashboard.tsx`)
+- Filtrar usuarios `is_courtesy = true` fora do calculo de `revenueForecast`
+- Nao contar cortesia em "Assinantes Ativos" nem "Inadimplentes"
+- Adicionar novo card KPI: "Cortesia" mostrando quantos usuarios tem acesso gratuito concedido
 
-O formulario (inline ou modal) tera os campos:
-- `name` (ex: "Alafia")
-- `result_key` (ex: "alafia") -- identificador tecnico
-- `meaning` (ex: "Todos abertos -- PAZ")
-- `description_ire` e `description_ibi` -- textos para cada cenario
-- `default_ire_ibi` -- select com "ire" ou "ibi"
-- `color_type` -- select com opcoes (success, warning, danger, accent)
-- `guidance_message` -- orientacao do mascote
-- `guidance_audio_url` -- URL de audio (opcional)
-- `display_order` -- numero de ordenacao
+### 3. Gestao de Usuarios (`src/components/admin/AdminUsers.tsx`)
+- Adicionar checkbox ou toggle "Cortesia" no formulario de edicao de usuario
+- Mostrar badge "Cortesia" na listagem quando `is_courtesy = true`
+- Adicionar filtro "Cortesia" na lista de status
 
-### 3. Sidebar: `src/components/admin/AdminSidebar.tsx`
-Adicionar item "Caidas do Obi" no menu, com icone `Dices` ou `Sparkles`, usando uma nova section key `oracle_configs`.
+### 4. Hook de dados (`src/hooks/useAdminData.ts`)
+- Incluir `is_courtesy` no tipo `AdminProfile`
 
-### 4. Pagina Admin: `src/pages/Admin.tsx`
-Adicionar renderizacao de `AdminOracleConfigs` quando `activeSection === "oracle_configs"`.
+### 5. Funcao RPC `admin_list_profiles`
+- Incluir `p.is_courtesy` no SELECT
+
+### 6. Funcao RPC `admin_get_stats`
+- Excluir usuarios com `is_courtesy = true` das contagens de `active_subscribers` e `overdue_users`
 
 ## Detalhes tecnicos
 
-- Nenhuma mudanca no banco de dados -- a tabela `oracle_configs` ja tem todos os campos necessarios e RLS configurado para admins
-- O tipo `AdminSection` sera estendido com `"oracle_configs"`
-- Os dados existentes serao preservados intactos
-- 4 arquivos modificados/criados
+### Logica de receita atualizada (pseudocodigo)
+```text
+// Antes: contava todos com status "active"
+// Depois: exclui cortesia
+for (const p of profiles) {
+  if (p.subscription_status === "active" 
+      && p.subscription_plan_id 
+      && !p.is_courtesy) {      // <-- novo filtro
+    total += plan.price;
+  }
+}
+```
 
+### Resumo de arquivos
+- 1 migracao SQL (nova coluna + atualizacao das RPCs)
+- 3 arquivos editados: AdminDashboard.tsx, AdminUsers.tsx, useAdminData.ts
