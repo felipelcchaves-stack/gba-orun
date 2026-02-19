@@ -7,8 +7,8 @@ interface Props {
   maxBadges?: number;
 }
 
-const AuthorBadges = ({ badges, level, maxBadges = 3 }: Props) => {
-  const visibleBadges = badges
+const AuthorBadges = ({ badges = [], level = 1, maxBadges = 3 }: Props) => {
+  const visibleBadges = (badges || [])
     .map((key) => ACHIEVEMENT_MAP[key])
     .filter(Boolean)
     .slice(-maxBadges);
