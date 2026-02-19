@@ -15,7 +15,9 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { Lock, Unlock, UserPlus, Upload, MoreHorizontal, Pencil, Shield, ShieldOff, Trash2, ChevronDown, Smartphone } from "lucide-react";
+import { Lock, Unlock, UserPlus, Upload, MoreHorizontal, Pencil, Shield, ShieldOff, Trash2, ChevronDown, Smartphone, Gift } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -80,6 +82,7 @@ const AdminUsers = () => {
   const [editCareDay, setEditCareDay] = useState("");
   const [editSubStatus, setEditSubStatus] = useState("");
   const [editExpires, setEditExpires] = useState("");
+  const [editCourtesy, setEditCourtesy] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Delete confirmation
@@ -227,6 +230,7 @@ const AdminUsers = () => {
     setEditCareDay(p.care_day !== null && p.care_day !== undefined ? String(p.care_day) : "");
     setEditSubStatus(p.subscription_status || "free");
     setEditExpires(p.subscription_expires_at ? p.subscription_expires_at.split("T")[0] : "");
+    setEditCourtesy(p.is_courtesy ?? false);
   };
 
   const handleSaveEdit = async () => {
@@ -241,6 +245,7 @@ const AdminUsers = () => {
         subscription_status: editSubStatus,
         subscription_expires_at: editExpires || null,
         is_premium: editSubStatus === "active",
+        is_courtesy: editCourtesy,
       };
       const { error } = await supabase
         .from("profiles")
@@ -389,9 +394,12 @@ const AdminUsers = () => {
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.display_name || "—"}</TableCell>
                     <TableCell>{p.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={sub === "free" ? "secondary" : "default"} className={cfg.className}>{cfg.label}</Badge>
-                    </TableCell>
+                     <TableCell>
+                       <div className="flex items-center gap-1">
+                         <Badge variant={sub === "free" ? "secondary" : "default"} className={cfg.className}>{cfg.label}</Badge>
+                         {p.is_courtesy && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500 text-purple-600"><Gift className="h-3 w-3 mr-0.5 inline" />Cortesia</Badge>}
+                       </div>
+                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {p.subscription_expires_at ? format(new Date(p.subscription_expires_at), "dd/MM/yyyy", { locale: ptBR }) : "—"}
                     </TableCell>
@@ -486,6 +494,10 @@ const AdminUsers = () => {
             <div>
               <label className="text-sm font-medium text-foreground">Expira em</label>
               <Input type="date" value={editExpires} onChange={e => setEditExpires(e.target.value)} />
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <Switch id="courtesy-switch" checked={editCourtesy} onCheckedChange={setEditCourtesy} />
+              <Label htmlFor="courtesy-switch" className="text-sm">Cortesia (não conta na receita)</Label>
             </div>
           </div>
           <DialogFooter>

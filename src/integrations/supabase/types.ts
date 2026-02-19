@@ -633,6 +633,7 @@ export type Database = {
           guru_subscription_id: string | null
           id: string
           ifa_status: string | null
+          is_courtesy: boolean
           is_premium: boolean
           onboarding_completed: boolean
           religion: string | null
@@ -655,6 +656,7 @@ export type Database = {
           guru_subscription_id?: string | null
           id?: string
           ifa_status?: string | null
+          is_courtesy?: boolean
           is_premium?: boolean
           onboarding_completed?: boolean
           religion?: string | null
@@ -677,6 +679,7 @@ export type Database = {
           guru_subscription_id?: string | null
           id?: string
           ifa_status?: string | null
+          is_courtesy?: boolean
           is_premium?: boolean
           onboarding_completed?: boolean
           religion?: string | null
@@ -1082,6 +1085,7 @@ export type Database = {
           guru_subscription_id: string
           id: string
           ifa_status: string
+          is_courtesy: boolean
           is_premium: boolean
           knows_ebo: boolean
           knows_egbe_orun: boolean

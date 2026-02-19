@@ -27,6 +27,7 @@ export interface AdminProfile {
   device_id: string | null;
   device_changed_at: string | null;
   ifa_status: string | null;
+  is_courtesy: boolean;
 }
 
 export interface KnowledgeStats {

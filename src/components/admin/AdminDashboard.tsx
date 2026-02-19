@@ -1,4 +1,4 @@
-import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare, UserCheck, AlertTriangle, DollarSign, MousePointerClick, GraduationCap } from "lucide-react";
+import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare, UserCheck, AlertTriangle, DollarSign, MousePointerClick, GraduationCap, Gift } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -47,19 +47,21 @@ const AdminDashboard = () => {
     let total = 0;
     const planMap = new Map(plans.map(p => [p.id, p]));
     for (const p of profiles) {
-      if (p.subscription_status === "active" && p.subscription_plan_id) {
+      if (p.subscription_status === "active" && p.subscription_plan_id && !p.is_courtesy) {
         const plan = planMap.get(p.subscription_plan_id);
         if (plan) total += Number(plan.price);
       }
     }
     // If active subscribers exist but no plan linked, estimate with cheapest plan
-    const activeWithoutPlan = (profiles || []).filter(p => p.subscription_status === "active" && !p.subscription_plan_id).length;
+    const activeWithoutPlan = (profiles || []).filter(p => p.subscription_status === "active" && !p.subscription_plan_id && !p.is_courtesy).length;
     if (activeWithoutPlan > 0 && plans.length > 0) {
       const cheapest = Math.min(...plans.filter(p => p.is_active).map(p => Number(p.price)));
       total += activeWithoutPlan * cheapest;
     }
     return total;
   })();
+
+  const courtesyCount = profiles?.filter(p => p.is_courtesy).length ?? 0;
 
   const hasAnySubscriber = profiles?.some(p =>
     p.subscription_status === "active" ||
@@ -75,7 +77,7 @@ const AdminDashboard = () => {
       { label: "Previsão Receita/Mês", value: `R$ ${revenueForecast.toFixed(2)}`, icon: DollarSign, color: "text-accent" },
     ] : []),
     { label: "Premium (Pagantes)", value: stats?.premium_users ?? 0, icon: Crown, color: "text-accent" },
-    { label: "Gratuitos", value: stats?.free_users ?? 0, icon: UserX, color: "text-muted-foreground" },
+    { label: "Cortesia", value: courtesyCount, icon: Gift, color: "text-purple-600" },
     { label: "Consultas Hoje", value: stats?.consultations_today ?? 0, icon: CalendarDays, color: "text-primary" },
     { label: "Rituais Cadastrados", value: stats?.total_rituals ?? 0, icon: BookOpen, color: "text-primary" },
     { label: "Cliques Promoções", value: stats?.total_promo_clicks ?? 0, icon: MousePointerClick, color: "text-accent" },
