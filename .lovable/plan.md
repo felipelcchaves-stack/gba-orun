@@ -1,68 +1,77 @@
 
-# Corrigir: Cascata de Obi usa resultado errado para determinar Ire/Ibi
+# Corrigir: Barra de Progresso do Oraculo mostra total errado
 
 ## Problema
 
-O fluxo no banco de dados esta 100% correto -- as 3 etapas de Obi estao conectadas conforme a logica tradicional. O bug esta no codigo.
+A barra de progresso usa `nodes.length` (total de TODOS os nos do fluxo) como denominador. Num fluxo com ramificacoes (como a cascata Etaiwa com 3 Obis), o total inclui nos que o usuario nunca vai visitar naquele caminho. Resultado: a barra nunca chega perto de 100% e o texto "Passo X de Y" mostra um total inflado.
 
-No componente `IreIbiStep` (arquivo `FlowStepRenderer.tsx`, linha 495), o sistema usa `Object.values(answers).find(...)` para localizar qual resultado de Obi determina se e Ire ou Ibi. O `.find()` retorna o **primeiro** resultado encontrado.
-
-Numa cascata de Etaiwa, as respostas acumuladas ficam assim:
-- 1o Obi: "etagun" (Etaiwa)
-- 2o Obi: "etagun" (Etaiwa de novo)
-- 3o Obi: "okaran" (caida negativa = Ibi)
-
-O `.find()` retorna "etagun" (1o resultado), que tem `default_ire_ibi: "ire"`. Mas o resultado decisivo e "okaran" (o ultimo), que deveria resultar em Ibi. Assim o sistema mostra os tipos de Ire quando deveria mostrar Ibi.
+Exemplo: fluxo com 10 nos, caminho do usuario passa por 5. A barra mostra "Passo 2 de 10" em vez de "Passo 2 de 5".
 
 ## Solucao
 
-Trocar `.find()` por `.findLast()` (ou equivalente) para pegar o **ultimo** resultado de Obi -- que e sempre o lancamento decisivo na cascata.
+Calcular o total de passos dinamicamente: passos ja visitados + estimativa de passos restantes ate o diagnostico. A cada transicao, o sistema percorre as edges a partir do no atual seguindo a saida "default" ate encontrar um no de diagnostico (ou ficar sem saidas), contando quantos passos faltam.
+
+Formula: `totalSteps = history.length + 1 + stepsRemaining`
+
+Isso garante que:
+- O total se adapta ao caminho real do usuario
+- Se cair Etaiwa e o caminho ficar mais longo, o total aumenta proporcionalmente
+- A barra chega a ~100% ao atingir o diagnostico
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/components/oracle/FlowStepRenderer.tsx` (linha 495)
+### Arquivo: `src/components/oracle/DynamicFlowRunner.tsx`
 
-Alterar de:
-
-```text
-const obiAnswer = Object.values(answers).find(a => allResultKeys.includes(a));
-```
-
-Para:
+Substituir o calculo atual (linhas 45-46):
 
 ```text
-const obiValues = Object.values(answers).filter(a => allResultKeys.includes(a));
-const obiAnswer = obiValues.length > 0 ? obiValues[obiValues.length - 1] : undefined;
+const totalNodes = nodes?.length || 1;
+const visitedCount = history.length + 1;
 ```
 
-Isso garante que em qualquer cascata (1, 2 ou 3 lancamentos), o resultado usado para determinar Ire/Ibi sera sempre o do ultimo Obi jogado -- que e exatamente o lancamento decisivo.
-
-### Resumo das conexoes (confirmadas como corretas):
+Por uma funcao que estima passos restantes:
 
 ```text
-1o Obi (Consulta com Obi)
-  alafia  -> Ire/Ibi (positivo)
-  ejife   -> Ire/Ibi (positivo)
-  etagun  -> 2o Obi  (joga novamente)
-  okaran  -> Ire/Ibi (negativo)
-  oyekun  -> Ire/Ibi (negativo)
+const estimateRemainingSteps = useMemo(() => {
+  if (!nodes || !edges || !currentNodeId) return 0;
+  let count = 0;
+  let nodeId: string | null = currentNodeId;
+  const visited = new Set<string>();
+  while (nodeId && count < 20) {
+    if (visited.has(nodeId)) break;
+    visited.add(nodeId);
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node || node.node_type === "diagnosis") break;
+    // Follow the first available edge (default handle preferred)
+    const defaultEdge = edges.find(
+      e => e.source_node_id === nodeId && (e.source_handle === "default" || e.source_handle === "")
+    );
+    const anyEdge = defaultEdge || edges.find(e => e.source_node_id === nodeId);
+    if (anyEdge) {
+      nodeId = anyEdge.target_node_id;
+      count++;
+    } else {
+      break;
+    }
+  }
+  return count;
+}, [nodes, edges, currentNodeId]);
 
-2o Obi (Etaiwa! Ou seja, precisamos assuntar)
-  alafia  -> Ire/Ibi (positivo = ire)
-  ejife   -> Ire/Ibi (positivo = ire)
-  etagun  -> 3o Obi  (joga pela terceira vez)
-  okaran  -> Ire/Ibi (negativo = ibi)
-  oyekun  -> Ire/Ibi (negativo = ibi)
-
-3o Obi (Etaiwa! Hunnn vamos continuar)
-  alafia  -> Ire/Ibi (positivo = ire)
-  ejife   -> Ire/Ibi (positivo = ire)
-  etagun  -> Ire/Ibi (etaiwa na 3a vez = ire)
-  okaran  -> Ire/Ibi (negativo = ibi)
-  oyekun  -> Ire/Ibi (negativo = ibi)
+const visitedCount = history.length + 1;
+const totalSteps = visitedCount + estimateRemainingSteps;
 ```
 
-### Arquivos modificados:
-- `src/components/oracle/FlowStepRenderer.tsx`: correcao de 1 linha (find -> findLast)
+E atualizar a chamada do componente:
 
-Nenhuma mudanca no banco de dados -- o fluxo esta correto.
+```text
+<OracleProgressBar currentStep={visitedCount} totalSteps={totalSteps} />
+```
+
+### Arquivo: `src/components/oracle/OracleProgressBar.tsx`
+
+Nenhuma mudanca necessaria -- o componente ja aceita `currentStep` e `totalSteps` como props.
+
+### Resumo
+- 1 arquivo modificado: `src/components/oracle/DynamicFlowRunner.tsx`
+- Calculo dinamico baseado no caminho real, nao no total de nos
+- Protecao contra loops infinitos (limite de 20 iteracoes + set de visitados)
