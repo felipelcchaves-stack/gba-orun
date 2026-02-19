@@ -696,7 +696,7 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
 
       {/* Summary of answers */}
       <div className="bg-card rounded-2xl p-5 shadow-card mb-6">
-        <h3 className="font-display font-bold text-lg mb-3">Resumo da Consulta</h3>
+        <h3 className="font-display font-bold text-lg mb-3">Resultado do seu jogo - o que você precisa cultuar</h3>
         <div className="space-y-2">
           {Object.entries(answers)
             .filter(([key]) => {

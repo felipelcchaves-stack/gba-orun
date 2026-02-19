@@ -21,7 +21,7 @@ const GUIDANCE_POINTS = [
   { key: "oracle_step_ebo", label: "Oráculo: Ebó" },
   { key: "oracle_step_ori", label: "Oráculo: Ori" },
   { key: "oracle_step_iyami", label: "Oráculo: Iyami / Egbe" },
-  { key: "oracle_step_diagnosis", label: "Oráculo: Diagnóstico" },
+  { key: "oracle_step_diagnosis", label: "Oráculo: Resultado do Jogo" },
   { key: "ritual_reader", label: "Leitor de Ritual" },
   { key: "journey_task_card", label: "Card da Jornada" },
 ];
