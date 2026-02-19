@@ -10,16 +10,15 @@ const SpiritualEvolutionChart = () => {
 
   if (isLoading || !data) return null;
 
-  // Only show energies that have data
-  const energiesWithData = data.energies.filter((e) => e.total > 0);
-  if (energiesWithData.length === 0) return null;
-
-  // Radar data: score inverted (100 = equilibrado, 0 = critico)
-  const radarData = energiesWithData.map((e) => ({
-    energy: e.label,
-    value: 100 - e.score,
+  // Always show all 4 energies; neutral (50) for those without data
+  const radarData = data.energies.map((e) => ({
+    energy: e.total > 0 ? e.label : `${e.label} *`,
+    value: e.total > 0 ? 100 - e.score : 50,
     fullMark: 100,
   }));
+
+  const hasAnyData = data.energies.some((e) => e.total > 0);
+  if (!hasAnyData) return null;
 
   return (
     <Card className="border-0 shadow-card">
