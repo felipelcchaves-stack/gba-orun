@@ -25,16 +25,16 @@ interface WeeklyData {
 }
 
 const TASK_TYPE_MAP: Record<EnergyKey, string[]> = {
-  ebo: ["ebo", "limpeza", "banho"],
-  ori: ["ibori", "oracao_ori", "oracao_manha", "oracao_noite", "meditacao"],
+  ebo: ["ebo", "limpeza", "banho", "cuidado_espiritual"],
+  ori: ["ibori", "oracao_ori", "oracao_manha", "oracao_noite", "meditacao", "oriki", "cantiga"],
   iyami: ["iyami", "oracao_iyami", "oferenda_iyami"],
   egbe: ["egbe_orun", "oferenda_egbe"],
 };
 
 // Fallback keywords for unmapped task types
 const KEYWORD_FALLBACK: Record<EnergyKey, string[]> = {
-  ebo: ["ebo", "limpeza", "banho", "sacudimento"],
-  ori: ["ori", "oracao", "reza", "prece", "meditac"],
+  ebo: ["ebo", "limpeza", "banho", "sacudimento", "cuidado"],
+  ori: ["ori", "oracao", "reza", "prece", "meditac", "oriki", "cantiga"],
   iyami: ["iyami", "mae", "mãe", "imule", "imulé"],
   egbe: ["egbe", "egbé"],
 };
@@ -87,11 +87,12 @@ const SUGGESTIONS: Record<EnergyKey, Record<string, string>> = {
 };
 
 function calcScore(total: number, completed: number): number {
-  if (total === 0) return 0; // No data = no score (avoids false alerts)
+  if (total === 0) return 50; // Neutro (sem dados = não sabemos)
   return Math.round(((total - completed) / total) * 100);
 }
 
-function getLevel(score: number): "equilibrado" | "atencao" | "critico" {
+function getLevel(score: number, total: number): "equilibrado" | "atencao" | "critico" {
+  if (total === 0) return "equilibrado"; // Sem dados = não alarmar
   if (score > 70) return "critico";
   if (score >= 40) return "atencao";
   return "equilibrado";
@@ -137,7 +138,7 @@ export const useSpiritualAnalysis = () => {
         const total = relevant.length;
         const completed = relevant.filter((t) => t.completed).length;
         const score = calcScore(total, completed);
-        const level = getLevel(score);
+        const level = getLevel(score, total);
 
         return {
           key,
