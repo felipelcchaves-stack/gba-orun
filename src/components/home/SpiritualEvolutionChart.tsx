@@ -42,11 +42,11 @@ const SpiritualEvolutionChart = () => {
         <CardContent>
           <div className="h-[260px] -ml-2">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
+              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="68%">
                 <PolarGrid stroke="hsl(var(--border))" />
                 <PolarAngleAxis
                   dataKey="energy"
-                  tick={{ fontSize: 12, fill: "hsl(var(--foreground))", fontWeight: 600 }}
+                  tick={{ fontSize: 11, fill: "hsl(var(--foreground))", fontWeight: 600 }}
                 />
                 <PolarRadiusAxis
                   angle={90}
