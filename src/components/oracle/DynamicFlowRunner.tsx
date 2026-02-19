@@ -115,7 +115,7 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
         <OracleProgressBar currentStep={visitedCount} totalSteps={totalNodes} />
       )}
 
-      <div className="animate-fade-up">
+      <div className="animate-fade-up" key={currentNode.id}>
         <FlowStepRenderer
           node={currentNode}
           onNext={handleNext}
