@@ -1,77 +1,70 @@
 
-# Corrigir: Barra de Progresso do Oraculo mostra total errado
+# Exibir todas as informacoes do diagnostico na Minha Jornada
 
 ## Problema
 
-A barra de progresso usa `nodes.length` (total de TODOS os nos do fluxo) como denominador. Num fluxo com ramificacoes (como a cascata Etaiwa com 3 Obis), o total inclui nos que o usuario nunca vai visitar naquele caminho. Resultado: a barra nunca chega perto de 100% e o texto "Passo X de Y" mostra um total inflado.
-
-Exemplo: fluxo com 10 nos, caminho do usuario passa por 5. A barra mostra "Passo 2 de 10" em vez de "Passo 2 de 5".
+Quando voce preenche campos de texto livre durante o fluxo (ex: "carne com sangue", "1 Galo", "Elas precisam de um Ipese"), essas respostas aparecem no Resumo do Diagnostico, mas ao salvar e ir para Minha Jornada, so aparecem as tarefas pre-configuradas ("Oracao da Manha", "Fazer Ebo"). As respostas de texto livre sao salvas como JSON bruto no campo `context` da tabela `user_journey`, mas nunca sao convertidas em tarefas visiveis.
 
 ## Solucao
 
-Calcular o total de passos dinamicamente: passos ja visitados + estimativa de passos restantes ate o diagnostico. A cada transicao, o sistema percorre as edges a partir do no atual seguindo a saida "default" ate encontrar um no de diagnostico (ou ficar sem saidas), contando quantos passos faltam.
-
-Formula: `totalSteps = history.length + 1 + stepsRemaining`
-
-Isso garante que:
-- O total se adapta ao caminho real do usuario
-- Se cair Etaiwa e o caminho ficar mais longo, o total aumenta proporcionalmente
-- A barra chega a ~100% ao atingir o diagnostico
+Ao salvar o diagnostico, alem das tarefas pre-configuradas, o sistema vai automaticamente criar tarefas extras para cada resposta de texto livre que o usuario preencheu durante o fluxo. Assim, na Minha Jornada aparecera tudo que foi orientado.
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/components/oracle/DynamicFlowRunner.tsx`
+### Arquivo: `src/components/oracle/FlowStepRenderer.tsx` (funcao `handleSave` no `DiagnosisStep`)
 
-Substituir o calculo atual (linhas 45-46):
+Apos montar as `taskRows` das tarefas pre-configuradas (linha ~650), adicionar logica para:
+
+1. Percorrer todas as `answers` e identificar quais vieram de nos do tipo `message` com `enable_text_input: true` ou do tipo `open_question`
+2. Filtrar apenas os nos que tem `show_in_diagnosis: true` ou que sao text-input (para nao criar tarefa de respostas irrelevantes)
+3. Para cada uma dessas respostas, criar uma `journey_task` adicional com:
+   - `task_title`: O label/question do no (ex: "Bom, como elas querem Ipese, precisamos apurar!")
+   - `task_type`: "cuidado_espiritual" (novo tipo generico para essas tarefas)
+   - `guidance_message`: A resposta do usuario (ex: "carne com sangue")
+   - Sem `ritual_id` ou `offering_id` (sao orientacoes livres)
 
 ```text
-const totalNodes = nodes?.length || 1;
-const visitedCount = history.length + 1;
-```
-
-Por uma funcao que estima passos restantes:
-
-```text
-const estimateRemainingSteps = useMemo(() => {
-  if (!nodes || !edges || !currentNodeId) return 0;
-  let count = 0;
-  let nodeId: string | null = currentNodeId;
-  const visited = new Set<string>();
-  while (nodeId && count < 20) {
-    if (visited.has(nodeId)) break;
-    visited.add(nodeId);
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node || node.node_type === "diagnosis") break;
-    // Follow the first available edge (default handle preferred)
-    const defaultEdge = edges.find(
-      e => e.source_node_id === nodeId && (e.source_handle === "default" || e.source_handle === "")
+// Pseudocodigo da logica a adicionar:
+const freeTextTasks = Object.entries(answers)
+  .filter(([key, value]) => {
+    const srcNode = allNodes.find(n => 
+      n.id === key || (n.config as any)?.variable_name === key
     );
-    const anyEdge = defaultEdge || edges.find(e => e.source_node_id === nodeId);
-    if (anyEdge) {
-      nodeId = anyEdge.target_node_id;
-      count++;
-    } else {
-      break;
-    }
-  }
-  return count;
-}, [nodes, edges, currentNodeId]);
+    if (!srcNode) return false;
+    // Incluir message com texto livre e open_question
+    const isTextInput = srcNode.node_type === "message" && (srcNode.config as any)?.enable_text_input;
+    const isOpenQuestion = srcNode.node_type === "open_question";
+    return (isTextInput || isOpenQuestion) && value.trim();
+  })
+  .map(([key, value]) => {
+    const srcNode = allNodes.find(n => 
+      n.id === key || (n.config as any)?.variable_name === key
+    );
+    return {
+      journey_id: entry.id,
+      task_type: "cuidado_espiritual",
+      task_title: srcNode?.config?.question || srcNode?.label || "Orientacao",
+      guidance_message: value,
+    };
+  });
 
-const visitedCount = history.length + 1;
-const totalSteps = visitedCount + estimateRemainingSteps;
+// Combinar com as taskRows existentes
+const allTaskRows = [...taskRows, ...freeTextTasks];
+await createTasks.mutateAsync(allTaskRows);
 ```
 
-E atualizar a chamada do componente:
+### Arquivo: `src/components/journey/JourneyEntryCard.tsx`
 
-```text
-<OracleProgressBar currentStep={visitedCount} totalSteps={totalSteps} />
-```
+Atualizar a logica de agrupamento para incluir o novo tipo `cuidado_espiritual`:
 
-### Arquivo: `src/components/oracle/OracleProgressBar.tsx`
+- Adicionar `cuidado_espiritual` ao grupo `otherTasks` (ja cai la automaticamente por nao estar em morningTypes nem nightTypes)
+- A tarefa ja vai aparecer com o `guidance_message` (a resposta do usuario) gracas ao codigo existente na linha 171-173 que renderiza `TaskGuidanceBubble` quando `guidance_message` existe
 
-Nenhuma mudanca necessaria -- o componente ja aceita `currentStep` e `totalSteps` como props.
+Nenhuma mudanca de layout necessaria -- o card existente ja suporta exibir tarefas com mensagem de orientacao.
 
 ### Resumo
-- 1 arquivo modificado: `src/components/oracle/DynamicFlowRunner.tsx`
-- Calculo dinamico baseado no caminho real, nao no total de nos
-- Protecao contra loops infinitos (limite de 20 iteracoes + set de visitados)
+
+- 1 arquivo modificado: `src/components/oracle/FlowStepRenderer.tsx`
+- As respostas de texto livre viram tarefas com tipo "cuidado_espiritual"
+- Na Jornada, aparecerao na secao "Rituais & Oferendas" com o titulo do passo e a resposta como orientacao
+- Nenhuma mudanca no banco de dados (a tabela `journey_tasks` ja suporta os campos necessarios)
