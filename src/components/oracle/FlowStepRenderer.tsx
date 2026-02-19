@@ -660,7 +660,26 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
             guidance_audio_url: t.guidance_audio_url || null,
           };
         });
-        await createTasks.mutateAsync(taskRows);
+        // Create extra tasks from free-text inputs (message with text input or open_question)
+        const freeTextTasks = Object.entries(answers)
+          .filter(([key, value]) => {
+            const srcNode = allNodes.find(n => n.id === key || (n.config as any)?.variable_name === key);
+            if (!srcNode) return false;
+            const isTextInput = srcNode.node_type === "message" && (srcNode.config as any)?.enable_text_input;
+            const isOpenQuestion = srcNode.node_type === "open_question";
+            return (isTextInput || isOpenQuestion) && typeof value === "string" && value.trim().length > 0;
+          })
+          .map(([key, value]) => {
+            const srcNode = allNodes.find(n => n.id === key || (n.config as any)?.variable_name === key);
+            return {
+              journey_id: (entry as any).id,
+              task_type: "cuidado_espiritual",
+              task_title: (srcNode?.config as any)?.question || srcNode?.label || "Orientação espiritual",
+              guidance_message: value,
+            };
+          });
+
+        await createTasks.mutateAsync([...taskRows, ...freeTextTasks]);
       }
 
       addXP.mutate({ xp: 15, field: "oracle_throws" });
