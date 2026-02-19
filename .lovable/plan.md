@@ -1,34 +1,37 @@
 
 
-# Corrigir: Admin nao consegue salvar "Cortesia"
+# Corrigir: Toggle de Cortesia nao persiste
 
 ## Problema encontrado
 
-A coluna `is_courtesy` existe no banco e o codigo frontend esta correto, mas o campo nunca e salvo porque a tabela `profiles` **nao tem politica RLS permitindo que admins facam UPDATE**. A unica politica de UPDATE exige `auth.uid() = user_id`, entao quando o admin tenta atualizar o perfil de outro usuario, a operacao falha silenciosamente.
+A politica de UPDATE para admins esta correta, mas a tabela `profiles` nao possui uma politica de **SELECT** para admins. A unica politica SELECT e `"Profiles viewable by owner"` (`auth.uid() = user_id`).
 
-Confirmacao: os dois usuarios ativos no banco estao com `is_courtesy = false` mesmo apos tentativa de edicao.
+Quando o admin envia um PATCH para atualizar o perfil de outro usuario, o PostgREST precisa primeiro localizar (SELECT) a linha para aplica-la ao UPDATE. Como o admin nao consegue "ver" a linha de outro usuario via SELECT direto, o UPDATE retorna 204 mas com 0 linhas afetadas -- o famoso "falha silenciosa".
+
+Confirmacao: O banco mostra `is_courtesy = false` para todos os usuarios, mesmo apos multiplas tentativas de salvamento que retornaram 204.
 
 ## Solucao
 
-Adicionar uma politica RLS na tabela `profiles` permitindo que admins facao UPDATE em qualquer perfil.
+Adicionar uma politica RLS de **SELECT** na tabela `profiles` permitindo que admins leiam qualquer perfil.
 
 ## Alteracoes
 
 ### 1. Migracao SQL
-Criar uma nova politica RLS na tabela `profiles`:
 
 ```text
-CREATE POLICY "Admins can update any profile"
-  ON public.profiles FOR UPDATE
+CREATE POLICY "Admins can view any profile"
+  ON public.profiles FOR SELECT
   USING (has_role(auth.uid(), 'admin'::app_role));
+
+NOTIFY pgrst, 'reload schema';
 ```
 
-Isso permitira que o admin salve `is_courtesy`, `subscription_status` e qualquer outro campo ao editar usuarios no painel.
+### 2. Nenhum codigo frontend alterado
 
-### 2. Notificar PostgREST
-Executar `NOTIFY pgrst, 'reload schema'` para garantir que o cache seja atualizado.
+O frontend ja esta correto. Uma vez que o admin consiga fazer SELECT em qualquer perfil, o PATCH (que ja possui politica UPDATE valida) passara a funcionar corretamente.
 
 ## Resumo
 
-- 1 migracao SQL (1 politica RLS)
-- 0 arquivos de codigo alterados (o frontend ja esta correto)
+- 1 migracao SQL (1 politica RLS de SELECT)
+- 0 arquivos de codigo alterados
+
