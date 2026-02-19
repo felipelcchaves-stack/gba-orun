@@ -492,7 +492,8 @@ const IreIbiStep = ({ node, onNext, answers }: { node: OracleFlowNode; onNext: (
   // Determine default category from previous obi answer using oracle_configs from DB
   const { data: oracleConfigs } = useOracleConfigs();
   const allResultKeys = oracleConfigs?.map(c => c.result_key) || [];
-  const obiAnswer = Object.values(answers).find(a => allResultKeys.includes(a));
+  const obiValues = Object.values(answers).filter(a => allResultKeys.includes(a));
+  const obiAnswer = obiValues.length > 0 ? obiValues[obiValues.length - 1] : undefined;
   const obiConfig = obiAnswer ? oracleConfigs?.find(c => c.result_key === obiAnswer) : null;
   const defaultCategory = obiConfig?.default_ire_ibi === "ire" ? "ire" : "ibi";
 
