@@ -1,81 +1,95 @@
 
-# Correções do Mapa Espiritual
 
-## Problemas identificados
+# Mapa Espiritual Expandido: 6 Eixos de Equilibrio
 
-1. **Tipos de tarefa nao mapeados**: `cuidado_espiritual`, `cantiga` e `oriki` nao sao classificados em nenhuma energia, sendo silenciosamente ignorados na analise.
-2. **Radar com apenas 2 pontos**: Quando so Ebo e Ori tem dados, o grafico radar vira uma linha reta -- visualmente inutil.
-3. **Score homogeneo**: Com 20/24 concluidos para ambos, os valores ficam quase identicos, gerando um grafico "generico" sem diferenciacao.
-4. **Energias sem dados nao aparecem**: Iyami e Egbe nunca mostram porque o filtro remove energias com `total === 0`, mas seria mais informativo mostra-las como "sem dados" com score neutro.
+## Resumo
 
-## Solucao
+Expandir o radar de 4 para **6 eixos** com grafia ioruba correta, cobrindo as grandes areas da pratica espiritual.
 
-### 1. Expandir o mapeamento de task types
-
-Adicionar os tipos faltantes ao `TASK_TYPE_MAP`:
+## Novo Modelo: 6 Eixos (Hexagono)
 
 ```text
-TASK_TYPE_MAP:
-  ebo: ["ebo", "limpeza", "banho", "cuidado_espiritual"]
-  ori: ["ibori", "oracao_ori", "oracao_manha", "oracao_noite", "meditacao", "oriki", "cantiga"]
-  iyami: ["iyami", "oracao_iyami", "oferenda_iyami"]
-  egbe: ["egbe_orun", "oferenda_egbe"]
+          Ori
+         /    \
+   Orixa      Ebo
+      |        |
+  Egungun    Iyami
+         \    /
+        Egbe Orun
 ```
 
-- `cuidado_espiritual` entra em Ebo (cuidado geral / limpeza)
-- `oriki` e `cantiga` entram em Ori (conexao espiritual / devocional)
+| Eixo | Label exibido | O que mede | Task types mapeados |
+|------|---------------|-----------|---------------------|
+| **Ebo** | Ẹbọ | Limpezas e cuidados | ebo, limpeza, banho, cuidado_espiritual, sacudimento |
+| **Ori** | Orí | Cabeca e destino pessoal | ibori, oracao_ori, oracao_manha, oracao_noite, meditacao |
+| **Iyami** | Ìyàmi | Maes ancestrais | iyami, oracao_iyami, oferenda_iyami, imule |
+| **Egbe** | Ẹgbẹ́ Ọ̀run | Comunidade espiritual | egbe_orun, oferenda_egbe |
+| **Egungun** | Egúngún | Ancestrais / Eguns | egungun, egupaka, egun, oferenda_egun, oracao_egun |
+| **Orixa** | Òrìṣà | Devocao aos Orixas | orixa, oriki, cantiga, oferenda_orixa, orunmila |
 
-### 2. Mostrar todas as 4 energias no radar (mesmo sem dados)
+## Sugestoes por eixo (com grafia correta)
 
-Em vez de filtrar energias com `total === 0`, mostra-las com um valor base neutro (ex: 50%) e uma indicacao visual de "sem dados ainda". Isso garante que o radar sempre tenha 4 pontos e forme um poligono real.
+| Eixo | Critico | Atencao | Equilibrado |
+|------|---------|---------|-------------|
+| Ẹbọ | "Consulte um Awó (Babalawó/Ìyánífá)" | "Faca um Ẹbọ de manutencao" | "Ẹbọ em dia! " |
+| Orí | "Precisa de um Igbá Orí (assento de Orí)" | "Faca um Ìborí de fortalecimento" | "Orí fortalecido! " |
+| Ìyàmi | "Considere fazer Ìmùlẹ̀ (pacto com as Maes)" | "Faca oracoes para Ìyàmi" | "Ìyàmi em paz! " |
+| Ẹgbẹ́ Ọ̀run | "Considere fazer Ìdí Ẹgbẹ́ (1a mao de Ẹgbẹ́)" | "Faca uma oferenda ao Ẹgbẹ́ Ọ̀run" | "Ẹgbẹ́ Ọ̀run satisfeito! " |
+| Egúngún | "Cuide dos seus Egúngún com urgencia" | "Faca uma oferenda aos ancestrais" | "Egúngún em paz! " |
+| Òrìṣà | "Fortaleca sua conexao com seu Òrìṣà" | "Faca um Oríkì ou Orin" | "Devocao aos Òrìṣà em dia! " |
 
-### 3. Melhorar a diferenciacao visual
+## Mudanca importante: oriki e cantiga
 
-Quando todas as energias estao "equilibradas", o grafico fica uniforme e pouco informativo. Adicionar:
-- Um texto contextual abaixo do radar explicando o estado ("Suas energias estao equilibradas!" vs "Ebo precisa de atencao")
-- Manter a sugestao da energia mais urgente como ja esta
+`oríkì` e `orin` (cantiga) migram de **Orí** para **Òrìṣà**, pois sao devocoes direcionadas aos Orixas. Orí fica focado em ìborí, oracoes pessoais e meditacao.
 
-### Arquivos alterados
+## Arquivos alterados
 
 ```text
 src/hooks/useSpiritualAnalysis.ts
-  - Adicionar cuidado_espiritual, oriki, cantiga ao TASK_TYPE_MAP
-  - Mudar calcScore para retornar 50 (neutro) quando total === 0 em vez de 0
-  - Adicionar keyword fallbacks para cantiga e oriki
+  - Expandir EnergyKey de 4 para 6 ("egungun" | "orixa")
+  - Reorganizar TASK_TYPE_MAP (oriki/cantiga saem de ori, vao para orixa)
+  - Adicionar novos grupos: egungun e orixa
+  - Expandir KEYWORD_FALLBACK, LABELS, COLORS, SUGGESTIONS com grafia ioruba
+  - Atualizar WeeklyData interface com os 2 novos campos
 
 src/components/home/SpiritualEvolutionChart.tsx
-  - Remover filtro que esconde energias sem dados
-  - Mostrar todas as 4 energias sempre
-  - Diferenciar visualmente energias "sem dados" (cor mais suave, label com asterisco)
+  - Ajustar outerRadius de 75% para 68% (6 labels precisam de mais espaco)
+  - Reduzir fontSize de 12 para 11 nos labels do radar
 ```
 
-### Detalhes tecnicos
+## Detalhes tecnicos
 
-**calcScore atualizado:**
+**Cores dos novos eixos:**
 ```text
-function calcScore(total, completed):
-  if total === 0: return 50  // Neutro (sem dados = nao sabemos)
-  return Math.round(((total - completed) / total) * 100)
+ebo:     hsl(25, 60%, 35%)   -- marrom terra (mantem)
+ori:     hsl(45, 90%, 52%)   -- amarelo ouro (mantem)
+iyami:   hsl(300, 100%, 25%) -- roxo (mantem)
+egbe:    hsl(120, 40%, 38%)  -- verde (mantem)
+egungun: hsl(0, 0%, 40%)    -- cinza ancestral (novo)
+orixa:   hsl(210, 70%, 45%)  -- azul celeste (novo)
 ```
 
-**getLevel atualizado:**
+**TASK_TYPE_MAP completo:**
 ```text
-function getLevel(score, total):
-  if total === 0: return "equilibrado"  // Sem dados = nao alarmar
-  if score > 70: return "critico"
-  if score >= 40: return "atencao"
-  return "equilibrado"
+ebo:     ["ebo", "limpeza", "banho", "cuidado_espiritual", "sacudimento"]
+ori:     ["ibori", "oracao_ori", "oracao_manha", "oracao_noite", "meditacao"]
+iyami:   ["iyami", "oracao_iyami", "oferenda_iyami", "imule"]
+egbe:    ["egbe_orun", "oferenda_egbe"]
+egungun: ["egungun", "egupaka", "egun", "oferenda_egun", "oracao_egun"]
+orixa:   ["orixa", "oriki", "cantiga", "oferenda_orixa", "orunmila"]
 ```
 
-**Radar sempre com 4 pontos:**
+**KEYWORD_FALLBACK completo:**
 ```text
-// Antes: energiesWithData = data.energies.filter(e => e.total > 0)
-// Depois: usar data.energies diretamente (sempre 4 itens)
-const radarData = data.energies.map(e => ({
-  energy: e.label,
-  value: e.total > 0 ? (100 - e.score) : 50,
-  fullMark: 100,
-}))
+ebo:     ["ebo", "limpeza", "banho", "sacudimento", "cuidado"]
+ori:     ["ori", "oracao", "reza", "prece", "meditac", "ibori"]
+iyami:   ["iyami", "mae", "mãe", "imule", "imulé"]
+egbe:    ["egbe", "egbé"]
+egungun: ["egun", "ancestr", "egupaka", "oriodu", "ofé"]
+orixa:   ["orixa", "orunmila", "oriki", "cantiga", "orin"]
 ```
 
-Isso corrige a assertividade do mapa: tipos de tarefa nao serao mais perdidos, o grafico sempre formara um poligono com 4 eixos, e energias sem dados aparecem como "neutras" em vez de desaparecerem.
+**SpiritualEnergyDashboard.tsx** ja itera dinamicamente sobre `data.energies`, entao mostrara 6 barras automaticamente sem alteracoes.
+
+**Nenhuma migracao necessaria**: o campo `task_type` em `oracle_task_templates` e texto livre -- o admin pode criar templates com `egungun`, `orixa`, etc. pelo painel e o mapeamento reconhece automaticamente.
+
