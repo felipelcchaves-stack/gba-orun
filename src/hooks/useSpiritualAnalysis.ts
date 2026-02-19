@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { startOfWeek, subWeeks, isAfter, isBefore, addWeeks } from "date-fns";
 
-type EnergyKey = "ebo" | "ori" | "iyami" | "egbe";
+type EnergyKey = "ebo" | "ori" | "iyami" | "egbe" | "egungun" | "orixa";
 
 interface EnergyScore {
   key: EnergyKey;
@@ -22,21 +22,27 @@ interface WeeklyData {
   ori: number;
   iyami: number;
   egbe: number;
+  egungun: number;
+  orixa: number;
 }
 
 const TASK_TYPE_MAP: Record<EnergyKey, string[]> = {
-  ebo: ["ebo", "limpeza", "banho", "cuidado_espiritual"],
-  ori: ["ibori", "oracao_ori", "oracao_manha", "oracao_noite", "meditacao", "oriki", "cantiga"],
-  iyami: ["iyami", "oracao_iyami", "oferenda_iyami"],
+  ebo: ["ebo", "limpeza", "banho", "cuidado_espiritual", "sacudimento"],
+  ori: ["ibori", "oracao_ori", "oracao_manha", "oracao_noite", "meditacao"],
+  iyami: ["iyami", "oracao_iyami", "oferenda_iyami", "imule"],
   egbe: ["egbe_orun", "oferenda_egbe"],
+  egungun: ["egungun", "egupaka", "egun", "oferenda_egun", "oracao_egun"],
+  orixa: ["orixa", "oriki", "cantiga", "oferenda_orixa", "orunmila"],
 };
 
 // Fallback keywords for unmapped task types
 const KEYWORD_FALLBACK: Record<EnergyKey, string[]> = {
   ebo: ["ebo", "limpeza", "banho", "sacudimento", "cuidado"],
-  ori: ["ori", "oracao", "reza", "prece", "meditac", "oriki", "cantiga"],
+  ori: ["ori", "oracao", "reza", "prece", "meditac", "ibori"],
   iyami: ["iyami", "mae", "mãe", "imule", "imulé"],
   egbe: ["egbe", "egbé"],
+  egungun: ["egun", "ancestr", "egupaka", "oriodu", "ofé"],
+  orixa: ["orixa", "orunmila", "oriki", "cantiga", "orin"],
 };
 
 function classifyByKeyword(taskType: string): EnergyKey | null {
@@ -50,10 +56,12 @@ function classifyByKeyword(taskType: string): EnergyKey | null {
 }
 
 const LABELS: Record<EnergyKey, string> = {
-  ebo: "Ebó",
-  ori: "Ori",
-  iyami: "Iyami",
-  egbe: "Egbe Orun",
+  ebo: "Ẹbọ",
+  ori: "Orí",
+  iyami: "Ìyàmi",
+  egbe: "Ẹgbẹ́ Ọ̀run",
+  egungun: "Egúngún",
+  orixa: "Òrìṣà",
 };
 
 const COLORS: Record<EnergyKey, string> = {
@@ -61,28 +69,40 @@ const COLORS: Record<EnergyKey, string> = {
   ori: "hsl(45, 90%, 52%)",
   iyami: "hsl(300, 100%, 25%)",
   egbe: "hsl(120, 40%, 38%)",
+  egungun: "hsl(0, 0%, 40%)",
+  orixa: "hsl(210, 70%, 45%)",
 };
 
 const SUGGESTIONS: Record<EnergyKey, Record<string, string>> = {
   ebo: {
-    critico: "Consulte um Awo (Babalawó/Iyanifá)",
-    atencao: "Faça um Ebó de manutenção",
-    equilibrado: "Ebó em dia! ✨",
+    critico: "Consulte um Awó (Babalawó/Ìyánífá)",
+    atencao: "Faça um Ẹbọ de manutenção",
+    equilibrado: "Ẹbọ em dia! ✨",
   },
   ori: {
-    critico: "Precisa de um Igbá Ori (assento de Ori)",
-    atencao: "Faça um Ibori de fortalecimento",
-    equilibrado: "Ori fortalecido! ✨",
+    critico: "Precisa de um Igbá Orí (assento de Orí)",
+    atencao: "Faça um Ìborí de fortalecimento",
+    equilibrado: "Orí fortalecido! ✨",
   },
   iyami: {
-    critico: "Considere fazer Imulé (pacto com as Mães)",
-    atencao: "Faça orações para Iyami",
-    equilibrado: "Iyami em paz! ✨",
+    critico: "Considere fazer Ìmùlẹ̀ (pacto com as Mães)",
+    atencao: "Faça orações para Ìyàmi",
+    equilibrado: "Ìyàmi em paz! ✨",
   },
   egbe: {
-    critico: "Considere fazer Idi Egbé (1ª mão de Egbé)",
-    atencao: "Faça uma oferenda ao Egbé Orun",
-    equilibrado: "Egbé Orun satisfeito! ✨",
+    critico: "Considere fazer Ìdí Ẹgbẹ́ (1ª mão de Ẹgbẹ́)",
+    atencao: "Faça uma oferenda ao Ẹgbẹ́ Ọ̀run",
+    equilibrado: "Ẹgbẹ́ Ọ̀run satisfeito! ✨",
+  },
+  egungun: {
+    critico: "Cuide dos seus Egúngún com urgência",
+    atencao: "Faça uma oferenda aos ancestrais",
+    equilibrado: "Egúngún em paz! ✨",
+  },
+  orixa: {
+    critico: "Fortaleça sua conexão com seu Òrìṣà",
+    atencao: "Faça um Oríkì ou Orin",
+    equilibrado: "Devoção aos Òrìṣà em dia! ✨",
   },
 };
 
@@ -125,7 +145,7 @@ export const useSpiritualAnalysis = () => {
       }
 
       // Calculate scores per energy
-      const energies: EnergyScore[] = (["ebo", "ori", "iyami", "egbe"] as EnergyKey[]).map((key) => {
+      const energies: EnergyScore[] = (["ebo", "ori", "iyami", "egbe", "egungun", "orixa"] as EnergyKey[]).map((key) => {
         const relevant = allTasks.filter((t) => {
           // Direct match
           if (taskEnergyMap.get(t.task_type) === key) return true;
@@ -166,7 +186,7 @@ export const useSpiritualAnalysis = () => {
         });
 
         const row: any = { semana: `Sem ${4 - i}` };
-        for (const key of ["ebo", "ori", "iyami", "egbe"] as EnergyKey[]) {
+        for (const key of ["ebo", "ori", "iyami", "egbe", "egungun", "orixa"] as EnergyKey[]) {
           const relevant = weekTasks.filter((t) => {
             if (taskEnergyMap.get(t.task_type) === key) return true;
             if (!taskEnergyMap.has(t.task_type)) {
