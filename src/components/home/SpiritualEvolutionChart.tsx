@@ -61,7 +61,7 @@ const SpiritualEvolutionChart = () => {
                     borderRadius: "0.75rem",
                     fontSize: 12,
                   }}
-                  formatter={(value: number) => [`${value}%`, "Equilíbrio"]}
+                  formatter={(value: number) => [`${value}%`, "Cuidado"]}
                 />
                 <Radar
                   name="Equilíbrio"
@@ -76,11 +76,11 @@ const SpiritualEvolutionChart = () => {
             </ResponsiveContainer>
           </div>
           <p className="text-xs text-center text-muted-foreground mt-1">
-            Quanto maior a área, mais equilibrado você está
+            Quanto mais a forma crescer, melhor você está cuidando da sua espiritualidade
           </p>
           {data.mostUrgent && data.mostUrgent.level !== "equilibrado" && (
             <p className="text-xs text-center mt-2 text-accent font-medium">
-              ✨ Que tal cuidar do seu {data.mostUrgent.label} hoje?
+              ✨ Que tal dar uma atenção pro seu {data.mostUrgent.label} hoje?
             </p>
           )}
         </CardContent>
