@@ -7,7 +7,7 @@ const DiagnosisNode = ({ data, selected }: NodeProps) => (
     <div className="flex items-center gap-2 px-5 py-3">
       <Handle type="target" position={Position.Top} className="!bg-primary !w-3 !h-3" />
       <ClipboardCheck className="h-5 w-5 text-secondary-foreground" />
-      <span className="font-bold text-sm text-secondary-foreground">Diagnóstico Final</span>
+      <span className="font-bold text-sm text-secondary-foreground">Resultado do Jogo</span>
     </div>
     <VariableBadge variableName={(data as any)?.config?.variable_name} />
   </div>

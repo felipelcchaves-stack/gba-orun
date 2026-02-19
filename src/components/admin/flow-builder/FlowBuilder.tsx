@@ -78,7 +78,7 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   obi: "Lançamento de Obi",
   ire_ibi: "Iré/Ibi",
   open_question: "Pergunta Aberta",
-  diagnosis: "Diagnóstico",
+  diagnosis: "Resultado do Jogo",
   media: "Mídia",
   timer: "Timer",
   conditional: "Condicional",
@@ -239,7 +239,7 @@ const FlowBuilderInner = ({ flowId }: FlowBuilderProps) => {
         id: `temp_${Date.now()}`,
         type,
         position,
-        data: { label: type === "start" ? "Início" : type === "diagnosis" ? "Diagnóstico" : "", config: variableName ? { variable_name: variableName } : {} },
+        data: { label: type === "start" ? "Início" : type === "diagnosis" ? "Resultado do Jogo" : "", config: variableName ? { variable_name: variableName } : {} },
       };
       setNodes((nds) => [...nds, newNode]);
     },

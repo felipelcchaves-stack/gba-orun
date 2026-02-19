@@ -10,7 +10,7 @@ const NODE_TYPES = [
   { type: "obi", label: "Lançamento Obi", icon: Sparkles, color: "text-accent" },
   { type: "ire_ibi", label: "Irê / Ibi", icon: ArrowUpDown, color: "text-purple-500" },
   { type: "open_question", label: "Pergunta Aberta", icon: PenLine, color: "text-teal-500" },
-  { type: "diagnosis", label: "Diagnóstico", icon: ClipboardCheck, color: "text-secondary-foreground" },
+  { type: "diagnosis", label: "Resultado do Jogo", icon: ClipboardCheck, color: "text-secondary-foreground" },
   { type: "media", label: "Mídia", icon: Image, color: "text-pink-500" },
   { type: "timer", label: "Timer", icon: Clock, color: "text-orange-500" },
   { type: "conditional", label: "Condicional", icon: GitBranch, color: "text-cyan-500" },
