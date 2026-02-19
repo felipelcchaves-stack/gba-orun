@@ -92,3 +92,24 @@ export const useAdminKnowledgeStats = () => {
     },
   });
 };
+
+export interface SubscriptionHistoryRow {
+  month: string;
+  new_users: number;
+  active_subscribers: number;
+  courtesy_users: number;
+  overdue_users: number;
+  cancelled_users: number;
+  revenue_estimate: number;
+}
+
+export const useSubscriptionHistory = () => {
+  return useQuery({
+    queryKey: ["admin-subscription-history"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_get_subscription_history" as any);
+      if (error) throw error;
+      return (data ?? []) as SubscriptionHistoryRow[];
+    },
+  });
+};

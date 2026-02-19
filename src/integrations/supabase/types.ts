@@ -1070,6 +1070,18 @@ export type Database = {
           total_users: number
         }[]
       }
+      admin_get_subscription_history: {
+        Args: never
+        Returns: {
+          active_subscribers: number
+          cancelled_users: number
+          courtesy_users: number
+          month: string
+          new_users: number
+          overdue_users: number
+          revenue_estimate: number
+        }[]
+      }
       admin_list_profiles: {
         Args: never
         Returns: {

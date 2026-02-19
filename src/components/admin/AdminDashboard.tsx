@@ -1,14 +1,111 @@
-import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare, UserCheck, AlertTriangle, DollarSign, MousePointerClick, GraduationCap, Gift } from "lucide-react";
+import { Users, Crown, UserX, Compass, CalendarDays, BookOpen, MessageCircle, MessageSquare, UserCheck, AlertTriangle, DollarSign, MousePointerClick, GraduationCap, Gift, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAdminStats, useAdminProfiles, useAdminKnowledgeStats } from "@/hooks/useAdminData";
+import { useAdminStats, useAdminProfiles, useAdminKnowledgeStats, useSubscriptionHistory } from "@/hooks/useAdminData";
 import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  LineChart, Line, AreaChart, Area, Legend,
+} from "recharts";
 import { useState } from "react";
+
+// --- Sub-components for charts ---
+
+const CHART_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--accent))",
+  "hsl(var(--secondary))",
+  "hsl(var(--muted-foreground))",
+  "hsl(25, 80%, 55%)",
+  "hsl(280, 60%, 50%)",
+];
+
+const SUB_COLORS = {
+  active: "#22c55e",
+  courtesy: "#8b5cf6",
+  overdue: "#ef4444",
+  cancelled: "#eab308",
+  revenue: "#FFD700",
+  newUsers: "#3b82f6",
+};
+
+const formatMonth = (m: string) => {
+  try {
+    return format(new Date(m), "MMM/yy", { locale: ptBR });
+  } catch {
+    return m;
+  }
+};
+
+const SubscriberEvolutionChart = ({ data }: { data: any[] }) => (
+  <Card>
+    <CardContent className="p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <TrendingUp className="h-5 w-5 text-primary" />
+        <h3 className="font-display font-semibold text-sm">Evolução de Assinantes</h3>
+      </div>
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <XAxis dataKey="month" tickFormatter={formatMonth} fontSize={11} />
+          <YAxis fontSize={11} allowDecimals={false} />
+          <Tooltip labelFormatter={formatMonth} />
+          <Legend />
+          <Line type="monotone" dataKey="active_subscribers" name="Ativos Pagantes" stroke={SUB_COLORS.active} strokeWidth={2} dot={{ r: 3 }} />
+          <Line type="monotone" dataKey="courtesy_users" name="Cortesia" stroke={SUB_COLORS.courtesy} strokeWidth={2} dot={{ r: 3 }} />
+          <Line type="monotone" dataKey="overdue_users" name="Inadimplentes" stroke={SUB_COLORS.overdue} strokeWidth={2} dot={{ r: 3 }} />
+          <Line type="monotone" dataKey="cancelled_users" name="Cancelados" stroke={SUB_COLORS.cancelled} strokeWidth={2} dot={{ r: 3 }} />
+        </LineChart>
+      </ResponsiveContainer>
+    </CardContent>
+  </Card>
+);
+
+const RevenueChart = ({ data }: { data: any[] }) => (
+  <Card>
+    <CardContent className="p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <DollarSign className="h-5 w-5 text-accent" />
+        <h3 className="font-display font-semibold text-sm">Previsão de Receita Mensal</h3>
+      </div>
+      <ResponsiveContainer width="100%" height={240}>
+        <AreaChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <XAxis dataKey="month" tickFormatter={formatMonth} fontSize={11} />
+          <YAxis fontSize={11} tickFormatter={(v: number) => `R$${v}`} />
+          <Tooltip labelFormatter={formatMonth} formatter={(v: number) => [`R$ ${Number(v).toFixed(2)}`, "Receita"]} />
+          <Area type="monotone" dataKey="revenue_estimate" name="Receita" stroke={SUB_COLORS.revenue} fill={SUB_COLORS.revenue} fillOpacity={0.25} strokeWidth={2} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </CardContent>
+  </Card>
+);
+
+const UserGrowthChart = ({ data }: { data: any[] }) => (
+  <Card>
+    <CardContent className="p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Users className="h-5 w-5 text-blue-500" />
+        <h3 className="font-display font-semibold text-sm">Crescimento de Usuários</h3>
+      </div>
+      <ResponsiveContainer width="100%" height={240}>
+        <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <XAxis dataKey="month" tickFormatter={formatMonth} fontSize={11} />
+          <YAxis fontSize={11} allowDecimals={false} />
+          <Tooltip labelFormatter={formatMonth} />
+          <Line type="monotone" dataKey="new_users" name="Novos Cadastros" stroke={SUB_COLORS.newUsers} strokeWidth={2} dot={{ r: 3 }} />
+        </LineChart>
+      </ResponsiveContainer>
+    </CardContent>
+  </Card>
+);
+
+// --- Constants ---
 
 const GENDER_LABELS: Record<string, string> = {
   masculino: "Masculino",
@@ -25,23 +122,17 @@ const RELIGION_LABELS: Record<string, string> = {
   prefiro_nao_dizer: "Não informado",
 };
 
-const CHART_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--accent))",
-  "hsl(var(--secondary))",
-  "hsl(var(--muted-foreground))",
-  "hsl(25, 80%, 55%)",
-  "hsl(280, 60%, 50%)",
-];
+// --- Main Component ---
 
 const AdminDashboard = () => {
   const { data: stats, isLoading: statsLoading } = useAdminStats();
   const { data: profiles, isLoading: profilesLoading } = useAdminProfiles();
   const { data: plans } = useSubscriptionPlans();
   const { data: knowledgeStats } = useAdminKnowledgeStats();
+  const { data: historyData } = useSubscriptionHistory();
   const [knowledgeFilter, setKnowledgeFilter] = useState<string>("all");
 
-  // Revenue forecast: active subscribers × their plan price
+  // Revenue forecast
   const revenueForecast = (() => {
     if (!profiles || !plans) return 0;
     let total = 0;
@@ -52,7 +143,6 @@ const AdminDashboard = () => {
         if (plan) total += Number(plan.price);
       }
     }
-    // If active subscribers exist but no plan linked, estimate with cheapest plan
     const activeWithoutPlan = (profiles || []).filter(p => p.subscription_status === "active" && !p.subscription_plan_id && !p.is_courtesy).length;
     if (activeWithoutPlan > 0 && plans.length > 0) {
       const cheapest = Math.min(...plans.filter(p => p.is_active).map(p => Number(p.price)));
@@ -87,27 +177,15 @@ const AdminDashboard = () => {
   const genderData = (() => {
     if (!profiles) return [];
     const counts: Record<string, number> = {};
-    for (const p of profiles) {
-      const key = p.gender || "nao_informado";
-      counts[key] = (counts[key] || 0) + 1;
-    }
-    return Object.entries(counts).map(([key, value]) => ({
-      name: GENDER_LABELS[key] || key,
-      value,
-    }));
+    for (const p of profiles) { const key = p.gender || "nao_informado"; counts[key] = (counts[key] || 0) + 1; }
+    return Object.entries(counts).map(([key, value]) => ({ name: GENDER_LABELS[key] || key, value }));
   })();
 
   const religionData = (() => {
     if (!profiles) return [];
     const counts: Record<string, number> = {};
-    for (const p of profiles) {
-      const key = p.religion || "nao_informado";
-      counts[key] = (counts[key] || 0) + 1;
-    }
-    return Object.entries(counts).map(([key, value]) => ({
-      name: RELIGION_LABELS[key] || key,
-      value,
-    }));
+    for (const p of profiles) { const key = p.religion || "nao_informado"; counts[key] = (counts[key] || 0) + 1; }
+    return Object.entries(counts).map(([key, value]) => ({ name: RELIGION_LABELS[key] || key, value }));
   })();
 
   const knowledgeBarData = (() => {
@@ -154,6 +232,7 @@ const AdminDashboard = () => {
         <p className="text-sm text-muted-foreground mt-1">Visão geral do aplicativo</p>
       </div>
 
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {KPI_CARDS.map(({ label, value, icon: Icon, color }) => (
           <Card key={label}>
@@ -172,6 +251,18 @@ const AdminDashboard = () => {
         ))}
       </div>
 
+      {/* Evolution Charts */}
+      {historyData && historyData.length > 0 && (
+        <>
+          <SubscriberEvolutionChart data={historyData} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RevenueChart data={historyData} />
+            <UserGrowthChart data={historyData} />
+          </div>
+        </>
+      )}
+
+      {/* Demographic Charts */}
       {profiles && profiles.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
@@ -180,25 +271,20 @@ const AdminDashboard = () => {
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={genderData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {genderData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
+                    {genderData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-5">
               <h3 className="font-display font-semibold text-sm mb-3">Distribuição por Religião</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={religionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {religionData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
+                    {religionData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -216,9 +302,7 @@ const AdminDashboard = () => {
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={ifaPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {ifaPieData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
+                    {ifaPieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -249,6 +333,7 @@ const AdminDashboard = () => {
         </Card>
       )}
 
+      {/* Users Table */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-display font-semibold text-foreground">Últimos Usuários</h2>
