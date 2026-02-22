@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppSettings, useUpdateAppSetting } from "@/hooks/useAppSettings";
+import { Switch } from "@/components/ui/switch";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useRituals, useCreateRitual, useUpdateRitual, useDeleteRitual, Ritual } from "@/hooks/useRituals";
 import { Plus, Pencil, Trash2, Shield, Sunrise } from "lucide-react";
@@ -24,6 +26,27 @@ import AdminOracleConfigs from "@/components/admin/AdminOracleConfigs";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
+
+const DailyPrayersToggle = () => {
+  const { data: settings } = useAppSettings();
+  const updateSetting = useUpdateAppSetting();
+  const enabled = settings?.show_daily_prayers === "true";
+
+  return (
+    <div className="bg-card rounded-2xl border border-border p-4 flex items-center justify-between">
+      <div>
+        <h3 className="font-display font-bold text-sm">Exibir Orações da Manhã/Noite</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">Quando desabilitado, as seções de orações não aparecem na Home e na Jornada</p>
+      </div>
+      <Switch
+        checked={enabled}
+        onCheckedChange={(checked) =>
+          updateSetting.mutate({ key: "show_daily_prayers", value: checked ? "true" : "false" })
+        }
+      />
+    </div>
+  );
+};
 
 const AdminPage = () => {
   const { user, loading: authLoading, signIn, signUp, signOut } = useAuth();
@@ -220,6 +243,7 @@ const AdminPage = () => {
               <h1 className="text-2xl font-display font-bold text-foreground">Configurações</h1>
               <p className="text-sm text-muted-foreground mt-1">Ajustes gerais do aplicativo</p>
             </div>
+            <DailyPrayersToggle />
             <AdminOfferSettings />
           </div>
         )}

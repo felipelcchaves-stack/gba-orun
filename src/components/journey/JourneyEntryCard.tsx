@@ -7,6 +7,7 @@ import { getCategoryImage, getCategoryLabel } from "@/lib/categories";
 import { Progress } from "@/components/ui/progress";
 import GuidanceBubble from "@/components/GuidanceBubble";
 import TaskGuidanceBubble from "@/components/TaskGuidanceBubble";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMemo, useState, useEffect, useRef } from "react";
 
 const JourneyEntryCard = ({
@@ -20,6 +21,8 @@ const JourneyEntryCard = ({
 }) => {
   const { data: tasks } = useJourneyTasks(entry.id);
   const { data: oracleConfigs } = useOracleConfigs();
+  const { data: settings } = useAppSettings();
+  const showPrayerGroups = settings?.show_daily_prayers === "true";
   const oracleNameMap = useMemo(() => {
     const map: Record<string, string> = {};
     oracleConfigs?.forEach((c) => { map[c.result_key] = c.name; });
@@ -135,9 +138,15 @@ const JourneyEntryCard = ({
 
       <GuidanceBubble pointKey="journey_task_card" className="mb-4" />
 
-      {morningTasks.length > 0 && <TaskSection icon={Sunrise} label="Manhã" iconBg="bg-accent/15" iconColor="text-accent" tasks={morningTasks} onComplete={onCompleteTask} />}
-      {otherTasks.length > 0 && <TaskSection icon={Compass} label="Rituais & Oferendas" iconBg="bg-earth/15" iconColor="text-earth" tasks={otherTasks} onComplete={onCompleteTask} />}
-      {nightTasks.length > 0 && <TaskSection icon={Moon} label="Noite" iconBg="bg-primary/15" iconColor="text-primary" tasks={nightTasks} onComplete={onCompleteTask} />}
+      {showPrayerGroups ? (
+        <>
+          {morningTasks.length > 0 && <TaskSection icon={Sunrise} label="Manhã" iconBg="bg-accent/15" iconColor="text-accent" tasks={morningTasks} onComplete={onCompleteTask} />}
+          {otherTasks.length > 0 && <TaskSection icon={Compass} label="Rituais & Oferendas" iconBg="bg-earth/15" iconColor="text-earth" tasks={otherTasks} onComplete={onCompleteTask} />}
+          {nightTasks.length > 0 && <TaskSection icon={Moon} label="Noite" iconBg="bg-primary/15" iconColor="text-primary" tasks={nightTasks} onComplete={onCompleteTask} />}
+        </>
+      ) : (
+        tasks && tasks.length > 0 && <TaskSection icon={Compass} label="Oferendas" iconBg="bg-earth/15" iconColor="text-earth" tasks={tasks} onComplete={onCompleteTask} />
+      )}
     </div>
   );
 };
