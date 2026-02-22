@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle, ChevronRight, Loader2, Play, Pause, BookOpen, UtensilsCrossed } from "lucide-react";
+import { CheckCircle, ChevronRight, Loader2, Play, Pause, BookOpen, UtensilsCrossed, Star } from "lucide-react";
+import { useDemo } from "@/contexts/DemoContext";
 import { type OracleFlowNode } from "@/hooks/useOracleFlows";
 import { useOracleConfigs } from "@/hooks/useOracleConfig";
 import { useIreIbiTypes } from "@/hooks/useIreIbiTypes";
@@ -627,6 +628,8 @@ const DiagnosisStep = ({ node, answers, allNodes, flowName }: { node: OracleFlow
   const [saved, setSaved] = useState(false);
   const [taskOfferingOverrides, setTaskOfferingOverrides] = useState<Record<number, string | null>>({});
 
+  const { isDemo } = useDemo();
+
   const config = node.config || {};
   const configTasks: DiagnosisTask[] = config.tasks || [];
   const oracleConfigKeys = obiConfigs?.map(c => c.result_key) || [];
@@ -780,7 +783,20 @@ const DiagnosisStep = ({ node, answers, allNodes, flowName }: { node: OracleFlow
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-10">
         <div className="max-w-lg mx-auto">
-          {user ? (
+          {isDemo ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  const checkoutUrl = "/oferta";
+                  navigate(checkoutUrl);
+                }}
+                className="w-full gradient-gold text-accent-foreground py-3.5 rounded-full font-medium text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-gold"
+              >
+                <Star className="h-4 w-4" /> Assine para salvar seus resultados
+              </button>
+              <p className="text-center text-xs text-muted-foreground">No modo demo, os resultados não são salvos.</p>
+            </div>
+          ) : user ? (
             <button
               onClick={handleSave}
               disabled={saving || saved}

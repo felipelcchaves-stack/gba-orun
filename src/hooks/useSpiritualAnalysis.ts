@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { useDemo } from "@/contexts/DemoContext";
 import { startOfWeek, subWeeks, isAfter, isBefore, addWeeks } from "date-fns";
 
 export type EnergyKey = "ebo" | "ori" | "iyami" | "egbe" | "egungun" | "orixa";
@@ -172,11 +173,12 @@ function getLevel(score: number, total: number): "equilibrado" | "atencao" | "cr
 
 export const useSpiritualAnalysis = () => {
   const { user } = useAuth();
+  const { isDemo } = useDemo();
 
   return useQuery({
-    queryKey: ["spiritual-analysis", user?.id],
+    queryKey: ["spiritual-analysis", isDemo ? "demo" : user?.id],
     queryFn: async () => {
-      if (!user) return null;
+      if (isDemo || !user) return null;
 
       // Fetch tasks and journey count in parallel
       const [tasksResult, journeyCountResult] = await Promise.all([

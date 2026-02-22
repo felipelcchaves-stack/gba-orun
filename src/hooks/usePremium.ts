@@ -1,14 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useQuery } from "@tanstack/react-query";
+import { useDemo } from "@/contexts/DemoContext";
 
 export const usePremium = () => {
   const { user } = useAuth();
+  const { isDemo } = useDemo();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["premium", user?.id],
+    queryKey: ["premium", isDemo ? "demo" : user?.id],
     queryFn: async () => {
-      if (!user) return { isPremium: false, status: "free" as string, expiresAt: null as string | null };
+      if (isDemo) return { isPremium: false, status: "free" as string, expiresAt: null as string | null, daysRemaining: null as number | null };
       const { data } = await supabase
         .from("profiles")
         .select("is_premium, subscription_status, subscription_expires_at, subscription_plan_id, guru_subscription_id")
@@ -44,7 +46,7 @@ export const usePremium = () => {
         daysRemaining,
       };
     },
-    enabled: !!user,
+    enabled: isDemo || !!user,
   });
 
   const daysRemaining = data?.daysRemaining ?? null;

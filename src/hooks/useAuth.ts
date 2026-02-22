@@ -1,14 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { useDemo } from "@/contexts/DemoContext";
+import { demoUser } from "@/lib/demoData";
 
 export const useAuth = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { isDemo } = useDemo();
 
   useEffect(() => {
+    if (isDemo) {
+      setUser(demoUser);
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
 
-    // 1. Registrar listener PRIMEIRO (evita perder eventos durante upload/refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (isMounted) {
@@ -17,7 +25,6 @@ export const useAuth = () => {
       }
     );
 
-    // 2. Buscar sessão inicial DEPOIS
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (isMounted) {
         setUser(session?.user ?? null);
@@ -29,7 +36,7 @@ export const useAuth = () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isDemo]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });

@@ -1,12 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useDemo } from "@/contexts/DemoContext";
+import { demoStats } from "@/lib/demoData";
 
 export const useUserStats = () => {
   const { user } = useAuth();
+  const { isDemo } = useDemo();
   return useQuery({
-    queryKey: ["user_stats", user?.id],
+    queryKey: ["user_stats", isDemo ? "demo" : user?.id],
     queryFn: async () => {
+      if (isDemo) return demoStats;
       if (!user) return null;
       const { data } = await supabase
         .from("user_stats")
@@ -15,15 +19,17 @@ export const useUserStats = () => {
         .maybeSingle();
       return data;
     },
-    enabled: !!user,
+    enabled: isDemo || !!user,
   });
 };
 
 export const useAddXP = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { isDemo } = useDemo();
   return useMutation({
     mutationFn: async ({ xp, field }: { xp: number; field?: "oracle_throws" | "rituals_read" }) => {
+      if (isDemo) return; // no-op in demo
       if (!user) throw new Error("Not logged in");
       // Upsert stats
       const { data: existing } = await supabase

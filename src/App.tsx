@@ -16,6 +16,7 @@ import Journey from "./pages/Journey";
 import Learn from "./pages/Learn";
 import Profile from "./pages/Profile";
 import Oferta from "./pages/Oferta";
+import Demo from "./pages/Demo";
 import Community from "./pages/Community";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
@@ -61,6 +62,7 @@ const AppContent = () => {
       <OfflineBanner />
       <Routes>
         <Route path="/oferta" element={<Oferta />} />
+        <Route path="/demo/*" element={<Demo />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/termos" element={<Terms />} />
