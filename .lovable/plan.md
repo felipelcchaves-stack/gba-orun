@@ -1,66 +1,50 @@
 
 
-# Corrigir a frase de conclusao no SpiritualCareCard
+# Habilitar/Desabilitar Oracoes da Manha e Noite
 
-## Diagnostico
+## O que sera feito
 
-Investiguei o banco de dados e o codigo e encontrei **dois problemas**:
+Criar um toggle no painel Admin que permite habilitar ou desabilitar a exibicao das secoes de "Oracoes da Manha" e "Oracoes da Noite" em todo o app. Quando desabilitado:
 
-1. **`flow_name` esta `null` em todas as entradas da jornada** -- incluindo a de hoje (22/02). Isso acontece porque a consulta de hoje foi feita **antes** do deploy do codigo que salva o `flow_name`. O codigo esta correto, mas as entradas existentes nao tem esse dado. Resultado: o card sempre mostra o fallback "o seu cuidado espiritual".
-
-2. **A `completion_phrase` foi preenchida como "Parabens! Continue assim. Ase oo"** -- mas esse campo deveria conter apenas o trecho que encaixa na frase "Voce fez \_\_\_ hoje". Exemplo correto: "o seu Cuidado Espiritual Semanal". A dica no Admin nao esta clara o suficiente.
+- A secao de oracoes na **Home** desaparece
+- As tarefas de oracao na **Jornada** nao sao agrupadas nas secoes "Manha" e "Noite" (ficam junto com as demais tarefas)
 
 ## Solucao
 
-### 1. Corrigir entradas antigas (retroativo)
+### 1. Criar a configuracao no banco de dados
 
-Atualizar as entradas existentes na `user_journey` que tem `flow_name = null` para associa-las ao fluxo correto. Como so existe um fluxo ("Cuidado Espiritual Semanal"), podemos preencher todas:
+Inserir uma nova chave `show_daily_prayers` na tabela `app_settings` com valor `"false"` (desabilitado por padrao para o lancamento de cortesia).
 
-```text
-UPDATE user_journey SET flow_name = 'Cuidado Espiritual Semanal' WHERE flow_name IS NULL;
-```
+### 2. Adicionar toggle no Admin
 
-### 2. Corrigir a `completion_phrase` no banco
+**Arquivo:** `src/pages/Admin.tsx`
 
-Atualizar o valor salvo para algo que encaixe na frase:
+Na area de rituais/oracoes do Admin, adicionar um Switch com label "Exibir Oracoes da Manha/Noite" que atualiza a chave `show_daily_prayers` na tabela `app_settings`. Usa o hook `useUpdateAppSetting` que ja existe.
 
-```text
-UPDATE oracle_flows 
-SET completion_phrase = 'o seu Cuidado Espiritual Semanal' 
-WHERE name = 'Cuidado Espiritual Semanal';
-```
+### 3. Ocultar secao na Home
 
-### 3. Melhorar o placeholder e a dica no Admin
+**Arquivo:** `src/pages/Home.tsx`
 
-**Arquivo:** `src/components/admin/AdminFlows.tsx`
+Condicionar a secao de "Oracoes da Manha / Noite" ao valor de `settings?.show_daily_prayers === "true"`. Quando `false`, a secao inteira (linhas 125-153) nao sera renderizada.
 
-Tornar a dica mais explicativa para o admin entender exatamente o que preencher:
+### 4. Simplificar agrupamento na Jornada
 
-- Placeholder atual: "Ex: o seu Cuidado Espiritual Semanal"
-- Dica atual: "aparece em 'Voce fez ___ hoje. Ase!'"
-- **Nova dica:** "Esse texto aparece assim: **Voce fez [o que voce escrever aqui] hoje. Ase!** -- Ex: 'o seu Cuidado Espiritual Semanal' ou 'o Cuidado com Oxum'"
+**Arquivo:** `src/components/journey/JourneyEntryCard.tsx`
 
-### 4. Remover o `as any` desnecessario no useJourney
-
-O `flow_name` ja existe no types.ts gerado, entao o cast `as any` no insert pode ser removido para manter o codigo limpo.
-
-### 5. Invalidar cache `week_journey` ao salvar jornada
-
-Adicionar `week_journey` nas queries invalidadas apos salvar uma nova entrada, para que o SpiritualCareCard atualize imediatamente.
-
-**Arquivo:** `src/hooks/useJourney.ts`
+Ler o `app_settings` via hook e, quando `show_daily_prayers !== "true"`, juntar todas as tarefas em um unico grupo (sem separar Manha/Noite). As tarefas continuam existindo e funcionando, apenas o agrupamento visual muda.
 
 ## Resumo dos arquivos alterados
 
 ```text
-Banco de dados (migracao):
-  - Preencher flow_name retroativamente nas entradas existentes
-  - Corrigir completion_phrase do fluxo "Cuidado Espiritual Semanal"
+Banco de dados (insert):
+  - Inserir chave "show_daily_prayers" = "false" na tabela app_settings
 
-src/components/admin/AdminFlows.tsx
-  - Melhorar placeholder e dica do campo "Frase de conclusao"
+src/pages/Admin.tsx
+  - Adicionar Switch para habilitar/desabilitar oracoes diarias
 
-src/hooks/useJourney.ts
-  - Remover "as any" no insert
-  - Adicionar invalidacao do cache "week_journey"
+src/pages/Home.tsx
+  - Condicionar secao de oracoes ao setting
+
+src/components/journey/JourneyEntryCard.tsx
+  - Condicionar agrupamento Manha/Noite ao setting
 ```
