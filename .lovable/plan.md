@@ -1,191 +1,96 @@
 
 
-# Redesign Completo da Landing Page + Modo Demo
+# Mockups Realistas + Hero Impactante na Landing Page
 
-## Resumo
+## Problema Atual
+Os mockups atuais sao muito abstratos -- mostram apenas circulos e retangulos coloridos genéricos dentro de molduras de celular. Nao transmitem a experiencia real do app e nao geram desejo de uso. Alem disso, estao apenas em carrossel, sem destaque visual na hero.
 
-Recriar a pagina `/oferta` inspirada no estilo Duolingo (limpa, convidativa, com mockups animados do app dentro de molduras de celular) e criar um **modo demo completo** onde o visitante navega pelo app real (Oraculo com fluxo completo, Rituais, Jornada) sem salvar dados e sem precisar de login.
+## Solucao
 
----
+### 1. Mockups Muito Mais Realistas
+Reescrever os 4 componentes de conteudo dos mockups (`OracleMockupContent`, `RitualsMockupContent`, `JourneyMockupContent`, `LearnMockupContent`) para replicar fielmente as telas reais do app, incluindo:
 
-## Parte 1: Modo Demo Completo
+**OracleMockupContent (Oraculo):**
+- Header "Como posso te ajudar hoje?" igual ao real
+- Cards de fluxo com icone Sparkles em fundo colorido, titulo e descricao (ex: "Consulta do Obi", "Ebos e Oferendas")
+- Visualmente identico a tela real do Oracle.tsx
 
-### Como funciona para o visitante
+**HomeMockupContent (NOVO - para o Hero):**
+- Saudacao "Ola, Visitante!" com icone de streak
+- Mini banner "Jornada Espiritual" com gradiente escuro
+- Cards de destaque com thumbnails coloridas (usando gradientes ao inves de imagens reais para manter leve)
+- Barra inferior simulada com icones
 
-1. Clica em "Experimentar Gratis" na landing page
-2. Entra no app real em modo demo (rota `/demo`)
-3. Pode navegar: Inicio, Oraculo (fluxo completo do Obi), Rituais, Aprender, Jornada
-4. Todos os fluxos funcionam normalmente, mas **nada e salvo** no banco
-5. Ao chegar no diagnostico do Oraculo (final do fluxo), ve o resultado mas o botao diz "Assine para salvar seus resultados" e redireciona ao checkout
-6. Conteudo premium mostra preview com CTA de assinatura
-7. Nao aparece para assinantes (ja tem acesso total)
-8. Nao da acesso ao Admin nem Comunidade
+**RitualsMockupContent (Rituais):**
+- Cards realistas com thumbnail colorida, titulo do ritual, categoria, e icone de cadeado premium
+- Separacao visual por categoria (Ebo, Oriki, etc.)
 
-### Navegacao no modo demo
+**JourneyMockupContent (Jornada):**
+- Card hero com gradiente sacred, circulo de progresso SVG com porcentagem
+- Lista de tarefas com checkmarks (2 completas, 1 pendente)
+- Barra de XP no topo
 
-- BottomNav adaptado: Inicio, Oraculo, Rituais, Aprender, Jornada + botao dourado "Assinar"
-- Banner fixo no topo: "Voce esta no modo demonstracao" com botao "Assinar agora"
-- Sem link para Admin, Comunidade, Perfil ou Promocoes
+**LearnMockupContent (Aprender):**
+- Grid de categorias com gradientes coloridos distintos por categoria
+- Titulos e contadores de conteudo
 
----
+### 2. Hero com Mockup em Destaque (nao so carrossel)
+- No hero, ao lado do texto (desktop), exibir o **HomeMockupContent** -- um mockup grande e realista da tela Home do app
+- O mockup do hero sera ligeiramente maior que os do carrossel (escala 1.1x)
+- No mobile, o mockup aparece abaixo do texto do hero
+- Adicionar uma sombra mais dramatica e um leve angulo/rotacao 3D para dar profundidade (estilo Duolingo, onde o mockup parece "flutuar")
 
-## Parte 2: Nova Landing Page (estilo Duolingo)
-
-### Principios de design (inspirados no Duolingo)
-
-- Layout limpo e espaçado, muito ar ao redor dos elementos
-- Secoes alternadas com fundos suaves (creme / branco / marrom escuro)
-- Mockups de celular com moldura CSS mostrando telas reais do app
-- Animacoes sutis de entrada (fade-up, scale-in) conforme o usuario scrolla
-- Botoes "gordinhos" com sombra e animacao pulse-gold
-- Tipografia grande e confiante nos titulos
-
-### Estrutura da pagina (de cima pra baixo)
-
-**1. Barra de Urgencia (sticky topo)**
-- Fundo `gradient-sacred` (marrom terra)
-- Texto de urgencia dinamico + botao "Entrar"
-
-**2. Hero Section**
-- Fundo creme limpo
-- Lado esquerdo (desktop): headline grande + subtitulo mencionando "Metodo Oluwo Ifatokun" + preco + 2 botoes (CTA principal dourado "Quero Comecar Agora" + secundario "Experimentar Gratis" que leva ao `/demo`)
-- Lado direito (desktop): mockup de celular CSS mostrando a tela Home do app (estatico, estilizado)
-- Mobile: empilhado, mockup abaixo
-- Badge no topo: "Metodo Oluwo Ifatokun"
-
-**3. Secao Autoridade**
-- Fundo escuro (`gradient-sacred`)
-- Imagem (`hero-banner.jpg`) com texto sobre o Oluwo Ifatokun e seu metodo
-- "Baseado no metodo do Oluwo Ifatokun, sacerdote de Ifa dedicado a preservar e transmitir a sabedoria ancestral Yoruba"
-
-**4. Secao Dores**
-- Fundo creme
-- Titulo: "Voce ja passou por isso?"
-- Cards com borda esquerda dourada e icones em tons da paleta (sem vermelho)
-
-**5. Galeria "Veja como funciona" (estilo Duolingo)**
-- 3 a 4 mockups de celular lado a lado (scroll horizontal no mobile)
-- Cada mockup e um componente React estatico que imita visualmente a tela do app:
-  - **Oraculo**: Mostra os 4 obis e a pergunta "Como posso te ajudar hoje?"
-  - **Rituais**: Lista de conteudos com categorias
-  - **Jornada**: Progresso circular e tarefas do dia
-  - **Aprender**: Grid de categorias
-- Cada mockup tem um titulo embaixo ("Consulte o Oraculo", "Siga os Rituais", etc.)
-- Animacao: mockups entram com fade-up escalonado conforme scroll (usando Intersection Observer)
-- Botao centralizado abaixo: "Experimentar Agora" -> `/demo`
-
-**6. Secao Demo CTA (destaque)**
-- Fundo com gradiente suave dourado
-- Titulo: "Experimente antes de assinar"
-- Subtitulo: "Navegue pelo app completo, faca uma consulta ao Oraculo e veja o resultado -- sem precisar criar conta"
-- Botao grande: "Iniciar Demonstracao Gratuita" -> `/demo`
-
-**7. Beneficios**
-- 6 cards com icones em fundo circular marrom/dourado
-- Layout grid 2 colunas
-
-**8. Como Funciona**
-- 3 passos com circulos `gradient-sacred` e numeros
-- Assine -> Consulte -> Pratique
-
-**9. Avaliacoes Reais**
-- Reviews aprovados de 5 estrelas do banco + fallback
-- Avatar com iniciais (circulo com fundo dourado + letra)
-- Grid 2 colunas no desktop, stack no mobile
-
-**10. Planos de Assinatura**
-- Cards dos planos do banco
-- Plano recomendado com borda dourada e badge "Mais Popular"
-- Mostrar economia no plano anual se aplicavel
-
-**11. FAQ**
-- Perguntas atuais + nova: "O que e o metodo Oluwo Ifatokun?"
-- Resposta: explicacao sobre a tecnica e como foi integrada ao app
-
-**12. Garantia**
-- Escudo dourado + texto de garantia
-
-**13. CTA Final**
-- Fundo `gradient-sacred`
-- Texto branco, preco grande, CTA dourado
-- Botao secundario "Ou experimente gratis" -> `/demo`
-
-**14. Footer**
-- Links para Termos e Privacidade
-- Copyright
+### 3. Galeria com Layout Variado (nao so carrossel linear)
+- Manter o scroll horizontal no mobile
+- No desktop (md+), exibir os 4 mockups com layout escalonado: os 2 do meio ligeiramente elevados (translateY negativo) criando um efeito de "onda"
+- Cada mockup mantem a animacao fade-up escalonada ja existente
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos novos
+### Arquivo modificado: `src/components/landing/PhoneMockup.tsx`
 
-1. **`src/contexts/DemoContext.tsx`**
-   - React Context com `isDemo`, `enterDemo()`, `exitDemo()`
-   - Quando `isDemo = true`, hooks de escrita viram no-ops
+**HomeMockupContent (NOVO):**
+- Saudacao com nome "Visitante" e badge de streak (icone fogo + "3")
+- Mini card com gradiente marrom escuro simulando o banner de jornada
+- 3 mini cards de destaque com thumbnails coloridas (gradientes CSS)
+- Estilo identico ao Home.tsx real
 
-2. **`src/lib/demoData.ts`**
-   - Perfil demo: `{ display_name: "Visitante", is_premium: false }`
-   - Stats demo: `{ streak_days: 3, total_xp: 150, level: 2 }`
-   - Entradas de jornada ficticias (3 dias)
-   - Tarefas de exemplo (5 tarefas, 3 completas)
+**OracleMockupContent (reescrito):**
+- Titulo centralizado "Como posso te ajudar hoje?" com subtitulo
+- 2-3 cards de fluxo com: icone em fundo colorido arredondado, titulo bold, descricao curta
+- Visual identico ao Oracle.tsx real
 
-3. **`src/pages/Demo.tsx`**
-   - Layout wrapper do modo demo
-   - Envolve as paginas com `DemoProvider`
-   - Banner fixo no topo "Modo demonstracao"
-   - Navegacao interna entre as telas do app
-   - BottomNav customizado (sem Admin/Comunidade, com botao "Assinar")
+**RitualsMockupContent (reescrito):**
+- 4 cards com: thumbnail colorida (gradiente), titulo do ritual, badge de categoria, icone de cadeado dourado no ultimo
+- Visual identico ao Rituals.tsx real
 
-4. **`src/components/landing/PhoneMockup.tsx`**
-   - Componente de moldura de celular CSS (borda arredondada, notch, sombra)
-   - Recebe children e renderiza dentro da "tela"
-   - 4 variantes estaticas: OracleMockup, RitualsMockup, JourneyMockup, LearnMockup
+**JourneyMockupContent (reescrito):**
+- Card hero com gradiente sacred + circulo SVG de progresso (60%, com strokeDasharray real)
+- Frase motivacional "Seu Ori agradece cada passo"
+- 3 tarefas: 2 com check verde + line-through, 1 pendente
+- Visual identico ao Journey.tsx / TodayHeroCard
 
-5. **`src/components/landing/AuthoritySection.tsx`**
-   - Secao do Oluwo Ifatokun com imagem e texto
+**LearnMockupContent (reescrito):**
+- Header "Categorias"
+- Grid 2x3 com cards coloridos: cada um com gradiente distinto (dourado para Ebo, verde para Oriki, roxo para Iyami, etc.)
+- Titulo e numero de itens em cada card
 
-6. **`src/components/landing/DemoBanner.tsx`**
-   - Banner fixo do modo demo ("Voce esta no modo demonstracao")
+### Arquivo modificado: `src/pages/Oferta.tsx`
 
-### Arquivos modificados
+**Hero Section (linhas 121-178):**
+- Trocar `OracleMockupContent` por `HomeMockupContent` no hero
+- Adicionar wrapper com estilo 3D: `transform: perspective(1000px) rotateY(-5deg) rotateX(2deg)` + sombra `shadow-2xl`
+- Mostrar mockup tambem no mobile (abaixo do texto), nao apenas `hidden md:block`
 
-1. **`src/pages/Oferta.tsx`** -- Reescrita completa com nova estrutura
-2. **`src/App.tsx`** -- Adicionar rota `/demo/*` sem ProtectedRoute, envolta por DemoProvider
-3. **`src/components/BottomNav.tsx`** -- Esconder tambem em rotas `/demo`, pois o Demo.tsx tera seu proprio nav
-4. **`src/components/oracle/FlowStepRenderer.tsx`** -- No diagnostico, se `isDemo`, trocar botao "Salvar" por "Assine para salvar" com link para checkout
-5. **`src/components/PremiumLockModal.tsx`** -- No modo demo, ajustar CTA para checkout direto
+**Galeria (linhas 199-222):**
+- No desktop, adicionar `md:items-end` no container flex
+- Aplicar `md:-translate-y-4` nos mockups do meio (indice 1 e 2) para efeito escalonado
+- Adicionar um PhoneMockup extra com HomeMockupContent no inicio (totalizando 5 mockups: Home, Oraculo, Rituais, Jornada, Aprender)
 
-### Hooks modificados no modo demo
-
-- `useAuth` -- retorna usuario demo ficticio (sem gravar sessao)
-- `useProfile` -- retorna perfil demo
-- `useUserStats` -- retorna stats demo
-- `useJourney` -- retorna entradas demo ficticias
-- `usePremium` -- retorna `isPremium: false`
-- `useAddJourneyEntry`, `useCompleteTask`, `useAddXP` -- viram no-ops silenciosos (retornam sem fazer nada)
-
-Esses hooks checam o contexto `isDemo` e, se verdadeiro, retornam dados do `demoData.ts` ao inves de consultar o banco.
-
-### Animacoes na landing page
-
-- Mockups de celular: fade-up escalonado com `IntersectionObserver` (sem biblioteca extra, usando `useEffect` + `useRef`)
-- CTAs: `animate-pulse-gold` (ja existe)
-- Secoes: `animate-fade-up` com delay conforme entram na viewport
-- Transicao suave entre secoes alternadas (creme/branco/escuro)
-
-### Paleta (mesma do app)
-
-- Fundo: creme `hsl(30 33% 97%)` / branco `hsl(0 0% 100%)`
-- Secoes escuras: `gradient-sacred` (marrom terra)
-- CTAs: dourado `hsl(45 90% 52%)` com `shadow-gold`
-- Textos: marrom escuro `hsl(20 20% 20%)`
-- Cards: branco com `shadow-soft` e bordas `rounded-2xl`
-
-### Dados dinamicos mantidos
-
-- Headline, CTA text, preco, garantia, urgencia -> `app_settings`
-- Planos e checkout URLs -> `subscription_plans`
-- Avaliacoes -> `user_reviews` (5 estrelas, aprovados)
-- Fluxos do Oraculo -> `oracle_flows` (dados reais para a demo funcionar)
-
+### Componente PhoneMockup (moldura)
+- Adicionar prop `size` com opcoes "default" e "large"
+- "large": w-[260px] h-[500px] para o hero
+- Adicionar barra de status simulada no topo (hora, bateria, sinal) para mais realismo
+- Adicionar indicador de home (barrinha inferior) no bottom da tela
