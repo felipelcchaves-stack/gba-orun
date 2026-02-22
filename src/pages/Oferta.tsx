@@ -9,7 +9,7 @@ import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { usePublicReviews } from "@/hooks/usePublicReviews";
 import AuthoritySection from "@/components/landing/AuthoritySection";
-import PhoneMockup, { OracleMockupContent, RitualsMockupContent, JourneyMockupContent, LearnMockupContent } from "@/components/landing/PhoneMockup";
+import PhoneMockup, { HomeMockupContent, OracleMockupContent, RitualsMockupContent, JourneyMockupContent, LearnMockupContent } from "@/components/landing/PhoneMockup";
 
 const FALLBACK_TESTIMONIALS = [
   { name: "Maria S.", text: "Nunca mais tive dúvida no Obi. Esse app mudou minha vida espiritual!", stars: 5 },
@@ -168,10 +168,15 @@ const OfertaPage = () => {
             )}
           </div>
 
-          {/* Phone mockup (desktop) */}
-          <div className="hidden md:block shrink-0">
-            <PhoneMockup>
-              <OracleMockupContent />
+          {/* Phone mockup - 3D floating effect */}
+          <div className="shrink-0 mt-8 md:mt-0"
+            style={{
+              transform: "perspective(1000px) rotateY(-5deg) rotateX(2deg)",
+              filter: "drop-shadow(0 25px 50px rgba(0,0,0,0.15))",
+            }}
+          >
+            <PhoneMockup size="large">
+              <HomeMockupContent />
             </PhoneMockup>
           </div>
         </div>
@@ -201,19 +206,20 @@ const OfertaPage = () => {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-display font-bold mb-3 text-foreground">Veja como funciona</h2>
           <p className="text-muted-foreground mb-10">Navegue pelo app completo sem compromisso</p>
-          <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory justify-start md:justify-center px-4 -mx-4">
-            <PhoneMockup title="Consulte o Oráculo" delay={0}>
-              <OracleMockupContent />
-            </PhoneMockup>
-            <PhoneMockup title="Siga os Rituais" delay={150}>
-              <RitualsMockupContent />
-            </PhoneMockup>
-            <PhoneMockup title="Evolua na Jornada" delay={300}>
-              <JourneyMockupContent />
-            </PhoneMockup>
-            <PhoneMockup title="Aprenda Sempre" delay={450}>
-              <LearnMockupContent />
-            </PhoneMockup>
+          <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory justify-start md:justify-center md:items-end px-4 -mx-4">
+            {[
+              { title: "Tela Inicial", content: <HomeMockupContent />, delay: 0 },
+              { title: "Consulte o Oráculo", content: <OracleMockupContent />, delay: 100 },
+              { title: "Siga os Rituais", content: <RitualsMockupContent />, delay: 200 },
+              { title: "Evolua na Jornada", content: <JourneyMockupContent />, delay: 300 },
+              { title: "Aprenda Sempre", content: <LearnMockupContent />, delay: 400 },
+            ].map((mockup, i) => (
+              <div key={mockup.title} className={`shrink-0 ${i === 1 || i === 2 ? "md:-translate-y-4" : ""}`}>
+                <PhoneMockup title={mockup.title} delay={mockup.delay}>
+                  {mockup.content}
+                </PhoneMockup>
+              </div>
+            ))}
           </div>
           <div className="mt-8">
             <DemoButton />
