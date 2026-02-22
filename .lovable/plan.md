@@ -1,96 +1,127 @@
 
 
-# Mockups Realistas + Hero Impactante na Landing Page
+# Rastreamento Completo: UTMs + Eventos Facebook/CAPI
 
-## Problema Atual
-Os mockups atuais sao muito abstratos -- mostram apenas circulos e retangulos coloridos genéricos dentro de molduras de celular. Nao transmitem a experiencia real do app e nao geram desejo de uso. Alem disso, estao apenas em carrossel, sem destaque visual na hero.
+## Resumo
 
-## Solucao
+Implementar captura e repasse de UTMs em toda a jornada do usuario, e adicionar todos os eventos padrao do Facebook Pixel que estao faltando (ViewContent, AddToCart, CompleteRegistration) alem de eventos customizados para acoes importantes.
 
-### 1. Mockups Muito Mais Realistas
-Reescrever os 4 componentes de conteudo dos mockups (`OracleMockupContent`, `RitualsMockupContent`, `JourneyMockupContent`, `LearnMockupContent`) para replicar fielmente as telas reais do app, incluindo:
+---
 
-**OracleMockupContent (Oraculo):**
-- Header "Como posso te ajudar hoje?" igual ao real
-- Cards de fluxo com icone Sparkles em fundo colorido, titulo e descricao (ex: "Consulta do Obi", "Ebos e Oferendas")
-- Visualmente identico a tela real do Oracle.tsx
+## 1. Captura e Repasse de UTMs
 
-**HomeMockupContent (NOVO - para o Hero):**
-- Saudacao "Ola, Visitante!" com icone de streak
-- Mini banner "Jornada Espiritual" com gradiente escuro
-- Cards de destaque com thumbnails coloridas (usando gradientes ao inves de imagens reais para manter leve)
-- Barra inferior simulada com icones
+### O que sera feito
+- Criar um utilitario `src/lib/utm.ts` que:
+  - Ao carregar a landing page, le os parametros `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term` e `fbclid` da URL
+  - Salva no `sessionStorage` (para persistir durante a navegacao SPA)
+  - Exporta funcao `getUtmParams()` para recuperar os UTMs salvos
+  - Exporta funcao `appendUtmsToUrl(url)` que adiciona os UTMs como query params a qualquer URL de checkout
 
-**RitualsMockupContent (Rituais):**
-- Cards realistas com thumbnail colorida, titulo do ritual, categoria, e icone de cadeado premium
-- Separacao visual por categoria (Ebo, Oriki, etc.)
+### Onde sera usado
+- **Oferta.tsx**: ao abrir link de checkout da Guru, os UTMs sao anexados a URL
+- **PremiumLockModal.tsx**: idem
+- **DemoBanner.tsx**: idem
+- **Demo.tsx**: idem
+- **Auth.tsx**: salvar UTMs no perfil do usuario ao fazer signup (campo `utm_source`, `utm_medium`, `utm_campaign` na tabela `profiles`)
 
-**JourneyMockupContent (Jornada):**
-- Card hero com gradiente sacred, circulo de progresso SVG com porcentagem
-- Lista de tarefas com checkmarks (2 completas, 1 pendente)
-- Barra de XP no topo
+### Repasse para Facebook
+- O `fbclid` capturado sera preservado automaticamente pelo Pixel
+- Os UTMs serao enviados como `custom_data` nos eventos CAPI para melhor atribuicao
 
-**LearnMockupContent (Aprender):**
-- Grid de categorias com gradientes coloridos distintos por categoria
-- Titulos e contadores de conteudo
+---
 
-### 2. Hero com Mockup em Destaque (nao so carrossel)
-- No hero, ao lado do texto (desktop), exibir o **HomeMockupContent** -- um mockup grande e realista da tela Home do app
-- O mockup do hero sera ligeiramente maior que os do carrossel (escala 1.1x)
-- No mobile, o mockup aparece abaixo do texto do hero
-- Adicionar uma sombra mais dramatica e um leve angulo/rotacao 3D para dar profundidade (estilo Duolingo, onde o mockup parece "flutuar")
+## 2. Novos Eventos de Pixel
 
-### 3. Galeria com Layout Variado (nao so carrossel linear)
-- Manter o scroll horizontal no mobile
-- No desktop (md+), exibir os 4 mockups com layout escalonado: os 2 do meio ligeiramente elevados (translateY negativo) criando um efeito de "onda"
-- Cada mockup mantem a animacao fade-up escalonada ja existente
+### ViewContent
+- **Onde**: ao montar a pagina `/oferta` (useEffect no Oferta.tsx)
+- **Dados**: `{ content_name: "Landing Page", content_category: "oferta" }`
+- **CAPI**: tambem enviado server-side se o usuario estiver logado
+
+### AddToCart
+- **Onde**: quando o usuario clica em um plano especifico (seleciona o card do plano) -- antes de ir ao checkout
+- **Dados**: `{ content_name: plan.name, value: plan.price, currency: "BRL" }`
+- **Nota**: diferente do InitiateCheckout, que dispara quando abre o link externo; AddToCart dispara ao demonstrar interesse no plano
+
+### CompleteRegistration
+- **Onde**: ao completar o onboarding (OnboardingWizard.tsx, no submit final)
+- **Dados**: `{ content_name: "Onboarding Completed" }`
+- **CAPI**: tambem enviado server-side
+
+### Purchase (browser-side)
+- **Onde**: adicionar na pagina de "boas-vindas pos-compra" ou detectar quando o usuario volta do checkout com status de premium ativo
+- **Alternativa pragmatica**: o Purchase via CAPI no webhook ja cobre isso; o browser-side seria redundancia para deduplicacao do Meta (que e boa pratica)
+
+### Eventos Customizados
+- `DemoStarted`: quando o usuario entra no `/demo`
+- `DemoOracleCompleted`: quando completa o fluxo do Oraculo na demo
+- `PremiumContentClicked`: quando clica em conteudo premium bloqueado
+
+---
+
+## 3. Melhoria no CAPI
+
+### Adicionar UTMs ao CAPI
+- Modificar `src/lib/capi.ts` para incluir UTMs nos `custom_data` de cada evento
+- Modificar `supabase/functions/meta-capi/index.ts` para repassar `custom_data` ao Meta
+
+### Adicionar event_id para deduplicacao
+- Gerar um `event_id` unico (UUID) para cada evento
+- Enviar o mesmo `event_id` tanto no Pixel (browser) quanto no CAPI (server)
+- Isso permite que o Meta deduplique os eventos corretamente
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivo modificado: `src/components/landing/PhoneMockup.tsx`
+### Novo arquivo: `src/lib/utm.ts`
+- `captureUtms()`: le `window.location.search`, salva UTMs no `sessionStorage`
+- `getUtmParams()`: retorna objeto com os UTMs salvos
+- `appendUtmsToUrl(url: string)`: adiciona UTMs como query params a uma URL
+- `getUtmString()`: retorna os UTMs como string para analytics
 
-**HomeMockupContent (NOVO):**
-- Saudacao com nome "Visitante" e badge de streak (icone fogo + "3")
-- Mini card com gradiente marrom escuro simulando o banner de jornada
-- 3 mini cards de destaque com thumbnails coloridas (gradientes CSS)
-- Estilo identico ao Home.tsx real
+### Arquivo modificado: `src/lib/pixel.ts`
+- Adicionar: `trackViewContent(data)`, `trackAddToCart(data)`, `trackCompleteRegistration()`, `trackCustomEvent(eventName, data)`
+- Adicionar suporte a `event_id` em todos os eventos (parametro `eventID` do fbq)
+- Gerar UUID via `crypto.randomUUID()` e retornar para uso no CAPI
 
-**OracleMockupContent (reescrito):**
-- Titulo centralizado "Como posso te ajudar hoje?" com subtitulo
-- 2-3 cards de fluxo com: icone em fundo colorido arredondado, titulo bold, descricao curta
-- Visual identico ao Oracle.tsx real
+### Arquivo modificado: `src/lib/capi.ts`
+- Aceitar `event_id` opcional para deduplicacao
+- Aceitar `custom_data` opcional para UTMs e dados extras
+- Enviar UTMs nos custom_data
 
-**RitualsMockupContent (reescrito):**
-- 4 cards com: thumbnail colorida (gradiente), titulo do ritual, badge de categoria, icone de cadeado dourado no ultimo
-- Visual identico ao Rituals.tsx real
+### Arquivo modificado: `supabase/functions/meta-capi/index.ts`
+- Aceitar e repassar `event_id` no payload do Meta
+- Aceitar e repassar `custom_data` generico
 
-**JourneyMockupContent (reescrito):**
-- Card hero com gradiente sacred + circulo SVG de progresso (60%, com strokeDasharray real)
-- Frase motivacional "Seu Ori agradece cada passo"
-- 3 tarefas: 2 com check verde + line-through, 1 pendente
-- Visual identico ao Journey.tsx / TodayHeroCard
+### Arquivos modificados (chamadas de eventos):
+1. `src/pages/Oferta.tsx` -- adicionar ViewContent no useEffect + appendUtmsToUrl nos checkouts + AddToCart nos cards de plano
+2. `src/components/PremiumLockModal.tsx` -- appendUtmsToUrl no checkout
+3. `src/components/landing/DemoBanner.tsx` -- appendUtmsToUrl no checkout
+4. `src/pages/Demo.tsx` -- DemoStarted ao montar + appendUtmsToUrl + DemoOracleCompleted
+5. `src/pages/Auth.tsx` -- salvar UTMs no perfil + CompleteRegistration apos signup
+6. `src/components/onboarding/OnboardingWizard.tsx` -- CompleteRegistration ao finalizar
+7. `src/components/oracle/FlowStepRenderer.tsx` -- DemoOracleCompleted no diagnostico em modo demo
+8. `src/App.tsx` -- chamar captureUtms() uma vez ao montar o AppContent
 
-**LearnMockupContent (reescrito):**
-- Header "Categorias"
-- Grid 2x3 com cards coloridos: cada um com gradiente distinto (dourado para Ebo, verde para Oriki, roxo para Iyami, etc.)
-- Titulo e numero de itens em cada card
+### Migracao de banco (opcional mas recomendada)
+- Adicionar colunas `utm_source`, `utm_medium`, `utm_campaign` na tabela `profiles` para rastrear a origem de cada usuario
+- Tipo: `text`, nullable, sem default
 
-### Arquivo modificado: `src/pages/Oferta.tsx`
+---
 
-**Hero Section (linhas 121-178):**
-- Trocar `OracleMockupContent` por `HomeMockupContent` no hero
-- Adicionar wrapper com estilo 3D: `transform: perspective(1000px) rotateY(-5deg) rotateX(2deg)` + sombra `shadow-2xl`
-- Mostrar mockup tambem no mobile (abaixo do texto), nao apenas `hidden md:block`
+## Resumo dos Eventos Apos Implementacao
 
-**Galeria (linhas 199-222):**
-- No desktop, adicionar `md:items-end` no container flex
-- Aplicar `md:-translate-y-4` nos mockups do meio (indice 1 e 2) para efeito escalonado
-- Adicionar um PhoneMockup extra com HomeMockupContent no inicio (totalizando 5 mockups: Home, Oraculo, Rituais, Jornada, Aprender)
+| Evento | Pixel (Browser) | CAPI (Server) | Onde |
+|---|---|---|---|
+| PageView | Sim (auto) | -- | Toda pagina |
+| ViewContent | Sim (NOVO) | Sim (NOVO) | /oferta |
+| Lead | Sim | Sim | Primeiro login |
+| AddToCart | Sim (NOVO) | Sim (NOVO) | Seleciona plano |
+| InitiateCheckout | Sim | Sim | Abre checkout |
+| CompleteRegistration | Sim (NOVO) | Sim (NOVO) | Apos onboarding |
+| Purchase | Sim (redundancia) | Sim (webhook) | Webhook Guru |
+| DemoStarted | Custom (NOVO) | -- | Entra /demo |
+| DemoOracleCompleted | Custom (NOVO) | -- | Completa oraculo demo |
+| PremiumContentClicked | Custom (NOVO) | -- | Clica premium |
 
-### Componente PhoneMockup (moldura)
-- Adicionar prop `size` com opcoes "default" e "large"
-- "large": w-[260px] h-[500px] para o hero
-- Adicionar barra de status simulada no topo (hora, bateria, sinal) para mais realismo
-- Adicionar indicador de home (barrinha inferior) no bottom da tela
+Todos os eventos de Pixel e CAPI compartilham o mesmo `event_id` para deduplicacao correta pelo Meta.
