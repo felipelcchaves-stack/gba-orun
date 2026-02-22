@@ -391,7 +391,7 @@ const AdminFlows = () => {
               {/* Frase de conclusão */}
               <div className="pl-1">
                 <label className="text-[11px] text-muted-foreground block mb-1">
-                  Frase de conclusão <span className="opacity-60">— aparece em "Você fez ___ hoje. Àṣẹ́!"</span>
+                  Frase de conclusão <span className="opacity-60">— aparece assim: "Você fez <strong>[o que você escrever aqui]</strong> hoje. Àṣẹ́!"</span>
                 </label>
                 <Input
                   placeholder="Ex: o seu Cuidado Espiritual Semanal"
