@@ -352,39 +352,60 @@ const AdminFlows = () => {
       ) : flows && flows.length > 0 ? (
         <div className="space-y-3">
           {flows.map((flow) => (
-            <div key={flow.id} className="bg-card rounded-2xl p-4 border border-border flex items-center justify-between">
-              <div>
-                <h3 className="font-display font-bold flex items-center gap-2">
-                  {flow.name}
-                  {flow.is_default && (
-                    <span className="text-xs bg-accent/20 text-accent-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Star className="h-3 w-3" /> Padrão
-                    </span>
+            <div key={flow.id} className="bg-card rounded-2xl p-4 border border-border space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-display font-bold flex items-center gap-2">
+                    {flow.name}
+                    {flow.is_default && (
+                      <span className="text-xs bg-accent/20 text-accent-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Star className="h-3 w-3" /> Padrão
+                      </span>
+                    )}
+                    {!flow.is_active && (
+                      <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Inativo</span>
+                    )}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{flow.description || "Sem descrição"}</span>
+                </div>
+                <div className="flex gap-2">
+                  {!flow.is_default && (
+                    <button onClick={() => handleSetDefault(flow.id)} className="p-2 rounded-lg hover:bg-muted" title="Definir como padrão">
+                      <Star className="h-4 w-4" />
+                    </button>
                   )}
-                  {!flow.is_active && (
-                    <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Inativo</span>
-                  )}
-                </h3>
-                <span className="text-xs text-muted-foreground">{flow.description || "Sem descrição"}</span>
-              </div>
-              <div className="flex gap-2">
-                {!flow.is_default && (
-                  <button onClick={() => handleSetDefault(flow.id)} className="p-2 rounded-lg hover:bg-muted" title="Definir como padrão">
-                    <Star className="h-4 w-4" />
+                  <button onClick={() => handleToggleActive(flow.id, flow.is_active)} className="p-2 rounded-lg hover:bg-muted text-xs font-medium">
+                    {flow.is_active ? "Desativar" : "Ativar"}
                   </button>
-                )}
-                <button onClick={() => handleToggleActive(flow.id, flow.is_active)} className="p-2 rounded-lg hover:bg-muted text-xs font-medium">
-                  {flow.is_active ? "Desativar" : "Ativar"}
-                </button>
-                <button onClick={() => handleCloneFlow(flow.id)} disabled={cloningId === flow.id} className="p-2 rounded-lg hover:bg-muted" title="Duplicar fluxo">
-                  <Copy className={`h-4 w-4 ${cloningId === flow.id ? "animate-spin" : ""}`} />
-                </button>
-                <button onClick={() => setEditingFlowId(flow.id)} className="p-2 rounded-lg hover:bg-muted">
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button onClick={() => handleDelete(flow.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                  <button onClick={() => handleCloneFlow(flow.id)} disabled={cloningId === flow.id} className="p-2 rounded-lg hover:bg-muted" title="Duplicar fluxo">
+                    <Copy className={`h-4 w-4 ${cloningId === flow.id ? "animate-spin" : ""}`} />
+                  </button>
+                  <button onClick={() => setEditingFlowId(flow.id)} className="p-2 rounded-lg hover:bg-muted">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => handleDelete(flow.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              {/* Frase de conclusão */}
+              <div className="pl-1">
+                <label className="text-[11px] text-muted-foreground block mb-1">
+                  Frase de conclusão <span className="opacity-60">— aparece em "Você fez ___ hoje. Àṣẹ́!"</span>
+                </label>
+                <Input
+                  placeholder="Ex: o seu Cuidado Espiritual Semanal"
+                  defaultValue={(flow as any).completion_phrase || ""}
+                  onBlur={(e) => {
+                    const val = e.target.value.trim();
+                    if (val !== ((flow as any).completion_phrase || "")) {
+                      updateFlow.mutateAsync({ id: flow.id, completion_phrase: val } as any).then(() => {
+                        toast.success("Frase de conclusão salva!");
+                      });
+                    }
+                  }}
+                  className="h-8 text-sm"
+                />
               </div>
             </div>
           ))}

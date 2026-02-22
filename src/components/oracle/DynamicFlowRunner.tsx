@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
-import { useFlowNodes, useFlowEdges, type OracleFlowNode } from "@/hooks/useOracleFlows";
+import { useFlowNodes, useFlowEdges, useOracleFlows, type OracleFlowNode } from "@/hooks/useOracleFlows";
 import FlowStepRenderer from "./FlowStepRenderer";
 import OracleProgressBar from "./OracleProgressBar";
 
@@ -12,6 +12,8 @@ interface DynamicFlowRunnerProps {
 const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
   const { data: nodes } = useFlowNodes(flowId);
   const { data: edges } = useFlowEdges(flowId);
+  const { data: flows } = useOracleFlows();
+  const currentFlow = flows?.find(f => f.id === flowId);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -145,6 +147,7 @@ const DynamicFlowRunner = ({ flowId, onExit }: DynamicFlowRunnerProps) => {
           onNext={handleNext}
           answers={answers}
           allNodes={nodes}
+          flowName={currentFlow?.name}
         />
       </div>
 

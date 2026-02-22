@@ -25,11 +25,12 @@ export const useAddJourneyEntry = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ oracle_result, suggested_ritual_id, context, notes }: { 
+    mutationFn: async ({ oracle_result, suggested_ritual_id, context, notes, flow_name }: { 
       oracle_result: string; 
       suggested_ritual_id?: string;
       context?: string;
       notes?: string;
+      flow_name?: string;
     }) => {
       if (!user) throw new Error("Not logged in");
       const { data, error } = await supabase.from("user_journey").insert({
@@ -38,6 +39,7 @@ export const useAddJourneyEntry = () => {
         suggested_ritual_id: suggested_ritual_id || null,
         context: context || "rotina_diaria",
         notes: notes || null,
+        flow_name: flow_name || null,
       } as any).select().single();
       if (error) throw error;
       return data;
