@@ -1,6 +1,7 @@
 import { Lock, ExternalLink } from "lucide-react";
-import { trackInitiateCheckout } from "@/lib/pixel";
+import { trackInitiateCheckout, trackCustomEvent } from "@/lib/pixel";
 import { sendCAPIEvent } from "@/lib/capi";
+import { appendUtmsToUrl } from "@/lib/utm";
 import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,10 +27,11 @@ const PremiumLockModal = ({ open, onClose, checkoutUrl }: PremiumLockModalProps)
   const directCheckoutUrl = cheapest?.guru_checkout_url;
 
   const handleCheckout = () => {
-    trackInitiateCheckout();
-    if (user?.email) sendCAPIEvent("InitiateCheckout", user.email);
+    trackCustomEvent("PremiumContentClicked");
+    const eventId = trackInitiateCheckout();
+    if (user?.email) sendCAPIEvent("InitiateCheckout", user.email, { event_id: eventId });
     if (isDemo && directCheckoutUrl) {
-      window.open(directCheckoutUrl, "_blank");
+      window.open(appendUtmsToUrl(directCheckoutUrl), "_blank");
     } else {
       navigate("/oferta");
     }

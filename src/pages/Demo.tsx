@@ -1,4 +1,5 @@
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { DemoProvider } from "@/contexts/DemoContext";
 import DemoBanner from "@/components/landing/DemoBanner";
 import Home from "./Home";
@@ -10,7 +11,8 @@ import Journey from "./Journey";
 import { Home as HomeIcon, Map, GraduationCap, Compass, Star } from "lucide-react";
 import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { trackInitiateCheckout } from "@/lib/pixel";
+import { trackInitiateCheckout, trackCustomEvent } from "@/lib/pixel";
+import { appendUtmsToUrl } from "@/lib/utm";
 
 const DemoNav = () => {
   const location = useLocation();
@@ -30,10 +32,11 @@ const DemoNav = () => {
 
   const handleSubscribe = () => {
     trackInitiateCheckout();
-    if (checkoutUrl.startsWith("http")) {
-      window.open(checkoutUrl, "_blank");
+    const targetUrl = appendUtmsToUrl(checkoutUrl);
+    if (targetUrl.startsWith("http")) {
+      window.open(targetUrl, "_blank");
     } else {
-      navigate(checkoutUrl);
+      navigate(targetUrl);
     }
   };
 
@@ -72,6 +75,10 @@ const DemoNav = () => {
 };
 
 const DemoPage = () => {
+  useEffect(() => {
+    trackCustomEvent("DemoStarted");
+  }, []);
+
   return (
     <DemoProvider>
       <DemoBanner />

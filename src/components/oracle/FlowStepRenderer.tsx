@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CheckCircle, ChevronRight, Loader2, Play, Pause, BookOpen, UtensilsCrossed, Star } from "lucide-react";
 import { useDemo } from "@/contexts/DemoContext";
+import { trackCustomEvent } from "@/lib/pixel";
 import { type OracleFlowNode } from "@/hooks/useOracleFlows";
 import { useOracleConfigs } from "@/hooks/useOracleConfig";
 import { useIreIbiTypes } from "@/hooks/useIreIbiTypes";
@@ -694,6 +695,13 @@ const DiagnosisStep = ({ node, answers, allNodes, flowName }: { node: OracleFlow
       setSaving(false);
     }
   };
+
+  // Track demo oracle completion
+  useEffect(() => {
+    if (isDemo) {
+      trackCustomEvent("DemoOracleCompleted", { flow_name: flowName });
+    }
+  }, [isDemo, flowName]);
 
   return (
     <div className="animate-fade-up">
