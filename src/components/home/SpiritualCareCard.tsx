@@ -2,6 +2,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOracleFlows } from "@/hooks/useOracleFlows";
 import { Link } from "react-router-dom";
 import { CalendarHeart, AlertTriangle, Sparkles, CheckCircle, Clock } from "lucide-react";
 import { startOfWeek, endOfWeek, differenceInDays } from "date-fns";
@@ -23,7 +24,7 @@ const SpiritualCareCard = () => {
       if (!user) return [];
       const { data } = await supabase
         .from("user_journey")
-        .select("id, created_at, oracle_result")
+        .select("id, created_at, oracle_result, flow_name")
         .eq("user_id", user.id)
         .gte("created_at", weekStart.toISOString())
         .lte("created_at", weekEnd.toISOString())
@@ -49,6 +50,9 @@ const SpiritualCareCard = () => {
     },
     enabled: !!user,
   });
+
+  // Fetch oracle flows for completion_phrase
+  const { data: oracleFlows } = useOracleFlows();
 
   if (!user || !profile) return null;
 
@@ -83,9 +87,15 @@ const SpiritualCareCard = () => {
     if (daysUntil === 0 && !isToday) daysUntil = 7;
 
     if (isToday && hadActivityToday) {
+      // Build smart completion message using flow_name + completion_phrase
+      const todayEntry = weekEntries?.find(e => new Date(e.created_at).getDay() === careDay);
+      const entryFlowName = (todayEntry as any)?.flow_name as string | undefined;
+      const matchedFlow = entryFlowName && oracleFlows?.find(f => f.name === entryFlowName);
+      const completionPhrase = matchedFlow?.completion_phrase || (entryFlowName ? entryFlowName : "o seu cuidado espiritual");
+      
       variant = "success";
       icon = <CheckCircle className="h-6 w-6 text-emerald-500" />;
-      message = "Você já cuidou do seu Ori hoje. Axé! ✨";
+      message = `Você fez ${completionPhrase} hoje. Àṣẹ́! ✨`;
       subMessage = "Continue assim, seu Ori agradece.";
     } else if (isToday) {
       variant = "gold";

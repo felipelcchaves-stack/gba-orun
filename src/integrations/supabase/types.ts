@@ -483,6 +483,7 @@ export type Database = {
       }
       oracle_flows: {
         Row: {
+          completion_phrase: string
           created_at: string
           description: string
           id: string
@@ -492,6 +493,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          completion_phrase?: string
           created_at?: string
           description?: string
           id?: string
@@ -501,6 +503,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          completion_phrase?: string
           created_at?: string
           description?: string
           id?: string
@@ -872,6 +875,7 @@ export type Database = {
           completed_at: string | null
           context: string | null
           created_at: string
+          flow_name: string | null
           id: string
           notes: string | null
           oracle_result: string
@@ -883,6 +887,7 @@ export type Database = {
           completed_at?: string | null
           context?: string | null
           created_at?: string
+          flow_name?: string | null
           id?: string
           notes?: string | null
           oracle_result: string
@@ -894,6 +899,7 @@ export type Database = {
           completed_at?: string | null
           context?: string | null
           created_at?: string
+          flow_name?: string | null
           id?: string
           notes?: string | null
           oracle_result?: string

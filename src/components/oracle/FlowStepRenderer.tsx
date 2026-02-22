@@ -26,6 +26,7 @@ interface FlowStepRendererProps {
   onNext: (handleId: string, answer?: string) => void;
   answers?: Record<string, string>;
   allNodes?: OracleFlowNode[];
+  flowName?: string;
 }
 
 // Inline guidance bubble that uses config data (not DB guidance_bubbles)
@@ -219,7 +220,7 @@ const StepHeader = ({ node, answers }: { node: OracleFlowNode; answers?: Record<
   );
 };
 
-const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowStepRendererProps) => {
+const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [], flowName }: FlowStepRendererProps) => {
   const config = node.config || {};
   const [openAnswer, setOpenAnswer] = useState("");
 
@@ -330,7 +331,7 @@ const FlowStepRenderer = ({ node, onNext, answers = {}, allNodes = [] }: FlowSte
 
   // ── DIAGNOSIS ──
   if (node.node_type === "diagnosis") {
-    return <DiagnosisStep node={node} answers={answers} allNodes={allNodes} />;
+    return <DiagnosisStep node={node} answers={answers} allNodes={allNodes} flowName={flowName} />;
   }
 
   // ── MEDIA ──
@@ -614,7 +615,7 @@ function evaluateCondition(condition: string, answers: Record<string, string>): 
   return false;
 }
 
-const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answers: Record<string, string>; allNodes: OracleFlowNode[] }) => {
+const DiagnosisStep = ({ node, answers, allNodes, flowName }: { node: OracleFlowNode; answers: Record<string, string>; allNodes: OracleFlowNode[]; flowName?: string }) => {
   const { user } = useAuth();
   const { data: obiConfigs } = useOracleConfigs();
   const addXP = useAddXP();
@@ -644,6 +645,7 @@ const DiagnosisStep = ({ node, answers, allNodes }: { node: OracleFlowNode; answ
         oracle_result: obiResult,
         context: JSON.stringify(answers),
         notes,
+        flow_name: flowName,
       });
 
       if (entry) {

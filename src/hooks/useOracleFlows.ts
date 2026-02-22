@@ -9,6 +9,7 @@ export interface OracleFlow {
   is_default: boolean;
   created_at: string;
   updated_at: string;
+  completion_phrase?: string;
 }
 
 export interface OracleFlowNode {
