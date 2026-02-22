@@ -243,8 +243,8 @@ const OfertaPage = () => {
       <section className="py-16 px-6 bg-accent/10">
         <div className="max-w-lg mx-auto text-center">
           <h2 className="text-2xl font-display font-bold mb-3 text-foreground">Experimente antes de assinar</h2>
-          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-            Navegue pelo app completo, faça uma consulta ao Oráculo e veja o resultado — sem precisar criar conta.
+          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">Navegue pelo app completo, simule o uso da consulta ao Oráculo e veja o resultado — sem precisar criar conta.
+
           </p>
           <button
             onClick={() => navigate("/demo")}
