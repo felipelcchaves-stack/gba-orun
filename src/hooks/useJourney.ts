@@ -39,8 +39,8 @@ export const useAddJourneyEntry = () => {
         suggested_ritual_id: suggested_ritual_id || null,
         context: context || "rotina_diaria",
         notes: notes || null,
-        flow_name: flow_name || null,
-      } as any).select().single();
+      flow_name: flow_name || null,
+      }).select().single();
       if (error) throw error;
       return data;
     },
@@ -48,6 +48,7 @@ export const useAddJourneyEntry = () => {
       qc.invalidateQueries({ queryKey: ["journey"] });
       qc.invalidateQueries({ queryKey: ["journey-month"] });
       qc.invalidateQueries({ queryKey: ["journey-month-tasks"] });
+      qc.invalidateQueries({ queryKey: ["week_journey"] });
     },
   });
 };
