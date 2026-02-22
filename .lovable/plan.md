@@ -1,50 +1,20 @@
 
+# Correção: Esconder tarefas de oração quando desabilitado
 
-# Habilitar/Desabilitar Oracoes da Manha e Noite
+## Problema
 
-## O que sera feito
+Quando `show_daily_prayers` está `false`, o código mostra **todas** as tarefas juntas (incluindo "Oração da Manhã", "Oração da Noite", etc.), porque passa a lista completa `tasks` ao invés de filtrar as orações.
 
-Criar um toggle no painel Admin que permite habilitar ou desabilitar a exibicao das secoes de "Oracoes da Manha" e "Oracoes da Noite" em todo o app. Quando desabilitado:
+## Solução
 
-- A secao de oracoes na **Home** desaparece
-- As tarefas de oracao na **Jornada** nao sao agrupadas nas secoes "Manha" e "Noite" (ficam junto com as demais tarefas)
+**Arquivo:** `src/components/journey/JourneyEntryCard.tsx` (linha 148)
 
-## Solucao
+Trocar `tasks` por `otherTasks` no bloco de quando orações estão desabilitadas. Assim, as tarefas de oração ficam completamente ocultas.
 
-### 1. Criar a configuracao no banco de dados
+Também ajustar o cálculo de progresso para considerar apenas as tarefas visíveis quando orações estão desabilitadas, para que a barra de progresso reflita corretamente o estado.
 
-Inserir uma nova chave `show_daily_prayers` na tabela `app_settings` com valor `"false"` (desabilitado por padrao para o lancamento de cortesia).
+### Detalhes técnicos
 
-### 2. Adicionar toggle no Admin
-
-**Arquivo:** `src/pages/Admin.tsx`
-
-Na area de rituais/oracoes do Admin, adicionar um Switch com label "Exibir Oracoes da Manha/Noite" que atualiza a chave `show_daily_prayers` na tabela `app_settings`. Usa o hook `useUpdateAppSetting` que ja existe.
-
-### 3. Ocultar secao na Home
-
-**Arquivo:** `src/pages/Home.tsx`
-
-Condicionar a secao de "Oracoes da Manha / Noite" ao valor de `settings?.show_daily_prayers === "true"`. Quando `false`, a secao inteira (linhas 125-153) nao sera renderizada.
-
-### 4. Simplificar agrupamento na Jornada
-
-**Arquivo:** `src/components/journey/JourneyEntryCard.tsx`
-
-Ler o `app_settings` via hook e, quando `show_daily_prayers !== "true"`, juntar todas as tarefas em um unico grupo (sem separar Manha/Noite). As tarefas continuam existindo e funcionando, apenas o agrupamento visual muda.
-
-## Resumo dos arquivos alterados
-
-```text
-Banco de dados (insert):
-  - Inserir chave "show_daily_prayers" = "false" na tabela app_settings
-
-src/pages/Admin.tsx
-  - Adicionar Switch para habilitar/desabilitar oracoes diarias
-
-src/pages/Home.tsx
-  - Condicionar secao de oracoes ao setting
-
-src/components/journey/JourneyEntryCard.tsx
-  - Condicionar agrupamento Manha/Noite ao setting
-```
+- Linha 148: trocar `tasks` por `otherTasks`
+- Ajustar `completedCount` e `totalCount` para usar `otherTasks` quando `showPrayerGroups` é `false`
+- O `allDone` também precisa considerar apenas tarefas visíveis
