@@ -83,14 +83,14 @@ const TodayHeroCard = ({ completedCount, totalCount, greeting }: TodayHeroCardPr
           {allDone ? (
             <>
               <h2 className="text-lg font-display font-bold mb-1">Rotina concluída! 🎉</h2>
-              <p className="text-sm opacity-80 mb-2">Todas as {totalCount} tarefa{totalCount !== 1 ? "s" : ""} feita{totalCount !== 1 ? "s" : ""}</p>
+              <p className="text-sm opacity-80 mb-2">Todas as {totalCount} oferenda{totalCount !== 1 ? "s" : ""} feita{totalCount !== 1 ? "s" : ""}</p>
               <p className="text-xs opacity-60 italic">Ori agradece sua dedicação 🙏</p>
             </>
           ) : (
             <>
               <h2 className="text-lg font-display font-bold mb-1">Rotina de Hoje</h2>
               <p className="text-sm opacity-80 mb-2">
-                {completedCount} de {totalCount} tarefa{totalCount !== 1 ? "s" : ""} concluída{completedCount !== 1 ? "s" : ""}
+                {completedCount} de {totalCount} oferenda{totalCount !== 1 ? "s" : ""} concluída{completedCount !== 1 ? "s" : ""}
               </p>
               <p className="text-xs opacity-60 italic">{phrase}</p>
             </>
