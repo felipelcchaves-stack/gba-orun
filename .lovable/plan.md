@@ -1,92 +1,66 @@
 
-# Mensagem de Conclusao Inteligente com Nome do Fluxo
 
-## Problema
+# Corrigir a frase de conclusao no SpiritualCareCard
 
-Quando o usuario completa o cuidado do dia, o card mostra "Voce ja cuidou do seu Ori hoje. Axe!" -- mas ele nao cuidou so do Ori, ele fez um fluxo especifico (ex: "Cuidado Espiritual Semanal" ou "Cuidado com Oxum"). Alem disso, simplesmente encaixar o nome do fluxo na frase pode gerar frases sem coerencia gramatical.
+## Diagnostico
+
+Investiguei o banco de dados e o codigo e encontrei **dois problemas**:
+
+1. **`flow_name` esta `null` em todas as entradas da jornada** -- incluindo a de hoje (22/02). Isso acontece porque a consulta de hoje foi feita **antes** do deploy do codigo que salva o `flow_name`. O codigo esta correto, mas as entradas existentes nao tem esse dado. Resultado: o card sempre mostra o fallback "o seu cuidado espiritual".
+
+2. **A `completion_phrase` foi preenchida como "Parabens! Continue assim. Ase oo"** -- mas esse campo deveria conter apenas o trecho que encaixa na frase "Voce fez \_\_\_ hoje". Exemplo correto: "o seu Cuidado Espiritual Semanal". A dica no Admin nao esta clara o suficiente.
 
 ## Solucao
 
-Adicionar um campo `completion_phrase` na tabela `oracle_flows` onde o admin define exatamente como o nome do fluxo deve aparecer na frase de conclusao. Assim o sistema monta: **"Voce fez [completion_phrase] hoje. Ase! ✨"**
+### 1. Corrigir entradas antigas (retroativo)
 
-Exemplos:
-
-| Nome do fluxo | completion_phrase | Frase final |
-|---|---|---|
-| Cuidado Espiritual Semanal | o seu Cuidado Espiritual Semanal | "Voce fez o seu Cuidado Espiritual Semanal hoje. Ase!" |
-| Cuidado com Oxum | o Cuidado com Oxum | "Voce fez o Cuidado com Oxum hoje. Ase!" |
-| Cuidado com Exu | o Cuidado com Exu | "Voce fez o Cuidado com Exu hoje. Ase!" |
-
-Isso garante coesao e coerencia total, porque o admin controla a frase exata. Se o campo estiver vazio, usa um fallback generico: "o seu cuidado espiritual".
-
-Tambem sera corrigida a grafia de "Axe" para **Ase** (com diacriticos ioruba corretos).
-
-## O que muda
-
-### 1. Banco de dados
-
-Duas alteracoes:
+Atualizar as entradas existentes na `user_journey` que tem `flow_name = null` para associa-las ao fluxo correto. Como so existe um fluxo ("Cuidado Espiritual Semanal"), podemos preencher todas:
 
 ```text
-1. Adicionar coluna flow_name (text, nullable) em user_journey
-   -- Para guardar qual fluxo o usuario completou
-
-2. Adicionar coluna completion_phrase (text, default '') em oracle_flows
-   -- Para o admin definir como o nome aparece na frase
-   -- Ex: "o seu Cuidado Espiritual Semanal"
+UPDATE user_journey SET flow_name = 'Cuidado Espiritual Semanal' WHERE flow_name IS NULL;
 ```
 
-### 2. Salvar o nome do fluxo ao completar a jornada
+### 2. Corrigir a `completion_phrase` no banco
 
-Quando o usuario termina um fluxo (no no de Diagnostico), o sistema salva o `flow_name` na `user_journey`.
+Atualizar o valor salvo para algo que encaixe na frase:
 
-**Arquivos:**
+```text
+UPDATE oracle_flows 
+SET completion_phrase = 'o seu Cuidado Espiritual Semanal' 
+WHERE name = 'Cuidado Espiritual Semanal';
+```
 
-- `src/hooks/useJourney.ts` -- aceitar `flow_name` como parametro opcional no `useAddJourneyEntry`
-- `src/components/oracle/DynamicFlowRunner.tsx` -- buscar o fluxo ativo e passar `flowName` e `completionPhrase` para o `FlowStepRenderer`
-- `src/components/oracle/FlowStepRenderer.tsx` -- receber `flowName` como prop e incluir no `addJourneyEntry`
+### 3. Melhorar o placeholder e a dica no Admin
 
-### 3. Mostrar a frase inteligente no SpiritualCareCard
+**Arquivo:** `src/components/admin/AdminFlows.tsx`
 
-**Arquivo:** `src/components/home/SpiritualCareCard.tsx`
+Tornar a dica mais explicativa para o admin entender exatamente o que preencher:
 
-- Incluir `flow_name` no select da query de `weekEntries`
-- Buscar a `completion_phrase` do fluxo correspondente (via query nos `oracle_flows`)
-- Montar a frase: "Voce fez [completion_phrase] hoje. Ase! ✨"
-- Fallback se nao houver completion_phrase: "Voce fez o seu cuidado espiritual hoje. Ase! ✨"
-- Corrigir todas as ocorrencias de "Axe"/"Axe!" para "Ase!" (grafia ioruba)
+- Placeholder atual: "Ex: o seu Cuidado Espiritual Semanal"
+- Dica atual: "aparece em 'Voce fez ___ hoje. Ase!'"
+- **Nova dica:** "Esse texto aparece assim: **Voce fez [o que voce escrever aqui] hoje. Ase!** -- Ex: 'o seu Cuidado Espiritual Semanal' ou 'o Cuidado com Oxum'"
 
-### 4. Admin: campo para editar a completion_phrase
+### 4. Remover o `as any` desnecessario no useJourney
 
-**Arquivo:** `src/components/admin/AdminFlows.tsx` (ou onde os fluxos sao editados)
+O `flow_name` ja existe no types.ts gerado, entao o cast `as any` no insert pode ser removido para manter o codigo limpo.
 
-- Adicionar um campo de texto "Frase de conclusao" no formulario de edicao de fluxo
-- Placeholder: "Ex: o seu Cuidado Espiritual Semanal"
-- Dica: "Como o nome do fluxo aparece na frase 'Voce fez ___ hoje'"
+### 5. Invalidar cache `week_journey` ao salvar jornada
+
+Adicionar `week_journey` nas queries invalidadas apos salvar uma nova entrada, para que o SpiritualCareCard atualize imediatamente.
+
+**Arquivo:** `src/hooks/useJourney.ts`
 
 ## Resumo dos arquivos alterados
 
 ```text
 Banco de dados (migracao):
-  - user_journey: adicionar coluna flow_name (text, nullable)
-  - oracle_flows: adicionar coluna completion_phrase (text, default '')
-
-src/hooks/useJourney.ts
-  - Aceitar flow_name no useAddJourneyEntry
-
-src/components/oracle/DynamicFlowRunner.tsx
-  - Buscar nome e completion_phrase do fluxo
-  - Passar flowName como prop para FlowStepRenderer
-
-src/components/oracle/FlowStepRenderer.tsx
-  - Receber flowName e salvar na jornada
-
-src/components/home/SpiritualCareCard.tsx
-  - Buscar flow_name da jornada do dia
-  - Buscar completion_phrase do fluxo correspondente
-  - Montar frase inteligente com coesao
-  - Corrigir "Axe" para "Ase" (grafia ioruba)
+  - Preencher flow_name retroativamente nas entradas existentes
+  - Corrigir completion_phrase do fluxo "Cuidado Espiritual Semanal"
 
 src/components/admin/AdminFlows.tsx
-  - Adicionar campo "Frase de conclusao" no editor de fluxos
+  - Melhorar placeholder e dica do campo "Frase de conclusao"
+
+src/hooks/useJourney.ts
+  - Remover "as any" no insert
+  - Adicionar invalidacao do cache "week_journey"
 ```
