@@ -122,7 +122,7 @@ const HomePage = () => {
       </div>
 
       {/* Daily Prayers section */}
-      {dailyPrayers.length > 0 &&
+      {settings?.show_daily_prayers === "true" && dailyPrayers.length > 0 &&
       <div className="px-6 mb-6">
           <div className="max-w-lg mx-auto">
             <div className="flex items-center justify-between mb-3">
