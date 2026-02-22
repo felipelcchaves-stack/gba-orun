@@ -1,20 +1,28 @@
 
-# Correção: Esconder tarefas de oração quando desabilitado
+# Corrigir contagem do TodayHeroCard
 
 ## Problema
 
-Quando `show_daily_prayers` está `false`, o código mostra **todas** as tarefas juntas (incluindo "Oração da Manhã", "Oração da Noite", etc.), porque passa a lista completa `tasks` ao invés de filtrar as orações.
+O card "Rotina de Hoje" no topo da pagina Jornada mostra 88% (7/8) porque o calculo em `Journey.tsx` conta **todas** as tarefas, incluindo as de oracao da manha/noite que foram desabilitadas. O filtro so foi aplicado dentro do `JourneyEntryCard`, mas nao no resumo geral.
 
-## Solução
+## Solucao
 
-**Arquivo:** `src/components/journey/JourneyEntryCard.tsx` (linha 148)
+**Arquivo:** `src/pages/Journey.tsx`
 
-Trocar `tasks` por `otherTasks` no bloco de quando orações estão desabilitadas. Assim, as tarefas de oração ficam completamente ocultas.
+1. Importar `useAppSettings` no topo do componente
+2. No `dayMap` (linhas 49-54), filtrar as tarefas de oracao quando `show_daily_prayers` nao estiver habilitado, excluindo tarefas com `task_type` em `["oracao_manha", "oracao_ori", "oracao_noite", "oracao_iyami"]`
+3. Isso corrige automaticamente `todayTasksDone`, `todayTasksTotal` e tambem o `totalTasksDone` mensal
 
-Também ajustar o cálculo de progresso para considerar apenas as tarefas visíveis quando orações estão desabilitadas, para que a barra de progresso reflita corretamente o estado.
+### Detalhe tecnico
 
-### Detalhes técnicos
+Nas linhas 49-54, antes de incrementar `tasksTotal` e `tasksDone`, verificar se o `task_type` da tarefa nao e de oracao (quando desabilitado). Usar a mesma logica de filtragem ja aplicada no `JourneyEntryCard`:
 
-- Linha 148: trocar `tasks` por `otherTasks`
-- Ajustar `completedCount` e `totalCount` para usar `otherTasks` quando `showPrayerGroups` é `false`
-- O `allDone` também precisa considerar apenas tarefas visíveis
+```
+const prayerTypes = ["oracao_manha", "oracao_ori", "oracao_noite", "oracao_iyami"];
+const showPrayers = settings?.show_daily_prayers === "true";
+
+// No loop de tasks do dayMap:
+if (!showPrayers && prayerTypes.includes(t.task_type)) continue;
+```
+
+Tambem aplicar o mesmo filtro na linha 74 (`totalTasksDone`) para manter consistencia nas estatisticas mensais.
