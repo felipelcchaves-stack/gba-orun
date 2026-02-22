@@ -28,8 +28,12 @@ const JourneyEntryCard = ({
     oracleConfigs?.forEach((c) => { map[c.result_key] = c.name; });
     return map;
   }, [oracleConfigs]);
-  const completedCount = tasks?.filter((t: any) => t.completed).length ?? 0;
-  const totalCount = tasks?.length ?? 0;
+  const morningTypes = ["oracao_manha", "oracao_ori"];
+  const nightTypes = ["oracao_noite", "oracao_iyami"];
+  const otherTasks = tasks?.filter((t: any) => !morningTypes.includes(t.task_type) && !nightTypes.includes(t.task_type)) ?? [];
+  const visibleTasks = showPrayerGroups ? (tasks ?? []) : otherTasks;
+  const completedCount = visibleTasks.filter((t: any) => t.completed).length;
+  const totalCount = visibleTasks.length;
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const allDone = totalCount > 0 && completedCount === totalCount;
 
@@ -44,11 +48,8 @@ const JourneyEntryCard = ({
     }
   }, [allDone, entry.completed, onComplete]);
 
-  const morningTypes = ["oracao_manha", "oracao_ori"];
-  const nightTypes = ["oracao_noite", "oracao_iyami"];
   const morningTasks = tasks?.filter((t: any) => morningTypes.includes(t.task_type)) ?? [];
   const nightTasks = tasks?.filter((t: any) => nightTypes.includes(t.task_type)) ?? [];
-  const otherTasks = tasks?.filter((t: any) => !morningTypes.includes(t.task_type) && !nightTypes.includes(t.task_type)) ?? [];
 
   // --- Compact completed state ---
   if (allDone && !expanded) {
@@ -145,7 +146,7 @@ const JourneyEntryCard = ({
           {nightTasks.length > 0 && <TaskSection icon={Moon} label="Noite" iconBg="bg-primary/15" iconColor="text-primary" tasks={nightTasks} onComplete={onCompleteTask} />}
         </>
       ) : (
-        tasks && tasks.length > 0 && <TaskSection icon={Compass} label="Oferendas" iconBg="bg-earth/15" iconColor="text-earth" tasks={tasks} onComplete={onCompleteTask} />
+        otherTasks.length > 0 && <TaskSection icon={Compass} label="Oferendas" iconBg="bg-earth/15" iconColor="text-earth" tasks={otherTasks} onComplete={onCompleteTask} />
       )}
     </div>
   );
