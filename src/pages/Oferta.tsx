@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CheckCircle, Shield, BookOpen, Compass, Headphones, Zap, Star, Heart, HelpCircle, ChevronRight, Play } from "lucide-react";
+import { CheckCircle, Shield, BookOpen, Compass, Zap, Star, Heart, HelpCircle, ChevronRight, Play } from "lucide-react";
 import { trackInitiateCheckout, trackViewContent, trackAddToCart } from "@/lib/pixel";
 import { sendCAPIEvent } from "@/lib/capi";
 import { appendUtmsToUrl } from "@/lib/utm";
@@ -13,15 +13,15 @@ import AuthoritySection from "@/components/landing/AuthoritySection";
 import PhoneMockup, { HomeMockupContent, OracleMockupContent, RitualsMockupContent, JourneyMockupContent, LearnMockupContent } from "@/components/landing/PhoneMockup";
 
 const FALLBACK_TESTIMONIALS = [
-{ name: "Maria S.", text: "Nunca mais tive dúvida no Obi. Esse app mudou minha vida espiritual!", stars: 5 },
-{ name: "João P.", text: "As receitas de Ebo são completas e fiéis à tradição. Recomendo demais!", stars: 5 },
-{ name: "Ana L.", text: "Uso todos os dias no meu terreiro. Os Orikis são perfeitos.", stars: 5 },
-{ name: "Carlos M.", text: "A praticidade de ter tudo no celular é incrível. Mudou minha rotina espiritual.", stars: 5 }];
+{ name: "Maria S.", text: "Jogava o Obi e ficava perdido. Agora o app me guia em tudo, passo a passo!", stars: 5 },
+{ name: "João P.", text: "É como ter o Oluwo do meu lado. Prático e direto ao ponto.", stars: 5 },
+{ name: "Ana L.", text: "Complementa perfeitamente o que aprendi nos cursos. Uso todos os dias.", stars: 5 },
+{ name: "Carlos M.", text: "Não dependo mais de ninguém pra seguir minha rotina espiritual.", stars: 5 }];
 
 
 const faqs = [
 { q: "O que é o Método Oluwo Ifatokun?", a: "É uma metodologia ritualística desenvolvida pelo Oluwo Ifatokun, sacerdote de Ifá, que organiza e sistematiza os procedimentos sagrados da tradição Yorubá. O Gba-Orun é a versão digital desta sabedoria ancestral." },
-{ q: "Preciso ter experiência religiosa para usar?", a: "Não! O Gba-Orun foi criado tanto para iniciantes quanto para praticantes experientes. O conteúdo é didático e acessível." },
+{ q: "Preciso ter feito os cursos para usar?", a: "O ideal é ter feito pelo menos um dos cursos do Oluwo Ifatokun (Obi, Ebó, Orí). O app foi pensado para complementar o que você aprendeu, mas mesmo quem está começando consegue acompanhar." },
 { q: "Funciona no celular?", a: "Sim! O app é 100% responsivo e pode ser instalado como aplicativo no seu celular, sem precisar da App Store." },
 { q: "Posso cancelar a qualquer momento?", a: "Sim! Você pode cancelar sua assinatura quando quiser, sem burocracia. Seu acesso continua até o fim do período pago." },
 { q: "Posso usar offline?", a: "Após instalar o app, as páginas já visitadas ficam disponíveis offline. Novos conteúdos precisam de conexão para carregar pela primeira vez." },
@@ -29,10 +29,10 @@ const faqs = [
 
 
 const pains = [
-"Fica inseguro(a) na hora de interpretar o Obi?",
-"Não sabe qual Ebo preparar para cada situação?",
-"Depende de outras pessoas para consultas simples?",
-"Perde tempo procurando Orikis em livros e cadernos espalhados?"];
+"Jogou o Obi e ficou sem saber o que fazer depois?",
+"Fez o curso mas na hora H não lembra os passos?",
+"Depende de alguém pra te orientar em cada consulta?",
+"Tem o conhecimento mas falta um guia prático no dia a dia?"];
 
 
 const PERIOD_LABELS: Record<string, string> = {
@@ -78,8 +78,8 @@ const OfertaPage = () => {
     script.text = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "Product",
-      name: "Gba-Orun — Sabedoria Ancestral Yorubá",
-      description: "O guia digital mais completo de Obi, Rituais e Orikis da tradição Yorubá.",
+      name: "Gba-Orun — Guia Prático do Método Oluwo Ifatokun",
+      description: "Guia prático digital que orienta alunos do Método Oluwo Ifatokun após cada consulta ao Obi.",
       offers: { "@type": "Offer", price: mainPlan?.price || price, priceCurrency: "BRL", availability: "https://schema.org/InStock" },
       aggregateRating: { "@type": "AggregateRating", ratingValue: "5", reviewCount: String(testimonials.length) }
     });
@@ -261,10 +261,10 @@ const OfertaPage = () => {
           <h2 className="text-3xl font-display font-bold text-center mb-10 text-foreground">O que você vai receber</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {[
-            { icon: Compass, title: "Oráculo do Obi", desc: "Interprete cada caída com precisão e confiança." },
-            { icon: BookOpen, title: "Receitas de Ebo", desc: "Ebós completos com materiais, cantigas e procedimentos." },
-            { icon: Headphones, title: "Áudios Exclusivos", desc: "Áudios gravados para guiar sua prática ritual." },
-            { icon: Shield, title: "Proteção de Iyami", desc: "Rituais de proteção e cuidado espiritual ancestral." },
+            { icon: Compass, title: "Guia Prático Pós-Obi", desc: "Jogou o Obi? O app te diz o próximo passo, como se o Oluwo estivesse ali." },
+            { icon: BookOpen, title: "Orientação Ritual Completa", desc: "Saiba qual ritual fazer, com que materiais e como proceder." },
+            { icon: Heart, title: "Conectado aos Cursos", desc: "Obi, Ebó, Orí, Iyami e Egbe Orun: o app complementa o que você aprendeu." },
+            { icon: Shield, title: "Seu Mentor no Bolso", desc: "Sem depender de ninguém. A orientação do Oluwo Ifatokun, sempre acessível." },
             { icon: Zap, title: "Jornada Gamificada", desc: "Acompanhe seu progresso espiritual com XP e conquistas." },
             { icon: Star, title: "Atualizações Contínuas", desc: "Novos conteúdos e funcionalidades inclusos na assinatura." }].
             map((b, i) =>
@@ -286,9 +286,9 @@ const OfertaPage = () => {
           <h2 className="text-3xl font-display font-bold mb-10 text-foreground">Como funciona</h2>
           <div className="grid gap-6 sm:grid-cols-3">
             {[
-            { step: "1", title: "Assine", desc: "Escolha seu plano e crie sua conta em segundos." },
-            { step: "2", title: "Consulte", desc: "Use o Oráculo do Obi e descubra o caminho." },
-            { step: "3", title: "Pratique", desc: "Siga os rituais indicados e evolua espiritualmente." }].
+            { step: "1", title: "Assine", desc: "Escolha seu plano e acesse o guia completo." },
+            { step: "2", title: "Jogue o Obi", desc: "Faça sua consulta e o app identifica o resultado." },
+            { step: "3", title: "Siga a Orientação", desc: "O app te mostra exatamente o que fazer, passo a passo." }].
             map((s, i) =>
             <div key={i} className="flex flex-col items-center gap-3">
                 <div className="w-14 h-14 rounded-full gradient-sacred text-primary-foreground flex items-center justify-center font-display font-bold text-xl shadow-sacred">
