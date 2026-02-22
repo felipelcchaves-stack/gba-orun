@@ -58,11 +58,37 @@ export const initGoogleAds = (googleAdsId: string) => {
   window.gtag("config", googleAdsId);
 };
 
-export const trackEvent = (event: string, data?: Record<string, any>) => {
-  if (typeof window.fbq === "function") window.fbq("track", event, data);
+/** Generate a unique event_id for deduplication with CAPI */
+export const generateEventId = (): string => {
+  return crypto.randomUUID();
 };
 
-export const trackLead = () => trackEvent("Lead");
-export const trackInitiateCheckout = () => trackEvent("InitiateCheckout");
-export const trackPurchase = (value?: number, currency = "BRL") =>
+/** Core tracking — returns the event_id used */
+export const trackEvent = (event: string, data?: Record<string, any>, eventId?: string): string => {
+  const id = eventId || generateEventId();
+  if (typeof window.fbq === "function") {
+    window.fbq("track", event, data, { eventID: id });
+  }
+  return id;
+};
+
+/** Track custom (non-standard) events */
+export const trackCustomEvent = (event: string, data?: Record<string, any>): string => {
+  const id = generateEventId();
+  if (typeof window.fbq === "function") {
+    window.fbq("trackCustom", event, data, { eventID: id });
+  }
+  return id;
+};
+
+// Standard events
+export const trackLead = (): string => trackEvent("Lead");
+export const trackInitiateCheckout = (): string => trackEvent("InitiateCheckout");
+export const trackPurchase = (value?: number, currency = "BRL"): string =>
   trackEvent("Purchase", { value, currency });
+export const trackViewContent = (data?: Record<string, any>): string =>
+  trackEvent("ViewContent", data);
+export const trackAddToCart = (data?: Record<string, any>): string =>
+  trackEvent("AddToCart", data);
+export const trackCompleteRegistration = (data?: Record<string, any>): string =>
+  trackEvent("CompleteRegistration", data);

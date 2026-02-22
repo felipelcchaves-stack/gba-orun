@@ -10,6 +10,9 @@ import { useSaveOnboarding, UserKnowledge } from "@/hooks/useOnboarding";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { Sparkles, BookOpen, Brain, Shield, Users, Compass, Check, X } from "lucide-react";
+import { trackCompleteRegistration } from "@/lib/pixel";
+import { sendCAPIEvent } from "@/lib/capi";
+import { useAuth } from "@/hooks/useAuth";
 
 const KNOWLEDGE_QUESTIONS = [
   { key: "knows_obi" as const, icon: Compass, label: "Você sabe jogar Obi (Obí Abatá)?", desc: "Lançar os 4 pedaços de noz de cola para consultar o Orixá." },
@@ -23,6 +26,7 @@ const OnboardingWizard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
+  const { user } = useAuth();
   const saveOnboarding = useSaveOnboarding();
 
   const [step, setStep] = useState(0);
@@ -56,6 +60,9 @@ const OnboardingWizard = () => {
       });
       await queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
       await queryClient.refetchQueries({ queryKey: ["onboarding-status"] });
+      // Track CompleteRegistration
+      const eventId = trackCompleteRegistration({ content_name: "Onboarding Completed" });
+      if (user?.email) sendCAPIEvent("CompleteRegistration", user.email, { event_id: eventId });
       toast.success("Bem-vindo à sua jornada espiritual! 🌟");
       navigate("/", { replace: true });
     } catch {

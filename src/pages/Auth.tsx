@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { trackLead } from "@/lib/pixel";
 import { sendCAPIEvent } from "@/lib/capi";
+import { getUtmParams } from "@/lib/utm";
 
 type AuthMode = "login" | "forgot";
 
@@ -48,8 +49,17 @@ const AuthPage = () => {
             .eq("user_id", currentUser.id)
             .maybeSingle();
           if (profile && !profile.onboarding_completed) {
-            trackLead();
-            sendCAPIEvent("Lead", email);
+            const eventId = trackLead();
+            sendCAPIEvent("Lead", email, { event_id: eventId });
+            // Save UTMs to profile
+            const utms = getUtmParams();
+            if (utms.utm_source || utms.utm_medium || utms.utm_campaign) {
+              await supabase.from("profiles").update({
+                utm_source: utms.utm_source || null,
+                utm_medium: utms.utm_medium || null,
+                utm_campaign: utms.utm_campaign || null,
+              }).eq("user_id", currentUser.id);
+            }
           }
         }
       } catch (leadErr) {

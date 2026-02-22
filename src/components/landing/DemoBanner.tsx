@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { trackInitiateCheckout } from "@/lib/pixel";
+import { appendUtmsToUrl } from "@/lib/utm";
 
 const DemoBanner = () => {
   const navigate = useNavigate();
@@ -12,10 +13,11 @@ const DemoBanner = () => {
 
   const handleSubscribe = () => {
     trackInitiateCheckout();
-    if (checkoutUrl.startsWith("http")) {
-      window.open(checkoutUrl, "_blank");
+    const targetUrl = appendUtmsToUrl(checkoutUrl);
+    if (targetUrl.startsWith("http")) {
+      window.open(targetUrl, "_blank");
     } else {
-      navigate(checkoutUrl);
+      navigate(targetUrl);
     }
   };
 

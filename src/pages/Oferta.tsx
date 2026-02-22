@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { CheckCircle, Shield, BookOpen, Compass, Headphones, Zap, Star, Heart, HelpCircle, ChevronRight, Play } from "lucide-react";
-import { trackInitiateCheckout } from "@/lib/pixel";
+import { trackInitiateCheckout, trackViewContent, trackAddToCart } from "@/lib/pixel";
 import { sendCAPIEvent } from "@/lib/capi";
+import { appendUtmsToUrl } from "@/lib/utm";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivePlans } from "@/hooks/useSubscriptionPlans";
@@ -65,6 +66,12 @@ const OfertaPage = () => {
   const urgencyText = settings?.offer_urgency_text || "🔥 Oferta por tempo limitado!";
   const guaranteeDays = settings?.offer_guarantee_days || "7";
 
+  // ViewContent on mount
+  useEffect(() => {
+    const eventId = trackViewContent({ content_name: "Landing Page", content_category: "oferta" });
+    if (user?.email) sendCAPIEvent("ViewContent", user.email, { event_id: eventId, custom_data: { content_name: "Landing Page" } });
+  }, []);
+
   useEffect(() => {
     const script = document.createElement("script");
     script.type = "application/ld+json";
@@ -80,10 +87,15 @@ const OfertaPage = () => {
     return () => { document.head.removeChild(script); };
   }, [price, mainPlan]);
 
-  const handleCheckout = (url?: string) => {
-    trackInitiateCheckout();
-    if (user?.email) sendCAPIEvent("InitiateCheckout", user.email);
-    const targetUrl = url || checkoutUrl;
+  const handleCheckout = (url?: string, planName?: string, planPrice?: number) => {
+    // AddToCart when a specific plan is chosen
+    if (planName) {
+      const addCartId = trackAddToCart({ content_name: planName, value: planPrice, currency: "BRL" });
+      if (user?.email) sendCAPIEvent("AddToCart", user.email, { event_id: addCartId, value: planPrice, custom_data: { content_name: planName } });
+    }
+    const eventId = trackInitiateCheckout();
+    if (user?.email) sendCAPIEvent("InitiateCheckout", user.email, { event_id: eventId });
+    const targetUrl = appendUtmsToUrl(url || checkoutUrl);
     if (targetUrl && targetUrl !== "#") window.open(targetUrl, "_blank");
   };
 
@@ -145,7 +157,7 @@ const OfertaPage = () => {
                     </div>
                     {plan.description && <p className="text-[11px] text-muted-foreground mb-3">{plan.description}</p>}
                     <button
-                      onClick={() => handleCheckout(plan.guru_checkout_url || undefined)}
+                      onClick={() => handleCheckout(plan.guru_checkout_url || undefined, plan.name, Number(plan.price))}
                       className="w-full gradient-gold text-accent-foreground py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       Assinar
@@ -331,7 +343,7 @@ const OfertaPage = () => {
                   </div>
                   {plan.description && <p className="text-xs text-muted-foreground mb-4">{plan.description}</p>}
                   <button
-                    onClick={() => handleCheckout(plan.guru_checkout_url || undefined)}
+                    onClick={() => handleCheckout(plan.guru_checkout_url || undefined, plan.name, Number(plan.price))}
                     className="w-full gradient-gold text-accent-foreground py-3 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     Assinar {plan.name}

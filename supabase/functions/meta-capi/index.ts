@@ -29,7 +29,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get pixel_id from app_settings
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -50,7 +49,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { event_name, email, value, currency = "BRL", event_source_url } = body;
+    const { event_name, email, value, currency = "BRL", event_source_url, event_id, custom_data } = body;
 
     if (!event_name || !email) {
       return new Response(JSON.stringify({ error: "event_name and email are required" }), {
@@ -71,22 +70,32 @@ Deno.serve(async (req) => {
       },
     };
 
+    if (event_id) {
+      eventData.event_id = event_id;
+    }
+
     if (event_source_url) {
       eventData.event_source_url = event_source_url;
     }
 
+    // Merge value + custom_data into custom_data
+    const mergedCustomData: Record<string, any> = {};
     if (value !== undefined && value !== null) {
-      eventData.custom_data = {
-        value: Number(value),
-        currency,
-      };
+      mergedCustomData.value = Number(value);
+      mergedCustomData.currency = currency;
+    }
+    if (custom_data && typeof custom_data === "object") {
+      Object.assign(mergedCustomData, custom_data);
+    }
+    if (Object.keys(mergedCustomData).length > 0) {
+      eventData.custom_data = mergedCustomData;
     }
 
     const payload = {
       data: [eventData],
     };
 
-    console.log(`Sending CAPI event: ${event_name} for ${email}`);
+    console.log(`Sending CAPI event: ${event_name} for ${email}${event_id ? ` (event_id: ${event_id})` : ""}`);
 
     const metaRes = await fetch(
       `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${capiToken}`,

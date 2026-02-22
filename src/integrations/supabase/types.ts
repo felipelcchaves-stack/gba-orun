@@ -645,6 +645,9 @@ export type Database = {
           subscription_started_at: string | null
           subscription_status: string
           user_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -668,6 +671,9 @@ export type Database = {
           subscription_started_at?: string | null
           subscription_status?: string
           user_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -691,6 +697,9 @@ export type Database = {
           subscription_started_at?: string | null
           subscription_status?: string
           user_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
         }
         Relationships: [
           {
