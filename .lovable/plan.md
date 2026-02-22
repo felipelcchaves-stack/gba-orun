@@ -1,127 +1,86 @@
 
 
-# Rastreamento Completo: UTMs + Eventos Facebook/CAPI
+# Corrigir a Proposta de Valor da Landing Page
 
-## Resumo
+## O Problema
 
-Implementar captura e repasse de UTMs em toda a jornada do usuario, e adicionar todos os eventos padrao do Facebook Pixel que estao faltando (ViewContent, AddToCart, CompleteRegistration) alem de eventos customizados para acoes importantes.
+A landing page esta fazendo promessas erradas. Ela diz que o app ensina a interpretar o Obi, da receitas de Ebo, tem audios exclusivos e protecao de Iyami. Nao e isso.
 
----
+A proposta real e: **o app e um guia pratico para alunos dos cursos do Oluwo Ifatokun**. O aluno joga o Obi e o app diz exatamente o que fazer depois -- como se o mestre estivesse ali do lado orientando.
 
-## 1. Captura e Repasse de UTMs
+## O que vai mudar
 
-### O que sera feito
-- Criar um utilitario `src/lib/utm.ts` que:
-  - Ao carregar a landing page, le os parametros `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term` e `fbclid` da URL
-  - Salva no `sessionStorage` (para persistir durante a navegacao SPA)
-  - Exporta funcao `getUtmParams()` para recuperar os UTMs salvos
-  - Exporta funcao `appendUtmsToUrl(url)` que adiciona os UTMs como query params a qualquer URL de checkout
+### 1. Secao "O que voce vai receber" (Benefits)
 
-### Onde sera usado
-- **Oferta.tsx**: ao abrir link de checkout da Guru, os UTMs sao anexados a URL
-- **PremiumLockModal.tsx**: idem
-- **DemoBanner.tsx**: idem
-- **Demo.tsx**: idem
-- **Auth.tsx**: salvar UTMs no perfil do usuario ao fazer signup (campo `utm_source`, `utm_medium`, `utm_campaign` na tabela `profiles`)
+**Antes (errado):**
+- Oraculo do Obi -- "Interprete cada caida com precisao e confianca"
+- Receitas de Ebo -- "Ebos completos com materiais, cantigas e procedimentos"
+- Audios Exclusivos -- "Audios gravados para guiar sua pratica ritual"
+- Protecao de Iyami -- "Rituais de protecao e cuidado espiritual ancestral"
+- Jornada Gamificada (ok)
+- Atualizacoes Continuas (ok)
 
-### Repasse para Facebook
-- O `fbclid` capturado sera preservado automaticamente pelo Pixel
-- Os UTMs serao enviados como `custom_data` nos eventos CAPI para melhor atribuicao
+**Depois (correto):**
+- **Guia Pratico Pos-Obi** -- "Jogou o Obi? O app te diz o proximo passo, como se o Oluwo estivesse ali."
+- **Orientacao Ritual Completa** -- "Saiba qual ritual fazer, com que materiais e como proceder."
+- **Tudo Conectado aos Cursos** -- "Obi, Ebo, Ori, Iyami e Egbe Orun: o app complementa o que voce aprendeu."
+- **Seu Mentor no Bolso** -- "Sem depender de ninguem. A orientacao do Oluwo Ifatokun, sempre acessivel."
+- Jornada Gamificada (mantido)
+- Atualizacoes Continuas (mantido)
 
----
+### 2. Secao "Voce ja passou por isso?" (Pain Points)
 
-## 2. Novos Eventos de Pixel
+**Antes:**
+- "Fica inseguro(a) na hora de interpretar o Obi?"
+- "Nao sabe qual Ebo preparar para cada situacao?"
+- "Depende de outras pessoas para consultas simples?"
+- "Perde tempo procurando Orikis em livros e cadernos espalhados?"
 
-### ViewContent
-- **Onde**: ao montar a pagina `/oferta` (useEffect no Oferta.tsx)
-- **Dados**: `{ content_name: "Landing Page", content_category: "oferta" }`
-- **CAPI**: tambem enviado server-side se o usuario estiver logado
+**Depois:**
+- "Jogou o Obi e ficou sem saber o que fazer depois?"
+- "Fez o curso mas na hora H nao lembra os passos?"
+- "Depende de alguem pra te orientar em cada consulta?"
+- "Tem o conhecimento mas falta um guia pratico no dia a dia?"
 
-### AddToCart
-- **Onde**: quando o usuario clica em um plano especifico (seleciona o card do plano) -- antes de ir ao checkout
-- **Dados**: `{ content_name: plan.name, value: plan.price, currency: "BRL" }`
-- **Nota**: diferente do InitiateCheckout, que dispara quando abre o link externo; AddToCart dispara ao demonstrar interesse no plano
+### 3. Secao "Como funciona"
 
-### CompleteRegistration
-- **Onde**: ao completar o onboarding (OnboardingWizard.tsx, no submit final)
-- **Dados**: `{ content_name: "Onboarding Completed" }`
-- **CAPI**: tambem enviado server-side
+**Antes:**
+- Assine / Consulte / Pratique (generico)
 
-### Purchase (browser-side)
-- **Onde**: adicionar na pagina de "boas-vindas pos-compra" ou detectar quando o usuario volta do checkout com status de premium ativo
-- **Alternativa pragmatica**: o Purchase via CAPI no webhook ja cobre isso; o browser-side seria redundancia para deduplicacao do Meta (que e boa pratica)
+**Depois:**
+- **1. Assine** -- "Escolha seu plano e acesse o guia completo."
+- **2. Jogue o Obi** -- "Faca sua consulta e o app identifica o resultado."
+- **3. Siga a Orientacao** -- "O app te mostra exatamente o que fazer, passo a passo."
 
-### Eventos Customizados
-- `DemoStarted`: quando o usuario entra no `/demo`
-- `DemoOracleCompleted`: quando completa o fluxo do Oraculo na demo
-- `PremiumContentClicked`: quando clica em conteudo premium bloqueado
+### 4. Depoimentos de Fallback
 
----
+Atualizar para refletir a proposta de guia pratico:
+- "Jogava o Obi e ficava perdido. Agora o app me guia em tudo." 
+- "E como ter o Oluwo do meu lado. Pratico e direto."
+- "Complementa perfeitamente o que aprendi nos cursos."
+- "Nao dependo mais de ninguem pra seguir minha rotina espiritual."
 
-## 3. Melhoria no CAPI
+### 5. Schema.org (SEO)
 
-### Adicionar UTMs ao CAPI
-- Modificar `src/lib/capi.ts` para incluir UTMs nos `custom_data` de cada evento
-- Modificar `supabase/functions/meta-capi/index.ts` para repassar `custom_data` ao Meta
+Atualizar a descricao de "O guia digital mais completo de Obi, Rituais e Orikis" para algo como "Guia pratico digital que orienta alunos do Metodo Oluwo Ifatokun apos cada consulta ao Obi."
 
-### Adicionar event_id para deduplicacao
-- Gerar um `event_id` unico (UUID) para cada evento
-- Enviar o mesmo `event_id` tanto no Pixel (browser) quanto no CAPI (server)
-- Isso permite que o Meta deduplique os eventos corretamente
+### 6. FAQ -- Ajuste na pergunta sobre experiencia
+
+**Antes:** "Nao! O Gba-Orun foi criado tanto para iniciantes quanto para praticantes experientes."
+
+**Depois:** "O ideal e ter feito pelo menos um dos cursos do Oluwo Ifatokun (Obi, Ebo, Ori). O app foi pensado para complementar o que voce aprendeu, mas mesmo quem esta comecando consegue acompanhar."
 
 ---
 
 ## Detalhes Tecnicos
 
-### Novo arquivo: `src/lib/utm.ts`
-- `captureUtms()`: le `window.location.search`, salva UTMs no `sessionStorage`
-- `getUtmParams()`: retorna objeto com os UTMs salvos
-- `appendUtmsToUrl(url: string)`: adiciona UTMs como query params a uma URL
-- `getUtmString()`: retorna os UTMs como string para analytics
+### Arquivo modificado: `src/pages/Oferta.tsx`
 
-### Arquivo modificado: `src/lib/pixel.ts`
-- Adicionar: `trackViewContent(data)`, `trackAddToCart(data)`, `trackCompleteRegistration()`, `trackCustomEvent(eventName, data)`
-- Adicionar suporte a `event_id` em todos os eventos (parametro `eventID` do fbq)
-- Gerar UUID via `crypto.randomUUID()` e retornar para uso no CAPI
+- Linhas 15-19: Atualizar array `FALLBACK_TESTIMONIALS`
+- Linhas 23-24: Atualizar FAQ sobre experiencia religiosa
+- Linhas 31-35: Atualizar array `pains`
+- Linhas 78-83: Atualizar texto do Schema.org
+- Linhas 263-269: Atualizar array de beneficios (icones, titulos e descricoes)
+- Linhas 288-291: Atualizar passos do "Como funciona"
 
-### Arquivo modificado: `src/lib/capi.ts`
-- Aceitar `event_id` opcional para deduplicacao
-- Aceitar `custom_data` opcional para UTMs e dados extras
-- Enviar UTMs nos custom_data
-
-### Arquivo modificado: `supabase/functions/meta-capi/index.ts`
-- Aceitar e repassar `event_id` no payload do Meta
-- Aceitar e repassar `custom_data` generico
-
-### Arquivos modificados (chamadas de eventos):
-1. `src/pages/Oferta.tsx` -- adicionar ViewContent no useEffect + appendUtmsToUrl nos checkouts + AddToCart nos cards de plano
-2. `src/components/PremiumLockModal.tsx` -- appendUtmsToUrl no checkout
-3. `src/components/landing/DemoBanner.tsx` -- appendUtmsToUrl no checkout
-4. `src/pages/Demo.tsx` -- DemoStarted ao montar + appendUtmsToUrl + DemoOracleCompleted
-5. `src/pages/Auth.tsx` -- salvar UTMs no perfil + CompleteRegistration apos signup
-6. `src/components/onboarding/OnboardingWizard.tsx` -- CompleteRegistration ao finalizar
-7. `src/components/oracle/FlowStepRenderer.tsx` -- DemoOracleCompleted no diagnostico em modo demo
-8. `src/App.tsx` -- chamar captureUtms() uma vez ao montar o AppContent
-
-### Migracao de banco (opcional mas recomendada)
-- Adicionar colunas `utm_source`, `utm_medium`, `utm_campaign` na tabela `profiles` para rastrear a origem de cada usuario
-- Tipo: `text`, nullable, sem default
-
----
-
-## Resumo dos Eventos Apos Implementacao
-
-| Evento | Pixel (Browser) | CAPI (Server) | Onde |
-|---|---|---|---|
-| PageView | Sim (auto) | -- | Toda pagina |
-| ViewContent | Sim (NOVO) | Sim (NOVO) | /oferta |
-| Lead | Sim | Sim | Primeiro login |
-| AddToCart | Sim (NOVO) | Sim (NOVO) | Seleciona plano |
-| InitiateCheckout | Sim | Sim | Abre checkout |
-| CompleteRegistration | Sim (NOVO) | Sim (NOVO) | Apos onboarding |
-| Purchase | Sim (redundancia) | Sim (webhook) | Webhook Guru |
-| DemoStarted | Custom (NOVO) | -- | Entra /demo |
-| DemoOracleCompleted | Custom (NOVO) | -- | Completa oraculo demo |
-| PremiumContentClicked | Custom (NOVO) | -- | Clica premium |
-
-Todos os eventos de Pixel e CAPI compartilham o mesmo `event_id` para deduplicacao correta pelo Meta.
+Nenhuma mudanca de banco de dados, nenhum arquivo novo. Apenas texto.
