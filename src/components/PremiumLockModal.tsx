@@ -4,6 +4,7 @@ import { sendCAPIEvent } from "@/lib/capi";
 import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useDemo } from "@/contexts/DemoContext";
 
 interface PremiumLockModalProps {
   open: boolean;
@@ -15,16 +16,23 @@ const PremiumLockModal = ({ open, onClose, checkoutUrl }: PremiumLockModalProps)
   const { data: plans } = useActivePlans();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isDemo } = useDemo();
 
   if (!open) return null;
 
   const cheapest = plans?.length ? plans.reduce((a, b) => (Number(a.price) < Number(b.price) ? a : b)) : null;
   const priceLabel = cheapest ? `R$ ${Number(cheapest.price).toFixed(2).replace(".", ",")}${cheapest.billing_period === "monthly" ? "/mês" : cheapest.billing_period === "quarterly" ? "/trim" : "/ano"}` : "";
 
+  const directCheckoutUrl = cheapest?.guru_checkout_url;
+
   const handleCheckout = () => {
     trackInitiateCheckout();
     if (user?.email) sendCAPIEvent("InitiateCheckout", user.email);
-    navigate("/oferta");
+    if (isDemo && directCheckoutUrl) {
+      window.open(directCheckoutUrl, "_blank");
+    } else {
+      navigate("/oferta");
+    }
   };
 
   return (

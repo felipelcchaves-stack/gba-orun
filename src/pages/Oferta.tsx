@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ExternalLink, CheckCircle, Star, Shield, BookOpen, Compass, Headphones, Zap, Eye, Heart, HelpCircle, ChevronRight } from "lucide-react";
+import { CheckCircle, Shield, BookOpen, Compass, Headphones, Zap, Star, Heart, HelpCircle, ChevronRight, Play } from "lucide-react";
 import { trackInitiateCheckout } from "@/lib/pixel";
 import { sendCAPIEvent } from "@/lib/capi";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActivePlans } from "@/hooks/useSubscriptionPlans";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { usePublicReviews } from "@/hooks/usePublicReviews";
+import AuthoritySection from "@/components/landing/AuthoritySection";
+import PhoneMockup, { OracleMockupContent, RitualsMockupContent, JourneyMockupContent, LearnMockupContent } from "@/components/landing/PhoneMockup";
 
 const FALLBACK_TESTIMONIALS = [
   { name: "Maria S.", text: "Nunca mais tive dúvida no Obi. Esse app mudou minha vida espiritual!", stars: 5 },
@@ -17,6 +19,7 @@ const FALLBACK_TESTIMONIALS = [
 ];
 
 const faqs = [
+  { q: "O que é o Método Oluwo Ifatokun?", a: "É uma metodologia ritualística desenvolvida pelo Oluwo Ifatokun, sacerdote de Ifá, que organiza e sistematiza os procedimentos sagrados da tradição Yorubá. O Gba-Orun é a versão digital desta sabedoria ancestral." },
   { q: "Preciso ter experiência religiosa para usar?", a: "Não! O Gba-Orun foi criado tanto para iniciantes quanto para praticantes experientes. O conteúdo é didático e acessível." },
   { q: "Funciona no celular?", a: "Sim! O app é 100% responsivo e pode ser instalado como aplicativo no seu celular, sem precisar da App Store." },
   { q: "Posso cancelar a qualquer momento?", a: "Sim! Você pode cancelar sua assinatura quando quiser, sem burocracia. Seu acesso continua até o fim do período pago." },
@@ -44,7 +47,6 @@ const OfertaPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Build testimonials: real 5-star reviews first, fallback if < 4
   const realTestimonials = (realReviews || []).map(r => ({
     name: r.display_name,
     text: r.review_text,
@@ -59,7 +61,6 @@ const OfertaPage = () => {
   const price = mainPlan ? Number(mainPlan.price).toFixed(2).replace(".", ",") : (settings?.offer_price || "29,90");
   const periodLabel = mainPlan ? (PERIOD_LABELS[mainPlan.billing_period] || "/mês") : "/mês";
   const headline = settings?.offer_headline || "Descubra o que o Orixá quer de você agora.";
-  const videoUrl = settings?.offer_video_url || "";
   const ctaText = settings?.offer_cta_text || "Quero Começar Agora";
   const urgencyText = settings?.offer_urgency_text || "🔥 Oferta por tempo limitado!";
   const guaranteeDays = settings?.offer_guarantee_days || "7";
@@ -72,17 +73,8 @@ const OfertaPage = () => {
       "@type": "Product",
       name: "Gba-Orun — Sabedoria Ancestral Yorubá",
       description: "O guia digital mais completo de Obi, Rituais e Orikis da tradição Yorubá.",
-      offers: {
-        "@type": "Offer",
-        price: mainPlan?.price || price,
-        priceCurrency: "BRL",
-        availability: "https://schema.org/InStock",
-      },
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: "5",
-        reviewCount: String(testimonials.length),
-      },
+      offers: { "@type": "Offer", price: mainPlan?.price || price, priceCurrency: "BRL", availability: "https://schema.org/InStock" },
+      aggregateRating: { "@type": "AggregateRating", ratingValue: "5", reviewCount: String(testimonials.length) },
     });
     document.head.appendChild(script);
     return () => { document.head.removeChild(script); };
@@ -98,20 +90,29 @@ const OfertaPage = () => {
   const CTAButton = ({ full = false, url }: { full?: boolean; url?: string }) => (
     <button
       onClick={() => handleCheckout(url)}
-      className={`${full ? "w-full" : ""} bg-accent text-accent-foreground px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] animate-pulse-gold inline-flex items-center justify-center gap-2 shadow-gold`}
+      className={`${full ? "w-full" : ""} gradient-gold text-accent-foreground px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] animate-pulse-gold inline-flex items-center justify-center gap-2 shadow-gold`}
     >
       {ctaText} <ChevronRight className="h-5 w-5" />
+    </button>
+  );
+
+  const DemoButton = ({ className = "" }: { className?: string }) => (
+    <button
+      onClick={() => navigate("/demo")}
+      className={`inline-flex items-center justify-center gap-2 px-8 py-3 rounded-2xl border-2 border-primary/30 text-primary font-bold transition-all hover:bg-primary/5 hover:scale-[1.02] active:scale-[0.98] ${className}`}
+    >
+      <Play className="h-4 w-4" /> Experimentar Grátis
     </button>
   );
 
   return (
     <div className="min-h-screen bg-background">
       {/* Urgency Bar */}
-      <div className="bg-accent text-accent-foreground flex items-center justify-between py-2.5 px-4 text-sm font-semibold sticky top-0 z-50">
+      <div className="gradient-sacred text-primary-foreground flex items-center justify-between py-2.5 px-4 text-sm font-semibold sticky top-0 z-50">
         <span className="flex-1 text-center">{urgencyText}</span>
         <button
           onClick={() => navigate("/auth")}
-          className="shrink-0 ml-4 bg-background text-foreground px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-background/90 transition-colors"
+          className="shrink-0 ml-4 bg-accent text-accent-foreground px-4 py-1.5 rounded-xl text-xs font-bold hover:opacity-90 transition-opacity"
         >
           Entrar
         </button>
@@ -119,106 +120,125 @@ const OfertaPage = () => {
 
       {/* Hero */}
       <section className="py-16 md:py-24 px-6">
-        <div className="max-w-2xl mx-auto text-center">
-          <span className="inline-block bg-primary/10 text-primary text-xs font-bold px-4 py-1.5 rounded-full mb-6 uppercase tracking-wider">
-            Assinatura Mensal
-          </span>
-          <h1 className="text-4xl md:text-5xl font-display font-bold mb-5 leading-tight text-foreground">
-            {headline}
-          </h1>
-          <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed">
-            O guia digital mais completo de Obi, Rituais e Orikis da tradição Yorubá. Tudo na palma da sua mão.
-          </p>
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-10 md:gap-16">
+          {/* Text */}
+          <div className="flex-1 text-center md:text-left">
+            <span className="inline-block bg-accent/15 text-accent-foreground text-xs font-bold px-4 py-1.5 rounded-full mb-5 uppercase tracking-wider">
+              Método Oluwo Ifatokun
+            </span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold mb-4 leading-tight text-foreground">
+              {headline}
+            </h1>
+            <p className="text-base text-muted-foreground mb-8 max-w-xl leading-relaxed">
+              Baseado na técnica do Oluwo Ifatokun — o guia digital mais completo de Obi, Rituais e Orikis da tradição Yorubá. Tudo na palma da sua mão.
+            </p>
 
-          {/* Plan cards */}
-          {plans && plans.length > 1 ? (
-            <div className="grid gap-4 sm:grid-cols-2 mb-8 max-w-lg mx-auto">
-              {plans.map((plan) => (
-                <div key={plan.id} className="bg-card rounded-2xl p-6 border border-border shadow-soft text-center">
-                  <h3 className="font-display font-bold text-lg mb-1">{plan.name}</h3>
-                  <div className="text-3xl font-bold text-foreground mb-1">
-                    R$ {Number(plan.price).toFixed(2).replace(".", ",")}
-                    <span className="text-sm font-normal text-muted-foreground">{PERIOD_LABELS[plan.billing_period] || "/mês"}</span>
+            {plans && plans.length > 1 ? (
+              <div className="grid gap-3 sm:grid-cols-2 mb-6 max-w-md mx-auto md:mx-0">
+                {plans.map((plan, i) => (
+                  <div key={plan.id} className={`bg-card rounded-2xl p-5 border shadow-soft text-center ${i === 0 ? "border-accent ring-2 ring-accent/20" : "border-border"}`}>
+                    {i === 0 && <span className="inline-block bg-accent text-accent-foreground text-[10px] font-bold px-3 py-0.5 rounded-full mb-2 uppercase">Mais Popular</span>}
+                    <h3 className="font-display font-bold text-base mb-1">{plan.name}</h3>
+                    <div className="text-2xl font-bold text-foreground mb-1">
+                      R$ {Number(plan.price).toFixed(2).replace(".", ",")}
+                      <span className="text-xs font-normal text-muted-foreground">{PERIOD_LABELS[plan.billing_period] || "/mês"}</span>
+                    </div>
+                    {plan.description && <p className="text-[11px] text-muted-foreground mb-3">{plan.description}</p>}
+                    <button
+                      onClick={() => handleCheckout(plan.guru_checkout_url || undefined)}
+                      className="w-full gradient-gold text-accent-foreground py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      Assinar
+                    </button>
                   </div>
-                  {plan.description && <p className="text-xs text-muted-foreground mb-4">{plan.description}</p>}
-                  <button
-                    onClick={() => handleCheckout(plan.guru_checkout_url || undefined)}
-                    className="w-full bg-accent text-accent-foreground py-3 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    Assinar {plan.name}
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="flex items-baseline justify-center gap-3 mb-6">
-                <span className="text-5xl font-display font-bold text-foreground">R$ {price}</span>
-                <span className="text-base text-muted-foreground">{periodLabel}</span>
+                ))}
               </div>
-              <CTAButton />
-              <p className="text-xs text-muted-foreground mt-4">Pagamento seguro • Cancele quando quiser</p>
-            </>
-          )}
+            ) : (
+              <div className="mb-6">
+                <div className="flex items-baseline gap-3 mb-4 justify-center md:justify-start">
+                  <span className="text-4xl font-display font-bold text-foreground">R$ {price}</span>
+                  <span className="text-sm text-muted-foreground">{periodLabel}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 items-center md:items-start">
+                  <CTAButton />
+                  <DemoButton />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-3">Pagamento seguro • Cancele quando quiser • Garantia de {guaranteeDays} dias</p>
+              </div>
+            )}
+          </div>
+
+          {/* Phone mockup (desktop) */}
+          <div className="hidden md:block shrink-0">
+            <PhoneMockup>
+              <OracleMockupContent />
+            </PhoneMockup>
+          </div>
         </div>
       </section>
 
-      {/* VSL */}
-      <section className="pb-16 px-6">
-        <div className="max-w-2xl mx-auto">
-          {videoUrl ? (
-            <div className="aspect-video rounded-2xl overflow-hidden bg-card shadow-card">
-              <iframe src={videoUrl} className="w-full h-full" allowFullScreen allow="autoplay" title="Vídeo de apresentação" />
-            </div>
-          ) : (
-            <div className="aspect-video bg-card rounded-2xl shadow-card flex items-center justify-center">
-              <p className="text-muted-foreground text-sm">Vídeo de apresentação</p>
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Authority */}
+      <AuthoritySection />
 
       {/* Pain Points */}
-      <section className="py-16 px-6 bg-card">
+      <section className="py-16 px-6">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl font-display font-bold mb-3 text-foreground">Você já passou por isso?</h2>
           <p className="text-muted-foreground mb-10">Se identificou com alguma dessas situações, o Gba-Orun foi feito para você.</p>
-          <div className="grid gap-4 text-left">
+          <div className="grid gap-3 text-left">
             {pains.map((pain, i) => (
-              <div key={i} className="flex items-start gap-3 bg-background rounded-xl p-4 shadow-soft">
-                <HelpCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
-                <span className="text-foreground font-medium">{pain}</span>
+              <div key={i} className="flex items-start gap-3 bg-card rounded-2xl p-4 shadow-soft border-l-4 border-accent">
+                <HelpCircle className="h-5 w-5 text-accent mt-0.5 shrink-0" />
+                <span className="text-foreground font-medium text-sm">{pain}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Solution */}
-      <section className="py-16 px-6">
-        <div className="max-w-2xl mx-auto text-center">
-          <span className="text-accent text-sm font-bold uppercase tracking-wider">A Solução</span>
-          <h2 className="text-3xl font-display font-bold mt-2 mb-4 text-foreground">Conheça o Gba-Orun</h2>
-          <p className="text-muted-foreground max-w-xl mx-auto leading-relaxed mb-8">
-            Um app completo que reúne o Oráculo do Obi, receitas de Ebo, Orikis, rituais de proteção e muito mais — tudo organizado, acessível e fiel à tradição Yorubá.
-          </p>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { icon: Eye, label: "Oráculo Interativo" },
-              { icon: BookOpen, label: "Rituais Completos" },
-              { icon: Heart, label: "Cuidado Espiritual" },
-            ].map(({ icon: Icon, label }, i) => (
-              <div key={i} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card shadow-soft">
-                <Icon className="h-7 w-7 text-primary" strokeWidth={1.5} />
-                <span className="text-xs font-semibold text-foreground">{label}</span>
-              </div>
-            ))}
+      {/* App Gallery - "Veja como funciona" */}
+      <section className="py-16 px-6 bg-card">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-display font-bold mb-3 text-foreground">Veja como funciona</h2>
+          <p className="text-muted-foreground mb-10">Navegue pelo app completo sem compromisso</p>
+          <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory justify-start md:justify-center px-4 -mx-4">
+            <PhoneMockup title="Consulte o Oráculo" delay={0}>
+              <OracleMockupContent />
+            </PhoneMockup>
+            <PhoneMockup title="Siga os Rituais" delay={150}>
+              <RitualsMockupContent />
+            </PhoneMockup>
+            <PhoneMockup title="Evolua na Jornada" delay={300}>
+              <JourneyMockupContent />
+            </PhoneMockup>
+            <PhoneMockup title="Aprenda Sempre" delay={450}>
+              <LearnMockupContent />
+            </PhoneMockup>
           </div>
+          <div className="mt-8">
+            <DemoButton />
+          </div>
+        </div>
+      </section>
+
+      {/* Demo CTA */}
+      <section className="py-16 px-6 bg-accent/10">
+        <div className="max-w-lg mx-auto text-center">
+          <h2 className="text-2xl font-display font-bold mb-3 text-foreground">Experimente antes de assinar</h2>
+          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
+            Navegue pelo app completo, faça uma consulta ao Oráculo e veja o resultado — sem precisar criar conta.
+          </p>
+          <button
+            onClick={() => navigate("/demo")}
+            className="gradient-gold text-accent-foreground px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-gold inline-flex items-center justify-center gap-2"
+          >
+            <Play className="h-5 w-5" /> Iniciar Demonstração Gratuita
+          </button>
         </div>
       </section>
 
       {/* Benefits */}
-      <section className="py-16 px-6 bg-card">
+      <section className="py-16 px-6">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-display font-bold text-center mb-10 text-foreground">O que você vai receber</h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -230,8 +250,10 @@ const OfertaPage = () => {
               { icon: Zap, title: "Jornada Gamificada", desc: "Acompanhe seu progresso espiritual com XP e conquistas." },
               { icon: Star, title: "Atualizações Contínuas", desc: "Novos conteúdos e funcionalidades inclusos na assinatura." },
             ].map((b, i) => (
-              <div key={i} className="bg-background rounded-2xl p-6 shadow-soft">
-                <b.icon className="h-6 w-6 text-accent mb-3" strokeWidth={1.5} />
+              <div key={i} className="bg-card rounded-2xl p-6 shadow-soft">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                  <b.icon className="h-5 w-5 text-primary" strokeWidth={1.5} />
+                </div>
                 <h3 className="font-display font-bold text-foreground mb-1">{b.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{b.desc}</p>
               </div>
@@ -241,7 +263,7 @@ const OfertaPage = () => {
       </section>
 
       {/* How it works */}
-      <section className="py-16 px-6">
+      <section className="py-16 px-6 bg-card">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl font-display font-bold mb-10 text-foreground">Como funciona</h2>
           <div className="grid gap-6 sm:grid-cols-3">
@@ -251,7 +273,7 @@ const OfertaPage = () => {
               { step: "3", title: "Pratique", desc: "Siga os rituais indicados e evolua espiritualmente." },
             ].map((s, i) => (
               <div key={i} className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-display font-bold text-lg">
+                <div className="w-14 h-14 rounded-full gradient-sacred text-primary-foreground flex items-center justify-center font-display font-bold text-xl shadow-sacred">
                   {s.step}
                 </div>
                 <h3 className="font-display font-bold text-foreground">{s.title}</h3>
@@ -263,24 +285,57 @@ const OfertaPage = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 px-6 bg-card">
+      <section className="py-16 px-6">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-display font-bold text-center mb-10 text-foreground">O que dizem nossos alunos</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {testimonials.map((t, i) => (
-              <div key={i} className="bg-background rounded-2xl p-6 shadow-soft">
-                <div className="flex items-center gap-0.5 mb-3">
+              <div key={i} className="bg-card rounded-2xl p-6 shadow-soft">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center text-sm font-bold text-accent-foreground">
+                    {t.name.charAt(0)}
+                  </div>
+                  <span className="text-sm font-bold text-foreground">{t.name}</span>
+                </div>
+                <div className="flex items-center gap-0.5 mb-2">
                   {Array.from({ length: t.stars }).map((_, j) => (
-                    <Star key={j} className="h-4 w-4 fill-accent text-accent" />
+                    <Star key={j} className="h-3.5 w-3.5 fill-accent text-accent" />
                   ))}
                 </div>
-                <p className="text-sm mb-3 leading-relaxed italic text-muted-foreground">"{t.text}"</p>
-                <span className="text-xs font-bold text-foreground">{t.name}</span>
+                <p className="text-sm leading-relaxed text-muted-foreground">"{t.text}"</p>
               </div>
             ))}
           </div>
         </div>
       </section>
+
+      {/* Plans */}
+      {plans && plans.length > 1 && (
+        <section className="py-16 px-6 bg-card">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-display font-bold mb-10 text-foreground">Escolha seu plano</h2>
+            <div className="grid gap-4 sm:grid-cols-2 max-w-lg mx-auto">
+              {plans.map((plan, i) => (
+                <div key={plan.id} className={`bg-background rounded-2xl p-6 border shadow-soft text-center ${i === 0 ? "border-accent ring-2 ring-accent/20" : "border-border"}`}>
+                  {i === 0 && <span className="inline-block bg-accent text-accent-foreground text-[10px] font-bold px-3 py-0.5 rounded-full mb-2 uppercase">Mais Popular</span>}
+                  <h3 className="font-display font-bold text-lg mb-1">{plan.name}</h3>
+                  <div className="text-3xl font-bold text-foreground mb-1">
+                    R$ {Number(plan.price).toFixed(2).replace(".", ",")}
+                    <span className="text-sm font-normal text-muted-foreground">{PERIOD_LABELS[plan.billing_period] || "/mês"}</span>
+                  </div>
+                  {plan.description && <p className="text-xs text-muted-foreground mb-4">{plan.description}</p>}
+                  <button
+                    onClick={() => handleCheckout(plan.guru_checkout_url || undefined)}
+                    className="w-full gradient-gold text-accent-foreground py-3 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    Assinar {plan.name}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* FAQ */}
       <section className="py-16 px-6">
@@ -289,10 +344,10 @@ const OfertaPage = () => {
           <Accordion type="single" collapsible className="space-y-2">
             {faqs.map((faq, i) => (
               <AccordionItem key={i} value={`faq-${i}`} className="bg-card rounded-2xl px-5 border-none shadow-soft">
-                <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline">
+                <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline text-sm">
                   {faq.q}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground leading-relaxed">
+                <AccordionContent className="text-muted-foreground leading-relaxed text-sm">
                   {faq.a}
                 </AccordionContent>
               </AccordionItem>
@@ -308,23 +363,35 @@ const OfertaPage = () => {
             <Shield className="h-10 w-10 text-accent" strokeWidth={1.5} />
           </div>
           <h2 className="text-2xl font-display font-bold mb-3 text-foreground">Garantia de {guaranteeDays} dias</h2>
-          <p className="text-muted-foreground leading-relaxed">
+          <p className="text-muted-foreground leading-relaxed text-sm">
             Se por qualquer motivo você não ficar satisfeito, devolvemos 100% do seu dinheiro em até {guaranteeDays} dias. Sem perguntas, sem burocracia.
           </p>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 px-6">
+      <section className="py-20 px-6 gradient-sacred text-primary-foreground">
         <div className="max-w-lg mx-auto text-center">
-          <h2 className="text-3xl font-display font-bold mb-4 text-foreground">Pronto para transformar sua prática?</h2>
-          <p className="text-muted-foreground text-sm mb-8">Acesso imediato a todo o conteúdo. Cancele quando quiser. Garantia total.</p>
+          <h2 className="text-3xl font-display font-bold mb-4">Pronto para transformar sua prática?</h2>
+          <p className="text-primary-foreground/70 text-sm mb-8">Acesso imediato a todo o conteúdo. Cancele quando quiser. Garantia total.</p>
           <div className="flex items-baseline justify-center gap-3 mb-6">
-            <span className="text-5xl font-display font-bold text-foreground">R$ {price}</span>
-            <span className="text-base text-muted-foreground">{periodLabel}</span>
+            <span className="text-5xl font-display font-bold">R$ {price}</span>
+            <span className="text-base text-primary-foreground/60">{periodLabel}</span>
           </div>
-          <CTAButton full />
-          <p className="text-xs text-muted-foreground mt-4">Pagamento seguro via cartão, Pix ou boleto</p>
+          <button
+            onClick={() => handleCheckout()}
+            className="w-full max-w-sm gradient-gold text-accent-foreground px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-gold inline-flex items-center justify-center gap-2"
+          >
+            {ctaText} <ChevronRight className="h-5 w-5" />
+          </button>
+          <div className="mt-4">
+            <button
+              onClick={() => navigate("/demo")}
+              className="text-primary-foreground/70 hover:text-primary-foreground text-sm underline underline-offset-4 inline-flex items-center gap-1"
+            >
+              <Play className="h-3.5 w-3.5" /> Ou experimente grátis
+            </button>
+          </div>
         </div>
       </section>
 

@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useDemo } from "@/contexts/DemoContext";
+import { demoProfile } from "@/lib/demoData";
 
 export interface Profile {
   id: string;
@@ -18,9 +20,11 @@ export interface Profile {
 
 export const useProfile = () => {
   const { user } = useAuth();
+  const { isDemo } = useDemo();
   return useQuery({
-    queryKey: ["profile", user?.id],
+    queryKey: ["profile", isDemo ? "demo" : user?.id],
     queryFn: async () => {
+      if (isDemo) return demoProfile as Profile;
       if (!user) return null;
       const { data } = await supabase
         .from("profiles")
@@ -29,7 +33,7 @@ export const useProfile = () => {
         .maybeSingle();
       return data as Profile | null;
     },
-    enabled: !!user,
+    enabled: isDemo || !!user,
   });
 };
 

@@ -2,12 +2,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { startOfMonth, endOfMonth } from "date-fns";
+import { useDemo } from "@/contexts/DemoContext";
+import { demoJourneyEntries } from "@/lib/demoData";
 
 export const useJourney = () => {
   const { user } = useAuth();
+  const { isDemo } = useDemo();
   return useQuery({
-    queryKey: ["journey", user?.id],
+    queryKey: ["journey", isDemo ? "demo" : user?.id],
     queryFn: async () => {
+      if (isDemo) return demoJourneyEntries;
       if (!user) return [];
       const { data, error } = await supabase
         .from("user_journey")
@@ -17,13 +21,14 @@ export const useJourney = () => {
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!user,
+    enabled: isDemo || !!user,
   });
 };
 
 export const useAddJourneyEntry = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { isDemo } = useDemo();
   return useMutation({
     mutationFn: async ({ oracle_result, suggested_ritual_id, context, notes, flow_name }: { 
       oracle_result: string; 
@@ -32,6 +37,7 @@ export const useAddJourneyEntry = () => {
       notes?: string;
       flow_name?: string;
     }) => {
+      if (isDemo) return { id: "demo-entry" }; // no-op
       if (!user) throw new Error("Not logged in");
       const { data, error } = await supabase.from("user_journey").insert({
         user_id: user.id,
@@ -93,6 +99,7 @@ export const useJourneyTasks = (journeyId?: string) => {
 export const useCreateJourneyTasks = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { isDemo } = useDemo();
   return useMutation({
     mutationFn: async (tasks: Array<{
       journey_id: string;
@@ -103,6 +110,7 @@ export const useCreateJourneyTasks = () => {
       guidance_message?: string;
       guidance_audio_url?: string | null;
     }>) => {
+      if (isDemo) return; // no-op
       if (!user) throw new Error("Not logged in");
       const rows = tasks.map(t => ({
         ...t,
