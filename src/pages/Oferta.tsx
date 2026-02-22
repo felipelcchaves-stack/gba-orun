@@ -264,7 +264,7 @@ const OfertaPage = () => {
             { icon: Compass, title: "Guia Prático Pós-Obi", desc: "Jogou o Obi? O app te diz o próximo passo, como se o Oluwo estivesse ali." },
             { icon: BookOpen, title: "Orientação Ritual Completa", desc: "Saiba qual ritual fazer, com que materiais e como proceder." },
             { icon: Heart, title: "Conectado aos Cursos", desc: "Obi, Ebó, Orí, Iyami e Egbe Orun: o app complementa o que você aprendeu." },
-            { icon: Shield, title: "Seu Mentor no Bolso", desc: "Sem depender de ninguém. A orientação do Oluwo Ifatokun, sempre acessível." },
+            { icon: Shield, title: "Seu Mentor junto com Você!", desc: "Sem depender de ninguém. A orientação do Oluwo Ifatokun, sempre acessível." },
             { icon: Zap, title: "Jornada Gamificada", desc: "Acompanhe seu progresso espiritual com XP e conquistas." },
             { icon: Star, title: "Atualizações Contínuas", desc: "Novos conteúdos e funcionalidades inclusos na assinatura." }].
             map((b, i) =>
