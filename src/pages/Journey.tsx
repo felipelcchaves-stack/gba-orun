@@ -1,5 +1,6 @@
 import { useJourneyByMonth, useCompleteJourney, useCompleteTask } from "@/hooks/useJourney";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserStats } from "@/hooks/useUserStats";
 import { Link } from "react-router-dom";
@@ -38,6 +39,10 @@ const JourneyPage = () => {
 
   const completeJourney = useCompleteJourney();
   const completeTask = useCompleteTask();
+  const { data: settings } = useAppSettings();
+
+  const prayerTypes = ["oracao_manha", "oracao_ori", "oracao_noite", "oracao_iyami"];
+  const showPrayers = settings?.show_daily_prayers === "true";
 
   const dayMap = useMemo(() => {
     const map = new Map<string, { entries: any[]; tasksDone: number; tasksTotal: number }>();
@@ -47,6 +52,7 @@ const JourneyPage = () => {
       map.get(key)!.entries.push(e);
     }
     for (const t of tasks) {
+      if (!showPrayers && prayerTypes.includes((t as any).task_type)) continue;
       const key = format(new Date((t as any).created_at), "yyyy-MM-dd");
       if (!map.has(key)) map.set(key, { entries: [], tasksDone: 0, tasksTotal: 0 });
       const d = map.get(key)!;
@@ -54,7 +60,7 @@ const JourneyPage = () => {
       if ((t as any).completed) d.tasksDone++;
     }
     return map;
-  }, [entries, tasks]);
+  }, [entries, tasks, showPrayers]);
 
   // Today's data
   const todayKey = format(today, "yyyy-MM-dd");
@@ -71,7 +77,10 @@ const JourneyPage = () => {
 
   // Monthly stats
   const totalConsultations = entries.length;
-  const totalTasksDone = tasks.filter((t: any) => t.completed).length;
+  const totalTasksDone = tasks.filter((t: any) => {
+    if (!showPrayers && prayerTypes.includes(t.task_type)) return false;
+    return t.completed;
+  }).length;
   const activeDays = dayMap.size;
 
   if (!user) {
