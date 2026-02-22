@@ -61,7 +61,7 @@ const OfertaPage = () => {
   const checkoutUrl = mainPlan?.guru_checkout_url || settings?.checkout_url || "#";
   const price = mainPlan ? Number(mainPlan.price).toFixed(2).replace(".", ",") : (settings?.offer_price || "29,90");
   const periodLabel = mainPlan ? (PERIOD_LABELS[mainPlan.billing_period] || "/mês") : "/mês";
-  const headline = settings?.offer_headline || "Descubra o que o Orixá quer de você agora.";
+  const headline = settings?.offer_headline || "Descubra o que o Òrìṣà quer de você agora.";
   const ctaText = settings?.offer_cta_text || "Quero Começar Agora";
   const urgencyText = settings?.offer_urgency_text || "🔥 Oferta por tempo limitado!";
   const guaranteeDays = settings?.offer_guarantee_days || "7";
