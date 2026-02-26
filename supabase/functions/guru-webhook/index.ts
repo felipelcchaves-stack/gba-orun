@@ -184,20 +184,26 @@ Deno.serve(async (req) => {
 
       // Send recovery email so buyer can set their own password
       try {
-        const { error: linkError } = await supabase.auth.admin.generateLink({
-          type: "recovery",
-          email,
-          options: {
-            redirectTo: `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/reset-password`,
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+        const resetRes = await fetch(`${supabaseUrl}/auth/v1/recover`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": anonKey,
           },
+          body: JSON.stringify({
+            email,
+            gotrue_meta_security: {},
+          }),
         });
-        if (linkError) {
-          console.error("Error generating recovery link:", linkError);
+        if (resetRes.ok) {
+          console.log(`Recovery email sent to ${maskEmail(email)}`);
         } else {
-          console.log(`Recovery email triggered for ${maskEmail(email)}`);
+          const errBody = await resetRes.text();
+          console.error(`Recovery email failed (${resetRes.status}): ${errBody}`);
         }
       } catch (linkErr) {
-        console.error("Recovery link error (non-blocking):", linkErr);
+        console.error("Recovery email error (non-blocking):", linkErr);
       }
 
       // Send Purchase event via Meta CAPI
