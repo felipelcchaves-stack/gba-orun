@@ -1,13 +1,13 @@
 project_id = "otfnpfzrtsopitmlpovk"
 
-[functions.check-expired-subscriptions]
-verify_jwt = false
-
-[functions.admin-manage-users]
-verify_jwt = false
-
-[functions.meta-capi]
-verify_jwt = false
-
-[functions.guru-webhook]
-verify_jwt = false
+[functions]
+  [functions.admin-manage-users]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.check-expired-subscriptions]
+    verify_jwt = false
+  [functions.guru-webhook]
+    verify_jwt = false
+  [functions.meta-capi]
+    verify_jwt = false
