@@ -1,61 +1,52 @@
 
-# Correção: E-mail de acesso não enviado ao comprador
 
-## Problema
-O webhook usa `supabase.auth.admin.generateLink({ type: "recovery" })` que apenas **gera** o link de recuperação e o retorna como objeto, mas **nao envia nenhum e-mail**. O log "Recovery email triggered" era falso — indicava apenas que a geração do link teve sucesso.
+# Correcao do Calculo de Receita no Dashboard Admin
+
+## Problema Identificado
+
+O card "Previsao Receita/Mes" soma o valor bruto de cada plano, independente do periodo. Atualmente existem dois planos:
+- **Mensal**: R$ 27,00
+- **Anual**: R$ 270,00
+
+Quando um assinante tem o plano Anual, o sistema soma R$ 270 inteiro como se fosse receita mensal, em vez de dividir por 12 (R$ 22,50/mes).
 
 ## Solucao
 
-Substituir `generateLink` por uma chamada direta a `supabase.auth.admin.inviteUserByEmail(email)` que:
-- Envia um e-mail real de convite ao usuario
-- Permite que ele defina sua senha ao clicar no link
-- Funciona com o service_role_key que ja temos
+### 1. Normalizar o calculo de receita mensal
 
-### Arquivo a alterar
-`supabase/functions/guru-webhook/index.ts` (linhas 185-201)
+Dividir o valor do plano pelo numero de meses do periodo:
+- `monthly` -> divide por 1
+- `quarterly` -> divide por 3
+- `yearly` -> divide por 12
 
-### Codigo atual (nao envia e-mail)
+Isso fara o card "Previsao Receita/Mes" mostrar o valor correto que efetivamente entra por mes.
+
+### 2. Adicionar card "Previsao Receita/Ano"
+
+Um novo KPI card mostrando a receita anual projetada (receita mensal normalizada x 12), dando uma visao de planejamento anual.
+
+## Detalhes Tecnicos
+
+**Arquivo**: `src/components/admin/AdminDashboard.tsx`
+
+**Calculo atual** (linhas 136-152):
 ```typescript
-const { error: linkError } = await supabase.auth.admin.generateLink({
-  type: "recovery",
-  email,
-  options: {
-    redirectTo: `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/reset-password`,
-  },
-});
+if (plan) total += Number(plan.price); // soma bruto, sem considerar periodo
 ```
 
-### Codigo corrigido (envia e-mail de convite)
+**Calculo corrigido**:
 ```typescript
-const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-  redirectTo: `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/reset-password`,
-});
+const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
+// ...
+if (plan) {
+  const months = PERIOD_MONTHS[plan.billing_period] || 1;
+  total += Number(plan.price) / months;
+}
 ```
 
-Porem, como o usuario ja foi criado com `email_confirm: true`, o `inviteUserByEmail` pode falhar pois o usuario ja existe. Nesse caso, a alternativa mais segura e usar `resetPasswordForEmail` via fetch direto na Auth API:
+**Novos KPI cards**:
+- "Receita Mensal Prevista" -> soma normalizada para mes
+- "Receita Anual Prevista" -> receita mensal x 12
 
-```typescript
-const resetRes = await fetch(`${supabaseUrl}/auth/v1/recover`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
-  },
-  body: JSON.stringify({
-    email,
-    gotrue_meta_security: {},
-  }),
-});
-```
+Nenhuma alteracao no banco de dados e necessaria.
 
-Esta chamada ao endpoint `/auth/v1/recover` realmente dispara o e-mail de recuperacao de senha para o usuario.
-
-## Detalhes tecnicos
-
-1. **Trocar** `generateLink` pelo endpoint REST `/auth/v1/recover` que envia o e-mail
-2. **Ajustar** o log para refletir o resultado real (`Recovery email sent` vs `Recovery email failed`)
-3. **Manter** o bloco try/catch para nao bloquear o fluxo principal
-4. **Apos deploy**, reenviar manualmente o e-mail para `escolaifatokunmcc@gmail.com` usando o painel admin ou chamando o endpoint de recover
-
-## Acao imediata pos-correcao
-Disparar manualmente o e-mail de recuperacao para o usuario `escolaifatokunmcc@gmail.com` que ja esta criado mas nunca recebeu suas credenciais.
