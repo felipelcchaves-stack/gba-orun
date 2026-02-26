@@ -1,101 +1,107 @@
 
 
-# Plano: Checkout Guru como Unica Porta de Entrada + Dados Completos do Comprador
+# Corrigir Webhook da Guru -- Mapeamento Real do Payload
 
-## Resumo
+## Problema
 
-O sistema sera ajustado para que a unica forma de criar conta seja via compra na Guru (ou cortesia pelo admin). Nao havera cadastro manual em nenhum lugar do app. Alem disso, o webhook vai extrair todos os dados relevantes do payload da Guru (nome, email, plano mensal/anual) e popular o perfil completo do usuario, permitindo gestao de inadimplencia e controle de recorrencia.
+O webhook esta falhando por dois motivos:
 
-## O que muda
+1. **Autenticacao**: A Guru envia o token como `payload.api_token` dentro do corpo JSON. O codigo atual procura nos headers (`x-guru-token` / `Authorization`), entao nunca encontra e rejeita com 401.
 
-### 1. Webhook da Guru -- Auto-criacao de conta com dados completos
-
-**Arquivo:** `supabase/functions/guru-webhook/index.ts`
-
-Quando o webhook receber pagamento aprovado e o usuario NAO existir:
-
-- Criar conta via `supabase.auth.admin.createUser()` com:
-  - Email do comprador
-  - Senha aleatoria (16 caracteres)
-  - `email_confirm: true` (sem necessidade de verificacao)
-  - `display_name` extraido do payload (`body.buyer.name` ou `body.customer.name`)
-- Disparar email de recuperacao de senha via `supabase.auth.admin.generateLink({ type: 'recovery' })` para o comprador definir sua propria senha
-- Popular o perfil com TODOS os dados do checkout:
-  - `display_name`: nome do comprador
-  - `is_premium: true`
-  - `subscription_status: 'active'`
-  - `subscription_started_at`: data atual
-  - `subscription_expires_at`: +30 dias (mensal) ou +365 dias (anual)
-  - `subscription_plan_id`: vinculado ao plano correspondente na tabela `subscription_plans`
-  - `guru_id`: ID da transacao
-  - `guru_subscription_id`: ID da assinatura na Guru
-
-**Logica de duracao do plano:**
-- O webhook vai verificar o campo de produto/plano da Guru (`body.product`, `body.subscription.plan`, `body.offer`) para determinar se e mensal ou anual
-- Buscar o plano correspondente na tabela `subscription_plans` pelo nome ou preco
-- Se nao encontrar correspondencia, usar 30 dias como padrao (mensal)
-
-**Para usuarios que JA existem** (fluxo atual melhorado):
-- Alem de ativar premium, tambem atualizar `display_name` se estiver vazio
-- Vincular ao `subscription_plan_id` correto
-- Calcular `subscription_expires_at` baseado no tipo de plano (mensal = 30 dias, anual = 365 dias)
-
-### 2. Remover cadastro manual da pagina Admin
-
-**Arquivo:** `src/pages/Admin.tsx`
-
-- Remover o botao "Criar Conta Admin (primeiro acesso)" e a funcao `handleSignUp`
-- Manter apenas o formulario de login
-- O primeiro admin ja foi criado; novos admins sao adicionados via painel admin (cortesia)
-
-### 3. Pagina de Auth -- Somente Login (ja esta assim)
-
-**Arquivo:** `src/pages/Auth.tsx`
-
-- Nenhuma mudanca necessaria. Ja possui apenas "Entrar" e "Esqueci minha senha"
-- Nao sera adicionado botao de cadastro
-
-### 4. Hook useAuth -- Remover funcao signUp da exposicao publica
-
-**Arquivo:** `src/hooks/useAuth.ts`
-
-- Remover `signUp` do retorno do hook para garantir que nenhum componente use cadastro manual
-- Manter a funcao internamente caso o admin precise (via edge function)
-
-## Fluxo Completo
+2. **Mapeamento de campos errado**: O payload real da Guru tem estrutura aninhada diferente do que o codigo espera:
 
 ```text
-COMPRADOR:
-  Guru checkout → Paga → Webhook recebe
-    → Usuario existe? → Atualiza premium + vincula plano
-    → Usuario NAO existe? → Cria conta + popula perfil + ativa premium
-      → Envia email "Defina sua senha"
-      → Comprador define senha → Acessa o app
-
-CORTESIA (Admin):
-  Admin → Painel → Cadastra usuario como cortesia (fluxo existente)
-
-INADIMPLENCIA:
-  Guru envia webhook "overdue" → Webhook bloqueia acesso
-  Cron diario 03h → Verifica expiracoes → Bloqueia quem passou da data
+Codigo atual espera:          Guru envia de verdade:
+─────────────────────         ──────────────────────
+body.status                   body.payload.last_status
+body.buyer.email              body.payload.subscriber.email
+body.buyer.name               body.payload.subscriber.name
+body.subscription.id          body.payload.subscription_code
+body.transaction.id           body.payload.last_transaction.id
+body.transaction.value        body.payload.last_transaction.payment.total
+body.product.name             body.payload.product.name
+(nenhum)                      body.payload.charged_every_days (30)
+(nenhum)                      body.payload.product.offer.plan.interval_type ("month")
 ```
 
-## Gestao de Recorrencia
+## Solucao
 
-Com o `subscription_plan_id` vinculado e o `subscription_expires_at` calculado corretamente por tipo de plano:
-- Plano mensal: expira em 30 dias, Guru renova e webhook atualiza
-- Plano anual: expira em 365 dias, Guru renova e webhook atualiza
-- Se Guru enviar "overdue": acesso bloqueado imediatamente
-- Se Guru enviar "cancelled": acesso bloqueado
-- Cron diario: backup para pegar expiracoes que o webhook nao cobriu
+Reescrever a extracao de dados no `supabase/functions/guru-webhook/index.ts` para mapear corretamente os campos reais do payload da Guru.
 
-## Arquivos Modificados
+### Mudancas no arquivo `supabase/functions/guru-webhook/index.ts`
 
-1. `supabase/functions/guru-webhook/index.ts` -- auto-criacao + dados completos
-2. `src/pages/Admin.tsx` -- remover botao de cadastro manual
-3. `src/hooks/useAuth.ts` -- remover signUp do retorno publico
+**A. Validacao de Token (linhas 22-31)**
 
-## Nenhuma mudanca de banco de dados
+Mover a validacao para DEPOIS de parsear o JSON, e comparar com `body.payload.api_token`:
 
-Todas as colunas necessarias ja existem na tabela `profiles` (`subscription_plan_id`, `subscription_expires_at`, `display_name`, etc.).
+```text
+ANTES:  token = headers["x-guru-token"] ou headers["Authorization"]
+DEPOIS: token = body.payload?.api_token (tambem manter fallback para headers)
+```
+
+**B. Extracao de dados (apos parsear o body)**
+
+Mapear todos os campos para a estrutura real:
+
+```text
+status       = body.payload?.last_status
+                OU body.payload?.last_transaction?.status
+email        = body.payload?.subscriber?.email
+                OU body.payload?.last_transaction?.contact?.email
+buyerName    = body.payload?.subscriber?.name
+                OU body.payload?.last_transaction?.contact?.name
+guruSubId    = body.payload?.subscription_code OU body.payload?.id
+transactionId = body.payload?.last_transaction?.id
+purchaseValue = body.payload?.last_transaction?.payment?.total
+                 OU body.payload?.current_invoice?.value
+```
+
+**C. Deteccao de plano mensal/anual (melhorada)**
+
+Usar os campos reais da Guru que sao muito mais confiaveis:
+
+```text
+intervalType = body.payload?.product?.offer?.plan?.interval_type
+               // "month" ou "year"
+chargedDays  = body.payload?.charged_every_days
+               // 30 para mensal
+
+SE intervalType == "year" OU chargedDays >= 365:
+  durationDays = 365, billingPeriod = "yearly"
+SENAO:
+  durationDays = 30, billingPeriod = "monthly"
+```
+
+**D. Mapeamento de status da Guru**
+
+A Guru envia `last_status` com valores como:
+
+```text
+"active"     → pagamento aprovado, ativar premium
+"overdue"    → inadimplente, bloquear acesso
+"canceled"   → cancelado, bloquear acesso
+"unpaid"     → nao pago, bloquear acesso
+```
+
+Ajustar a lista de status aprovados:
+
+```text
+isApproved = status IN ("active", "approved", "paid",
+             "payment_approved", "completed",
+             "subscription_created", "subscription_renewed")
+```
+
+### Nenhuma mudanca em outros arquivos
+
+Apenas o webhook precisa ser corrigido. O resto do fluxo (criacao de conta, ativacao premium, email de senha) ja esta implementado e correto -- so nao estava sendo executado porque o webhook rejeitava antes.
+
+## Resultado Esperado
+
+Apos a correcao:
+1. Guru envia o webhook com o payload real
+2. Token e validado via `payload.api_token`
+3. Dados do comprador sao extraidos corretamente
+4. Conta e criada (se nova) ou premium ativado (se existente)
+5. Email de "Defina sua senha" e enviado para novos compradores
+6. Plano mensal/anual detectado automaticamente via `interval_type`
 
