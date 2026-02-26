@@ -18,10 +18,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate webhook authenticity
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    const body = await req.json();
+    console.log("Guru webhook received:", JSON.stringify(body));
+
+    // --- Validate webhook authenticity ---
+    // Guru sends token inside body.payload.api_token
     const webhookSecret = Deno.env.get("GURU_WEBHOOK_SECRET");
     if (webhookSecret) {
-      const token = req.headers.get("x-guru-token") || req.headers.get("authorization")?.replace("Bearer ", "");
+      const bodyToken = body?.payload?.api_token;
+      const headerToken = req.headers.get("x-guru-token") || req.headers.get("authorization")?.replace("Bearer ", "");
+      const token = bodyToken || headerToken;
+
       if (token !== webhookSecret) {
         console.error("Invalid webhook token");
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -31,19 +42,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    // --- Extract data from real Guru payload structure ---
+    const p = body?.payload;
 
-    const body = await req.json();
-    console.log("Guru webhook received:", JSON.stringify(body));
-
-    const status = body?.status || body?.transaction?.status;
-    const email = body?.buyer?.email || body?.customer?.email || body?.email;
-    const buyerName = body?.buyer?.name || body?.customer?.name || body?.name || null;
-    const guruSubId = body?.subscription?.id || body?.guru_subscription_id || null;
-    const transactionId = body?.transaction?.id || body?.id || null;
-    const purchaseValue = body?.transaction?.value || body?.amount || body?.price || null;
+    const status = p?.last_status || p?.last_transaction?.status || body?.status;
+    const email = p?.subscriber?.email || p?.last_transaction?.contact?.email || body?.buyer?.email || body?.email;
+    const buyerName = p?.subscriber?.name || p?.last_transaction?.contact?.name || body?.buyer?.name || body?.name || null;
+    const guruSubId = p?.subscription_code || p?.id || body?.subscription?.id || null;
+    const transactionId = p?.last_transaction?.id || body?.transaction?.id || body?.id || null;
+    const purchaseValue = p?.last_transaction?.payment?.total || p?.current_invoice?.value || body?.transaction?.value || body?.amount || null;
 
     if (!email) {
       return new Response(JSON.stringify({ error: "No email found in payload" }), {
@@ -52,22 +59,32 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log(`Extracted — status: ${status}, email: ${email}, name: ${buyerName}, subId: ${guruSubId}, txId: ${transactionId}, value: ${purchaseValue}`);
+
     // --- Determine subscription plan from payload ---
     async function resolveSubscriptionPlan() {
-      // Try to detect billing period from Guru payload
-      const planName = body?.subscription?.plan?.name || body?.product?.name || body?.offer?.name || "";
+      // Use real Guru fields for plan detection
+      const intervalType = p?.product?.offer?.plan?.interval_type
+        || p?.next_product?.offer?.plan?.interval_type
+        || "";
+      const chargedDays = p?.charged_every_days || 0;
+
+      // Fallback: check product/offer name
+      const planName = p?.product?.offer?.name || p?.product?.name || p?.name || "";
       const planNameLower = (planName || "").toLowerCase();
 
-      // Check if annual keywords are present
-      const isAnnual = planNameLower.includes("anual") || planNameLower.includes("annual") || planNameLower.includes("yearly") || planNameLower.includes("12 meses");
+      const isAnnual =
+        intervalType === "year" ||
+        chargedDays >= 365 ||
+        planNameLower.includes("anual") ||
+        planNameLower.includes("annual") ||
+        planNameLower.includes("yearly");
 
       const billingPeriod = isAnnual ? "yearly" : "monthly";
       const durationDays = isAnnual ? 365 : 30;
 
-      // Try to find matching plan in subscription_plans table
       let planId: string | null = null;
 
-      // First try by billing_period
       const { data: plans } = await supabase
         .from("subscription_plans")
         .select("id, billing_period, price, name")
@@ -79,7 +96,6 @@ Deno.serve(async (req) => {
       if (plans && plans.length > 0) {
         planId = plans[0].id;
       } else {
-        // Fallback: get any active plan
         const { data: fallback } = await supabase
           .from("subscription_plans")
           .select("id")
@@ -91,6 +107,7 @@ Deno.serve(async (req) => {
         }
       }
 
+      console.log(`Plan resolved — interval: ${intervalType}, chargedDays: ${chargedDays}, billing: ${billingPeriod}, duration: ${durationDays}, planId: ${planId}`);
       return { planId, durationDays };
     }
 
@@ -105,8 +122,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const isApproved = status === "approved" || status === "payment_approved" || status === "completed" ||
-      status === "subscription_created" || status === "subscription_renewed";
+    // --- Status mapping ---
+    const isApproved = [
+      "active", "approved", "paid",
+      "payment_approved", "completed",
+      "subscription_created", "subscription_renewed",
+    ].includes(status);
 
     // --- AUTO-CREATE USER if not found AND payment approved ---
     if (!userId && isApproved) {
@@ -114,7 +135,6 @@ Deno.serve(async (req) => {
 
       const randomPassword = generateRandomPassword();
 
-      // Create user via admin API
       const { data: newUserData, error: createError } = await supabase.auth.admin.createUser({
         email,
         password: randomPassword,
@@ -133,10 +153,8 @@ Deno.serve(async (req) => {
       const newUserId = newUserData.user.id;
       console.log(`User created: ${newUserId}`);
 
-      // Wait a moment for the handle_new_user trigger to create the profile
       await new Promise((r) => setTimeout(r, 1500));
 
-      // Resolve plan and populate profile
       const { planId, durationDays } = await resolveSubscriptionPlan();
       const now = new Date();
       const expiresAt = new Date(now);
@@ -222,7 +240,6 @@ Deno.serve(async (req) => {
       const expiresAt = new Date(now);
       expiresAt.setDate(expiresAt.getDate() + durationDays);
 
-      // Build update payload — also update display_name if empty
       const updatePayload: any = {
         is_premium: true,
         subscription_status: "active",
@@ -233,9 +250,7 @@ Deno.serve(async (req) => {
         guru_subscription_id: guruSubId,
       };
 
-      // Update display_name only if buyer name is available
       if (buyerName) {
-        // Check if current display_name is empty
         const { data: currentProfile } = await supabase
           .from("profiles")
           .select("display_name")
@@ -283,7 +298,7 @@ Deno.serve(async (req) => {
       }
 
     } else if (
-      status === "subscription_overdue" || status === "payment_refunded" || status === "overdue"
+      status === "overdue" || status === "subscription_overdue" || status === "payment_refunded" || status === "unpaid"
     ) {
       const { error } = await supabase
         .from("profiles")
@@ -297,7 +312,7 @@ Deno.serve(async (req) => {
       console.log(`User ${email} marked overdue`);
 
     } else if (
-      status === "subscription_cancelled" || status === "cancelled" || status === "refunded"
+      status === "canceled" || status === "cancelled" || status === "subscription_cancelled" || status === "refunded"
     ) {
       const { error } = await supabase
         .from("profiles")
