@@ -12,6 +12,11 @@ function generateRandomPassword(length = 16): string {
   return Array.from(array, (b) => chars[b % chars.length]).join("");
 }
 
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  return `${local.substring(0, 3)}***@${domain}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -23,17 +28,18 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const body = await req.json();
-    console.log("Guru webhook received:", JSON.stringify(body));
+
+    // --- NORMALIZE PAYLOAD: accept both wrapped {payload:{...}} and unwrapped {...} ---
+    const isWrapped = body?.payload && typeof body.payload === "object" && body.payload.api_token;
+    const p = isWrapped ? body.payload : body;
+    console.log(`Webhook received — format: ${isWrapped ? "wrapped" : "unwrapped"}`);
 
     // --- Validate webhook authenticity ---
-    // Guru sends token inside body.payload.api_token
     const webhookSecret = Deno.env.get("GURU_WEBHOOK_SECRET");
     if (webhookSecret) {
-      const bodyToken = body?.payload?.api_token;
+      const bodyToken = p?.api_token;
       const headerToken = req.headers.get("x-guru-token") || req.headers.get("authorization")?.replace("Bearer ", "");
       const token = bodyToken || headerToken;
-
-      // Token validated successfully or not
 
       if (token !== webhookSecret) {
         console.error("Invalid webhook token");
@@ -44,15 +50,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- Extract data from real Guru payload structure ---
-    const p = body?.payload;
-
-    const status = p?.last_status || p?.last_transaction?.status || body?.status;
-    const email = p?.subscriber?.email || p?.last_transaction?.contact?.email || body?.buyer?.email || body?.email;
-    const buyerName = p?.subscriber?.name || p?.last_transaction?.contact?.name || body?.buyer?.name || body?.name || null;
-    const guruSubId = p?.subscription_code || p?.id || body?.subscription?.id || null;
-    const transactionId = p?.last_transaction?.id || body?.transaction?.id || body?.id || null;
-    const purchaseValue = p?.last_transaction?.payment?.total || p?.current_invoice?.value || body?.transaction?.value || body?.amount || null;
+    // --- Extract data from normalized payload ---
+    const rawStatus = p?.last_status || p?.last_transaction?.status || p?.status || "";
+    const status = rawStatus.toLowerCase();
+    const email = p?.subscriber?.email || p?.last_transaction?.contact?.email || p?.buyer?.email || p?.email;
+    const buyerName = p?.subscriber?.name || p?.last_transaction?.contact?.name || p?.buyer?.name || p?.name || null;
+    const guruSubId = p?.subscription_code || p?.id || null;
+    const transactionId = p?.last_transaction?.id || p?.transaction?.id || p?.id || null;
+    const purchaseValue = p?.last_transaction?.payment?.total || p?.current_invoice?.value || p?.transaction?.value || p?.amount || null;
 
     if (!email) {
       return new Response(JSON.stringify({ error: "No email found in payload" }), {
@@ -61,17 +66,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Extracted — status: ${status}, email: ${email}, name: ${buyerName}, subId: ${guruSubId}, txId: ${transactionId}, value: ${purchaseValue}`);
+    console.log(`Extracted — status: ${status}, email: ${maskEmail(email)}, subId: ${guruSubId}`);
 
     // --- Determine subscription plan from payload ---
     async function resolveSubscriptionPlan() {
-      // Use real Guru fields for plan detection
       const intervalType = p?.product?.offer?.plan?.interval_type
         || p?.next_product?.offer?.plan?.interval_type
         || "";
       const chargedDays = p?.charged_every_days || 0;
-
-      // Fallback: check product/offer name
       const planName = p?.product?.offer?.name || p?.product?.name || p?.name || "";
       const planNameLower = (planName || "").toLowerCase();
 
@@ -109,7 +111,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`Plan resolved — interval: ${intervalType}, chargedDays: ${chargedDays}, billing: ${billingPeriod}, duration: ${durationDays}, planId: ${planId}`);
+      console.log(`Plan resolved — billing: ${billingPeriod}, duration: ${durationDays}d, planId: ${planId}`);
       return { planId, durationDays };
     }
 
@@ -124,7 +126,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- Status mapping ---
+    // --- Status mapping (case-insensitive) ---
     const isApproved = [
       "active", "approved", "paid",
       "payment_approved", "completed",
@@ -133,7 +135,7 @@ Deno.serve(async (req) => {
 
     // --- AUTO-CREATE USER if not found AND payment approved ---
     if (!userId && isApproved) {
-      console.log(`User ${email} not found — auto-creating account...`);
+      console.log(`User ${maskEmail(email)} not found — auto-creating account...`);
 
       const randomPassword = generateRandomPassword();
 
@@ -192,7 +194,7 @@ Deno.serve(async (req) => {
         if (linkError) {
           console.error("Error generating recovery link:", linkError);
         } else {
-          console.log(`Recovery email triggered for ${email}`);
+          console.log(`Recovery email triggered for ${maskEmail(email)}`);
         }
       } catch (linkErr) {
         console.error("Recovery link error (non-blocking):", linkErr);
@@ -219,6 +221,7 @@ Deno.serve(async (req) => {
         console.error("CAPI Purchase error (non-blocking):", capiErr);
       }
 
+      console.log(`Result: user_created, premium activated for ${maskEmail(email)}`);
       return new Response(JSON.stringify({ success: true, action: "user_created", user_id: newUserId }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -227,7 +230,7 @@ Deno.serve(async (req) => {
 
     // --- User not found and NOT an approval event → ignore ---
     if (!userId) {
-      console.log(`User ${email} not found and status=${status} — ignoring`);
+      console.log(`User ${maskEmail(email)} not found, status=${status} — ignoring`);
       return new Response(JSON.stringify({ success: true, note: "user not found, non-approval event" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -276,7 +279,7 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      console.log(`User ${email} subscription activated (${durationDays} days)`);
+      console.log(`User ${maskEmail(email)} subscription activated (${durationDays} days)`);
 
       // Send Purchase event via Meta CAPI
       try {
@@ -300,7 +303,7 @@ Deno.serve(async (req) => {
       }
 
     } else if (
-      status === "overdue" || status === "subscription_overdue" || status === "payment_refunded" || status === "unpaid"
+      ["overdue", "subscription_overdue", "payment_refunded", "unpaid"].includes(status)
     ) {
       const { error } = await supabase
         .from("profiles")
@@ -311,10 +314,10 @@ Deno.serve(async (req) => {
         .eq("user_id", userId);
 
       if (error) console.error("Error marking overdue:", error);
-      console.log(`User ${email} marked overdue`);
+      console.log(`User ${maskEmail(email)} marked overdue`);
 
     } else if (
-      status === "canceled" || status === "cancelled" || status === "subscription_cancelled" || status === "refunded"
+      ["canceled", "cancelled", "subscription_cancelled", "refunded"].includes(status)
     ) {
       const { error } = await supabase
         .from("profiles")
@@ -325,9 +328,10 @@ Deno.serve(async (req) => {
         .eq("user_id", userId);
 
       if (error) console.error("Error cancelling:", error);
-      console.log(`User ${email} subscription cancelled`);
+      console.log(`User ${maskEmail(email)} subscription cancelled`);
     }
 
+    console.log(`Result: processed status=${status} for ${maskEmail(email)}`);
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
