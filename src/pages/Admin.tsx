@@ -49,7 +49,7 @@ const DailyPrayersToggle = () => {
 };
 
 const AdminPage = () => {
-  const { user, loading: authLoading, signIn, signUp, signOut } = useAuth();
+  const { user, loading: authLoading, signIn, signOut } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { data: rituals, isLoading } = useRituals();
   const createRitual = useCreateRitual();
@@ -103,13 +103,6 @@ const AdminPage = () => {
   }
 
   if (!user) {
-    const handleSignUp = async (e: React.FormEvent) => {
-      e.preventDefault();
-      const { error } = await signUp(email, password);
-      if (error) toast.error(error.message);
-      else toast.success("Conta criada! Você já está logado.");
-    };
-
     return (
       <div className="min-h-screen flex items-center justify-center px-5">
         <div className="w-full max-w-sm">
@@ -119,7 +112,6 @@ const AdminPage = () => {
             <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground focus:ring-2 focus:ring-primary outline-none" required />
             <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground focus:ring-2 focus:ring-primary outline-none" required />
             <button type="submit" className="w-full py-3 rounded-xl bg-secondary text-secondary-foreground font-bold text-lg">Entrar</button>
-            <button type="button" onClick={handleSignUp} className="w-full py-3 rounded-xl border border-border font-semibold text-sm hover:bg-muted">Criar Conta Admin (primeiro acesso)</button>
           </form>
         </div>
       </div>
