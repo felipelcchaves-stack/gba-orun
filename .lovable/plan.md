@@ -1,107 +1,65 @@
 
+Objetivo
+- Eliminar o erro 401 no webhook da Guru para que novas compras sejam processadas automaticamente (criação/ativação de conta premium).
 
-# Corrigir Webhook da Guru -- Mapeamento Real do Payload
+Diagnóstico confirmado (com evidência)
+- O webhook atual valida token em `body.payload.api_token`.
+- Os eventos reais da Guru que estão falhando chegam em formato “desembrulhado”, com `api_token` na raiz do JSON.
+- Resultado: `body.payload` fica `undefined`, o token lido vira vazio e a função retorna 401.
+- Reprodução técnica já feita:
+  - Requisição com corpo “desembrulhado” (`api_token` na raiz) => 401 Unauthorized.
+  - Requisição com corpo “embrulhado” (`payload.api_token`) => 200 OK.
+- Portanto, a causa raiz não é mais o valor do secret, e sim incompatibilidade de formato do payload (shape mismatch).
 
-## Problema
+Plano de correção
+1) Normalizar formato de entrada no início da função
+- Criar uma variável única de trabalho, por exemplo:
+  - se existir `body.payload` e for objeto -> usar `body.payload`
+  - senão -> usar `body` (raiz)
+- Isso permite aceitar os 2 formatos sem quebrar integração.
 
-O webhook esta falhando por dois motivos:
+2) Ajustar validação de token para usar payload normalizado
+- Validar na ordem:
+  1. `normalizedPayload.api_token`
+  2. fallback em header `x-guru-token`
+  3. fallback em `Authorization: Bearer ...`
+- Manter resposta 401 quando não bater, mas com log seguro (sem expor secret).
 
-1. **Autenticacao**: A Guru envia o token como `payload.api_token` dentro do corpo JSON. O codigo atual procura nos headers (`x-guru-token` / `Authorization`), entao nunca encontra e rejeita com 401.
+3) Ajustar extração de campos para o mesmo payload normalizado
+- `status`, `email`, `buyerName`, `subscription_code`, `transaction`, `value` devem ler primeiro do payload normalizado.
+- Manter fallbacks legados atuais para não regressão.
 
-2. **Mapeamento de campos errado**: O payload real da Guru tem estrutura aninhada diferente do que o codigo espera:
+4) Melhorar robustez de status
+- Continuar tratando `active/approved/paid` como aprovação.
+- Continuar tratando `overdue/unpaid` e `canceled/refunded`.
+- Garantir comparação case-insensitive (`toLowerCase`) para evitar falhas por variação de caixa.
 
-```text
-Codigo atual espera:          Guru envia de verdade:
-─────────────────────         ──────────────────────
-body.status                   body.payload.last_status
-body.buyer.email              body.payload.subscriber.email
-body.buyer.name               body.payload.subscriber.name
-body.subscription.id          body.payload.subscription_code
-body.transaction.id           body.payload.last_transaction.id
-body.transaction.value        body.payload.last_transaction.payment.total
-body.product.name             body.payload.product.name
-(nenhum)                      body.payload.charged_every_days (30)
-(nenhum)                      body.payload.product.offer.plan.interval_type ("month")
-```
+5) Logging de observabilidade (sem dados sensíveis)
+- Logar somente:
+  - se chegou formato root ou payload
+  - status extraído
+  - email mascarado (ou parcialmente)
+  - resultado final do processamento
+- Evitar logs com token/secret completos.
 
-## Solucao
+6) Verificação pós-correção
+- Teste A: payload “desembrulhado” de compra aprovada deve retornar 200 e processar usuário.
+- Teste B: payload “embrulhado” deve continuar funcionando.
+- Teste C: token inválido deve continuar retornando 401.
+- Teste D: evento de cancelamento/inadimplência deve atualizar status corretamente.
 
-Reescrever a extracao de dados no `supabase/functions/guru-webhook/index.ts` para mapear corretamente os campos reais do payload da Guru.
+Critérios de aceite
+- Nova compra da Guru não retorna 401 por erro de formato.
+- Usuário comprador é criado/atualizado com premium ativo em evento aprovado.
+- Eventos de cancelamento/inadimplência continuam alterando assinatura corretamente.
+- Não há regressão para payload no formato antigo.
 
-### Mudancas no arquivo `supabase/functions/guru-webhook/index.ts`
+Riscos e mitigação
+- Risco: variações futuras no JSON da Guru.
+  - Mitigação: normalização + fallbacks + logs de formato recebido.
+- Risco: falsos negativos por `status` em maiúsculo/minúsculo.
+  - Mitigação: normalização de string para comparação.
+- Risco: exposição de dados sensíveis em log.
+  - Mitigação: mascaramento e remoção de logs sensíveis.
 
-**A. Validacao de Token (linhas 22-31)**
-
-Mover a validacao para DEPOIS de parsear o JSON, e comparar com `body.payload.api_token`:
-
-```text
-ANTES:  token = headers["x-guru-token"] ou headers["Authorization"]
-DEPOIS: token = body.payload?.api_token (tambem manter fallback para headers)
-```
-
-**B. Extracao de dados (apos parsear o body)**
-
-Mapear todos os campos para a estrutura real:
-
-```text
-status       = body.payload?.last_status
-                OU body.payload?.last_transaction?.status
-email        = body.payload?.subscriber?.email
-                OU body.payload?.last_transaction?.contact?.email
-buyerName    = body.payload?.subscriber?.name
-                OU body.payload?.last_transaction?.contact?.name
-guruSubId    = body.payload?.subscription_code OU body.payload?.id
-transactionId = body.payload?.last_transaction?.id
-purchaseValue = body.payload?.last_transaction?.payment?.total
-                 OU body.payload?.current_invoice?.value
-```
-
-**C. Deteccao de plano mensal/anual (melhorada)**
-
-Usar os campos reais da Guru que sao muito mais confiaveis:
-
-```text
-intervalType = body.payload?.product?.offer?.plan?.interval_type
-               // "month" ou "year"
-chargedDays  = body.payload?.charged_every_days
-               // 30 para mensal
-
-SE intervalType == "year" OU chargedDays >= 365:
-  durationDays = 365, billingPeriod = "yearly"
-SENAO:
-  durationDays = 30, billingPeriod = "monthly"
-```
-
-**D. Mapeamento de status da Guru**
-
-A Guru envia `last_status` com valores como:
-
-```text
-"active"     → pagamento aprovado, ativar premium
-"overdue"    → inadimplente, bloquear acesso
-"canceled"   → cancelado, bloquear acesso
-"unpaid"     → nao pago, bloquear acesso
-```
-
-Ajustar a lista de status aprovados:
-
-```text
-isApproved = status IN ("active", "approved", "paid",
-             "payment_approved", "completed",
-             "subscription_created", "subscription_renewed")
-```
-
-### Nenhuma mudanca em outros arquivos
-
-Apenas o webhook precisa ser corrigido. O resto do fluxo (criacao de conta, ativacao premium, email de senha) ja esta implementado e correto -- so nao estava sendo executado porque o webhook rejeitava antes.
-
-## Resultado Esperado
-
-Apos a correcao:
-1. Guru envia o webhook com o payload real
-2. Token e validado via `payload.api_token`
-3. Dados do comprador sao extraidos corretamente
-4. Conta e criada (se nova) ou premium ativado (se existente)
-5. Email de "Defina sua senha" e enviado para novos compradores
-6. Plano mensal/anual detectado automaticamente via `interval_type`
-
+Se você aprovar, eu implemento exatamente essa correção de compatibilidade de payload e já deixo um checklist de teste de ponta a ponta para validar com uma compra real.
