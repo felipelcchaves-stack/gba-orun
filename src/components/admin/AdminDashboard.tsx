@@ -132,15 +132,20 @@ const AdminDashboard = () => {
   const { data: historyData } = useSubscriptionHistory();
   const [knowledgeFilter, setKnowledgeFilter] = useState<string>("all");
 
-  // Revenue forecast
-  const revenueForecast = (() => {
+  const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
+
+  // Revenue forecast (normalized to monthly)
+  const monthlyRevenueForecast = (() => {
     if (!profiles || !plans) return 0;
     let total = 0;
     const planMap = new Map(plans.map(p => [p.id, p]));
     for (const p of profiles) {
       if (p.subscription_status === "active" && p.subscription_plan_id && !p.is_courtesy) {
         const plan = planMap.get(p.subscription_plan_id);
-        if (plan) total += Number(plan.price);
+        if (plan) {
+          const months = PERIOD_MONTHS[plan.billing_period] || 1;
+          total += Number(plan.price) / months;
+        }
       }
     }
     const activeWithoutPlan = (profiles || []).filter(p => p.subscription_status === "active" && !p.subscription_plan_id && !p.is_courtesy).length;
@@ -150,6 +155,8 @@ const AdminDashboard = () => {
     }
     return total;
   })();
+
+  const yearlyRevenueForecast = monthlyRevenueForecast * 12;
 
   const courtesyCount = profiles?.filter(p => p.is_courtesy).length ?? 0;
 
@@ -164,7 +171,8 @@ const AdminDashboard = () => {
     { label: "Assinantes Ativos", value: stats?.active_subscribers ?? 0, icon: UserCheck, color: "text-green-600" },
     ...(hasAnySubscriber ? [
       { label: "Inadimplentes", value: stats?.overdue_users ?? 0, icon: AlertTriangle, color: "text-destructive" },
-      { label: "Previsão Receita/Mês", value: `R$ ${revenueForecast.toFixed(2)}`, icon: DollarSign, color: "text-accent" },
+      { label: "Receita Mensal Prevista", value: `R$ ${monthlyRevenueForecast.toFixed(2)}`, icon: DollarSign, color: "text-accent" },
+      { label: "Receita Anual Prevista", value: `R$ ${yearlyRevenueForecast.toFixed(2)}`, icon: TrendingUp, color: "text-green-600" },
     ] : []),
     { label: "Premium (Pagantes)", value: stats?.premium_users ?? 0, icon: Crown, color: "text-accent" },
     { label: "Cortesia", value: courtesyCount, icon: Gift, color: "text-purple-600" },
