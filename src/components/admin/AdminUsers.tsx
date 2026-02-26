@@ -178,6 +178,8 @@ const AdminUsers = () => {
     else {
       toast.success(newPremium ? "Acesso liberado!" : "Acesso travado!");
       qc.invalidateQueries({ queryKey: ["admin-profiles"] });
+      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: ["admin-subscription-history"] });
     }
   };
 
@@ -201,6 +203,8 @@ const AdminUsers = () => {
       toast.success(`Usuário ${deleteUserEmail} excluído`);
       setDeleteUserId(null);
       qc.invalidateQueries({ queryKey: ["admin-profiles"] });
+      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: ["admin-subscription-history"] });
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -255,6 +259,8 @@ const AdminUsers = () => {
       toast.success("Perfil atualizado!");
       setEditUser(null);
       qc.invalidateQueries({ queryKey: ["admin-profiles"] });
+      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: ["admin-subscription-history"] });
     } catch (e: any) {
       toast.error(e.message);
     } finally {
