@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       const headerToken = req.headers.get("x-guru-token") || req.headers.get("authorization")?.replace("Bearer ", "");
       const token = bodyToken || headerToken;
 
-      console.log(`Token check — body: [${bodyToken?.length}chars] secret: [${webhookSecret?.length}chars] match: ${token === webhookSecret}`);
+      console.log(`Token check — body: [${bodyToken?.length}chars "${bodyToken?.substring(0,6)}..."] secret: [${webhookSecret?.length}chars "${webhookSecret?.substring(0,6)}...${webhookSecret?.substring(webhookSecret.length-6)}"] match: ${token === webhookSecret}`);
 
       if (token !== webhookSecret) {
         console.error("Invalid webhook token");
