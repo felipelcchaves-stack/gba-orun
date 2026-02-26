@@ -1,86 +1,101 @@
 
 
-# Corrigir a Proposta de Valor da Landing Page
+# Plano: Checkout Guru como Unica Porta de Entrada + Dados Completos do Comprador
 
-## O Problema
+## Resumo
 
-A landing page esta fazendo promessas erradas. Ela diz que o app ensina a interpretar o Obi, da receitas de Ebo, tem audios exclusivos e protecao de Iyami. Nao e isso.
+O sistema sera ajustado para que a unica forma de criar conta seja via compra na Guru (ou cortesia pelo admin). Nao havera cadastro manual em nenhum lugar do app. Alem disso, o webhook vai extrair todos os dados relevantes do payload da Guru (nome, email, plano mensal/anual) e popular o perfil completo do usuario, permitindo gestao de inadimplencia e controle de recorrencia.
 
-A proposta real e: **o app e um guia pratico para alunos dos cursos do Oluwo Ifatokun**. O aluno joga o Obi e o app diz exatamente o que fazer depois -- como se o mestre estivesse ali do lado orientando.
+## O que muda
 
-## O que vai mudar
+### 1. Webhook da Guru -- Auto-criacao de conta com dados completos
 
-### 1. Secao "O que voce vai receber" (Benefits)
+**Arquivo:** `supabase/functions/guru-webhook/index.ts`
 
-**Antes (errado):**
-- Oraculo do Obi -- "Interprete cada caida com precisao e confianca"
-- Receitas de Ebo -- "Ebos completos com materiais, cantigas e procedimentos"
-- Audios Exclusivos -- "Audios gravados para guiar sua pratica ritual"
-- Protecao de Iyami -- "Rituais de protecao e cuidado espiritual ancestral"
-- Jornada Gamificada (ok)
-- Atualizacoes Continuas (ok)
+Quando o webhook receber pagamento aprovado e o usuario NAO existir:
 
-**Depois (correto):**
-- **Guia Pratico Pos-Obi** -- "Jogou o Obi? O app te diz o proximo passo, como se o Oluwo estivesse ali."
-- **Orientacao Ritual Completa** -- "Saiba qual ritual fazer, com que materiais e como proceder."
-- **Tudo Conectado aos Cursos** -- "Obi, Ebo, Ori, Iyami e Egbe Orun: o app complementa o que voce aprendeu."
-- **Seu Mentor no Bolso** -- "Sem depender de ninguem. A orientacao do Oluwo Ifatokun, sempre acessivel."
-- Jornada Gamificada (mantido)
-- Atualizacoes Continuas (mantido)
+- Criar conta via `supabase.auth.admin.createUser()` com:
+  - Email do comprador
+  - Senha aleatoria (16 caracteres)
+  - `email_confirm: true` (sem necessidade de verificacao)
+  - `display_name` extraido do payload (`body.buyer.name` ou `body.customer.name`)
+- Disparar email de recuperacao de senha via `supabase.auth.admin.generateLink({ type: 'recovery' })` para o comprador definir sua propria senha
+- Popular o perfil com TODOS os dados do checkout:
+  - `display_name`: nome do comprador
+  - `is_premium: true`
+  - `subscription_status: 'active'`
+  - `subscription_started_at`: data atual
+  - `subscription_expires_at`: +30 dias (mensal) ou +365 dias (anual)
+  - `subscription_plan_id`: vinculado ao plano correspondente na tabela `subscription_plans`
+  - `guru_id`: ID da transacao
+  - `guru_subscription_id`: ID da assinatura na Guru
 
-### 2. Secao "Voce ja passou por isso?" (Pain Points)
+**Logica de duracao do plano:**
+- O webhook vai verificar o campo de produto/plano da Guru (`body.product`, `body.subscription.plan`, `body.offer`) para determinar se e mensal ou anual
+- Buscar o plano correspondente na tabela `subscription_plans` pelo nome ou preco
+- Se nao encontrar correspondencia, usar 30 dias como padrao (mensal)
 
-**Antes:**
-- "Fica inseguro(a) na hora de interpretar o Obi?"
-- "Nao sabe qual Ebo preparar para cada situacao?"
-- "Depende de outras pessoas para consultas simples?"
-- "Perde tempo procurando Orikis em livros e cadernos espalhados?"
+**Para usuarios que JA existem** (fluxo atual melhorado):
+- Alem de ativar premium, tambem atualizar `display_name` se estiver vazio
+- Vincular ao `subscription_plan_id` correto
+- Calcular `subscription_expires_at` baseado no tipo de plano (mensal = 30 dias, anual = 365 dias)
 
-**Depois:**
-- "Jogou o Obi e ficou sem saber o que fazer depois?"
-- "Fez o curso mas na hora H nao lembra os passos?"
-- "Depende de alguem pra te orientar em cada consulta?"
-- "Tem o conhecimento mas falta um guia pratico no dia a dia?"
+### 2. Remover cadastro manual da pagina Admin
 
-### 3. Secao "Como funciona"
+**Arquivo:** `src/pages/Admin.tsx`
 
-**Antes:**
-- Assine / Consulte / Pratique (generico)
+- Remover o botao "Criar Conta Admin (primeiro acesso)" e a funcao `handleSignUp`
+- Manter apenas o formulario de login
+- O primeiro admin ja foi criado; novos admins sao adicionados via painel admin (cortesia)
 
-**Depois:**
-- **1. Assine** -- "Escolha seu plano e acesse o guia completo."
-- **2. Jogue o Obi** -- "Faca sua consulta e o app identifica o resultado."
-- **3. Siga a Orientacao** -- "O app te mostra exatamente o que fazer, passo a passo."
+### 3. Pagina de Auth -- Somente Login (ja esta assim)
 
-### 4. Depoimentos de Fallback
+**Arquivo:** `src/pages/Auth.tsx`
 
-Atualizar para refletir a proposta de guia pratico:
-- "Jogava o Obi e ficava perdido. Agora o app me guia em tudo." 
-- "E como ter o Oluwo do meu lado. Pratico e direto."
-- "Complementa perfeitamente o que aprendi nos cursos."
-- "Nao dependo mais de ninguem pra seguir minha rotina espiritual."
+- Nenhuma mudanca necessaria. Ja possui apenas "Entrar" e "Esqueci minha senha"
+- Nao sera adicionado botao de cadastro
 
-### 5. Schema.org (SEO)
+### 4. Hook useAuth -- Remover funcao signUp da exposicao publica
 
-Atualizar a descricao de "O guia digital mais completo de Obi, Rituais e Orikis" para algo como "Guia pratico digital que orienta alunos do Metodo Oluwo Ifatokun apos cada consulta ao Obi."
+**Arquivo:** `src/hooks/useAuth.ts`
 
-### 6. FAQ -- Ajuste na pergunta sobre experiencia
+- Remover `signUp` do retorno do hook para garantir que nenhum componente use cadastro manual
+- Manter a funcao internamente caso o admin precise (via edge function)
 
-**Antes:** "Nao! O Gba-Orun foi criado tanto para iniciantes quanto para praticantes experientes."
+## Fluxo Completo
 
-**Depois:** "O ideal e ter feito pelo menos um dos cursos do Oluwo Ifatokun (Obi, Ebo, Ori). O app foi pensado para complementar o que voce aprendeu, mas mesmo quem esta comecando consegue acompanhar."
+```text
+COMPRADOR:
+  Guru checkout → Paga → Webhook recebe
+    → Usuario existe? → Atualiza premium + vincula plano
+    → Usuario NAO existe? → Cria conta + popula perfil + ativa premium
+      → Envia email "Defina sua senha"
+      → Comprador define senha → Acessa o app
 
----
+CORTESIA (Admin):
+  Admin → Painel → Cadastra usuario como cortesia (fluxo existente)
 
-## Detalhes Tecnicos
+INADIMPLENCIA:
+  Guru envia webhook "overdue" → Webhook bloqueia acesso
+  Cron diario 03h → Verifica expiracoes → Bloqueia quem passou da data
+```
 
-### Arquivo modificado: `src/pages/Oferta.tsx`
+## Gestao de Recorrencia
 
-- Linhas 15-19: Atualizar array `FALLBACK_TESTIMONIALS`
-- Linhas 23-24: Atualizar FAQ sobre experiencia religiosa
-- Linhas 31-35: Atualizar array `pains`
-- Linhas 78-83: Atualizar texto do Schema.org
-- Linhas 263-269: Atualizar array de beneficios (icones, titulos e descricoes)
-- Linhas 288-291: Atualizar passos do "Como funciona"
+Com o `subscription_plan_id` vinculado e o `subscription_expires_at` calculado corretamente por tipo de plano:
+- Plano mensal: expira em 30 dias, Guru renova e webhook atualiza
+- Plano anual: expira em 365 dias, Guru renova e webhook atualiza
+- Se Guru enviar "overdue": acesso bloqueado imediatamente
+- Se Guru enviar "cancelled": acesso bloqueado
+- Cron diario: backup para pegar expiracoes que o webhook nao cobriu
 
-Nenhuma mudanca de banco de dados, nenhum arquivo novo. Apenas texto.
+## Arquivos Modificados
+
+1. `supabase/functions/guru-webhook/index.ts` -- auto-criacao + dados completos
+2. `src/pages/Admin.tsx` -- remover botao de cadastro manual
+3. `src/hooks/useAuth.ts` -- remover signUp do retorno publico
+
+## Nenhuma mudanca de banco de dados
+
+Todas as colunas necessarias ja existem na tabela `profiles` (`subscription_plan_id`, `subscription_expires_at`, `display_name`, etc.).
+
