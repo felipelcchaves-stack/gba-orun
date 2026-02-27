@@ -1,47 +1,41 @@
 
 
-# Graficos começam no primeiro evento real
+# Card de Receita Mensal com Evolucao %
 
-## Problema
-Os graficos de Evolucao de Assinantes, Receita e Crescimento mostram dados desde o primeiro cadastro no sistema, gerando uma linha de zeros ate a primeira atividade real (assinatura, cortesia ou venda). Isso polui o grafico e esconde os gaps reais.
+## O que sera criado
+Um novo card KPI no dashboard admin mostrando:
+- **Valor total em R$** que voce esta recebendo neste mes (soma de todos os planos ativos, independente se mensal ou anual)
+- **Badge de evolucao %** comparando com o mes anterior (seta verde para cima se cresceu, vermelha para baixo se caiu)
 
-## Solucao
-Alterar a RPC `admin_get_subscription_history_v2` para que o ponto de inicio (`start_date`) considere a **primeira atividade relevante** em vez do primeiro cadastro:
+## Como funciona
 
-- **Grafico de Assinantes/Receita**: comecar na data do primeiro perfil com `subscription_started_at IS NOT NULL` ou `is_courtesy = true`
-- **Se nao houver nenhuma atividade**: nao retornar dados (grafico fica oculto, como ja acontece hoje com a condicao `historyData.length > 0`)
+O card usa os dados de assinantes ativos e seus planos para calcular quanto entra por mes. Planos anuais sao divididos por 12, trimestrais por 3, para normalizar tudo em valor mensal. A comparacao e feita pegando o mesmo calculo do mes anterior.
 
-Para o modo diario, manter o limite de 90 dias mas tambem so mostrar a partir da primeira atividade.
+## Detalhes tecnicos
 
-## Alteracao
+### 1. Nova RPC no banco de dados: `admin_get_revenue_comparison`
 
-### 1. Migração SQL - Atualizar a RPC
+Funcao SQL que retorna duas linhas:
+- Receita do mes atual (baseada nos assinantes ativos hoje)
+- Receita do mes anterior (baseada nos assinantes que estavam ativos no ultimo dia do mes passado, usando o historico ja existente)
 
-Alterar o calculo de `start_date` na CTE `params`:
+A logica reutiliza o mesmo calculo de `net_price` ja usado no dashboard, somando o valor liquido de cada plano normalizado para mensal.
 
-**Antes:**
+### 2. Alteracao no frontend: `AdminDashboard.tsx`
+
+- Novo hook `useMonthlyRevenueComparison` em `useAdminData.ts`
+- Novo card com icone DollarSign mostrando o valor em R$
+- Badge ao lado com a % de variacao e cor condicional (verde/vermelho)
+- Posicionado logo apos os cards de assinantes ativos
+
+### Visual esperado
+
 ```text
-start_date = primeiro cadastro (min(created_at) de profiles)
++----------------------------------+
+| R$ 1.250,00                      |
+| Receita Este Mes    [+15.3% ^]   |
++----------------------------------+
 ```
 
-**Depois:**
-```text
-start_date = GREATEST(
-  -- primeiro evento relevante (assinatura ou cortesia)
-  primeiro subscription_started_at OU primeiro created_at de cortesia,
-  -- para diario, no maximo 90 dias atras
-  limite de 90 dias (se diario)
-)
-```
-
-Se nao houver nenhum evento relevante, a query retorna zero linhas.
-
-### 2. Sem alteracao no frontend
-
-O dashboard ja trata `historyData.length > 0` para esconder os graficos quando nao ha dados. A formatacao dos eixos ja e dinamica. Nenhuma mudanca no React.
-
-## Resultado esperado
-- Graficos so aparecem quando existe pelo menos um assinante, cortesia ou venda
-- A partir desse ponto, os gaps (dias/meses sem venda) ficam visiveis, que e exatamente o que voce quer monitorar
-- Modo diario continua limitado a 90 dias
+Se nao houver dados do mes anterior, o badge mostra "Novo" em vez de porcentagem.
 
