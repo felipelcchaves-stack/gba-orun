@@ -17,6 +17,7 @@ import AdminCommunity from "@/components/admin/AdminCommunity";
 import AdminPlans from "@/components/admin/AdminPlans";
 import AdminPromotions from "@/components/admin/AdminPromotions";
 import AdminGuidance from "@/components/admin/AdminGuidance";
+import AdminSalesRecovery from "@/components/admin/AdminSalesRecovery";
 import AdminOfferings from "@/components/admin/AdminOfferings";
 import AdminReviews from "@/components/admin/AdminReviews";
 import AdminFlows from "@/components/admin/AdminFlows";
@@ -226,6 +227,7 @@ const AdminPage = () => {
         {activeSection === "links" && <AdminRitualLinks />}
         {activeSection === "community" && <AdminCommunity />}
         {activeSection === "promotions" && <AdminPromotions />}
+        {activeSection === "recovery" && <AdminSalesRecovery />}
         {activeSection === "guidance" && <AdminGuidance />}
         {activeSection === "reviews" && <AdminReviews />}
 
