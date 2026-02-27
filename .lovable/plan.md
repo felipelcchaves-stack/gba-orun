@@ -1,38 +1,35 @@
 
+# Receita Liquida: Campo "Valor Liquido" nos Planos de Assinatura
 
-# Correção: Receita Prevista atualizar ao cancelar + normalizar no histórico
+## O que muda para voce
 
-## Situação Atual
+Na tela **Admin > Planos**, cada plano passara a ter um campo adicional chamado **"Valor Liquido (quanto voce recebe)"**. Voce preenche com o valor que efetivamente cai na sua conta apos descontos do gateway, impostos e rateio de coproducao.
 
-O cálculo dos **cards KPI** (Receita Mensal/Anual) já está correto após a última correção — só soma assinantes com `subscription_status = 'active'` e normaliza pelo período. Quando você cancela um aluno, ele sai do cálculo automaticamente ao recarregar a página.
+Exemplo:
+- Plano Mensal R$ 27,00 -> Valor Liquido: **R$ 26,50**
+- Plano Anual R$ 270,00 -> Valor Liquido: **R$ 265,00**
 
-Porém, existem dois problemas remanescentes:
+Os cards **Receita Mensal Prevista** e **Receita Anual Prevista** no dashboard, bem como o grafico de evolucao de receita, passarao a usar o valor liquido. Se o campo nao estiver preenchido, o sistema usa o preco bruto como fallback.
 
-### Problema 1: Gráfico de "Previsão de Receita Mensal" (evolução histórica)
-A função de banco de dados `admin_get_subscription_history` que alimenta o gráfico de área "Previsão de Receita Mensal" ainda soma o valor bruto do plano (`sum(sp.price)`) sem dividir pelo período de cobrança. Ou seja, plano anual de R$ 270 aparece como R$ 270/mês no gráfico, em vez de R$ 22,50.
+---
 
-### Problema 2: Dados não atualizam em tempo real
-Após cancelar um usuário na aba "Usuários", o dashboard não refaz a consulta automaticamente — o admin precisa sair e voltar para ver o card atualizado.
+## Detalhes Tecnicos
 
-## Solução
+### 1. Migracao de banco de dados
+- Adicionar coluna `net_price NUMERIC DEFAULT NULL` na tabela `subscription_plans`
+- Atualizar os planos existentes com os valores informados (Mensal: 26.50, Anual: 265.00) via ferramenta de insercao
+- Atualizar a funcao `admin_get_subscription_history` para usar `COALESCE(sp.net_price, sp.price)` no calculo de `revenue_estimate`
 
-### 1. Corrigir a função de banco de dados
-Atualizar a RPC `admin_get_subscription_history` para normalizar a receita pelo período de cobrança:
+### 2. Frontend - AdminPlans.tsx
+- Adicionar campo "Valor Liquido" no formulario de criacao/edicao de planos
+- Exibir o valor liquido na listagem de planos (ex: "R$ 27,00 / Mensal | Liquido: R$ 26,50")
 
-```sql
--- Antes: sum(sp.price)
--- Depois: sum(sp.price / CASE sp.billing_period WHEN 'yearly' THEN 12 WHEN 'quarterly' THEN 3 ELSE 1 END)
+### 3. Frontend - AdminDashboard.tsx (linha ~147)
+- Alterar o calculo de `monthlyRevenueForecast` para usar `net_price` quando disponivel:
+```text
+total += Number(plan.net_price ?? plan.price) / months;
 ```
 
-### 2. Invalidar cache do dashboard ao cancelar
-No componente `AdminUsers`, após salvar edições (incluindo mudança de status para "cancelled"), invalidar também as queries do dashboard (`admin-stats`, `admin-profiles`, `subscription-history`) para que os cards atualizem imediatamente.
-
-## Detalhes Técnicos
-
-**Arquivo 1**: Migração SQL para atualizar `admin_get_subscription_history`
-- Substituir `sum(sp.price)` por `sum(sp.price / CASE sp.billing_period WHEN 'yearly' THEN 12 WHEN 'quarterly' THEN 3 ELSE 1 END)`
-
-**Arquivo 2**: `src/components/admin/AdminUsers.tsx`
-- Na função `handleSaveEdit` (linha 257), adicionar invalidação das queries: `admin-stats` e `subscription-history`
-- Na função `togglePremium` (linha 180), adicionar as mesmas invalidações
-- Na função `handleDelete` (linha 203), adicionar as mesmas invalidações
+### 4. Hook useSubscriptionPlans.ts
+- Adicionar `net_price: number | null` ao tipo `SubscriptionPlan`
+- Incluir `net_price` nas operacoes de criacao e edicao
