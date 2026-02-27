@@ -1,41 +1,31 @@
 
 
-# Card de Receita Mensal com Evolucao %
+# Corrigir Card "Receita Este Mes"
 
-## O que sera criado
-Um novo card KPI no dashboard admin mostrando:
-- **Valor total em R$** que voce esta recebendo neste mes (soma de todos os planos ativos, independente se mensal ou anual)
-- **Badge de evolucao %** comparando com o mes anterior (seta verde para cima se cresceu, vermelha para baixo se caiu)
+## Problema
 
-## Como funciona
+O card "Receita Este Mes" usa uma RPC que soma o valor cheio do plano anual (R$238 por assinante), resultando em R$761,60. Porem a receita mensal real e a normalizada: anual dividido por 12, mensal inteiro. Essa e a mesma logica que ja calcula os cards "Receita Mensal Prevista" (R$107,10) e "Receita Anual Prevista" (R$1.285,20).
 
-O card usa os dados de assinantes ativos e seus planos para calcular quanto entra por mes. Planos anuais sao divididos por 12, trimestrais por 3, para normalizar tudo em valor mensal. A comparacao e feita pegando o mesmo calculo do mes anterior.
+## Solucao
 
-## Detalhes tecnicos
+Simplificar o card "Receita Este Mes" para usar o mesmo valor do `monthlyRevenueForecast` que ja existe no frontend (linha 143-162 do AdminDashboard), em vez de chamar a RPC separada. O badge de evolucao % sera calculado comparando com o periodo anterior do historico mensal.
 
-### 1. Nova RPC no banco de dados: `admin_get_revenue_comparison`
+## Alteracoes
 
-Funcao SQL que retorna duas linhas:
-- Receita do mes atual (baseada nos assinantes ativos hoje)
-- Receita do mes anterior (baseada nos assinantes que estavam ativos no ultimo dia do mes passado, usando o historico ja existente)
+### AdminDashboard.tsx
 
-A logica reutiliza o mesmo calculo de `net_price` ja usado no dashboard, somando o valor liquido de cada plano normalizado para mensal.
+1. **Remover** a importacao e uso do `useMonthlyRevenue`
+2. **Alterar** o card "Receita Este Mes" para exibir o valor de `monthlyRevenueForecast` (que ja normaliza anual/12, trimestral/3)
+3. **Calcular evolucao %** usando os dois ultimos registros do `useSubscriptionHistory('monthly')` (campo `revenue_estimate`), que ja usa a mesma logica de normalizacao
+4. **Remover** o card KPI "Receita Mensal Prevista" dos KPI_CARDS para nao duplicar a informacao (o card grande ja mostra esse valor com o badge de evolucao)
 
-### 2. Alteracao no frontend: `AdminDashboard.tsx`
+### Resultado visual
 
-- Novo hook `useMonthlyRevenueComparison` em `useAdminData.ts`
-- Novo card com icone DollarSign mostrando o valor em R$
-- Badge ao lado com a % de variacao e cor condicional (verde/vermelho)
-- Posicionado logo apos os cards de assinantes ativos
+O card grande passa a mostrar R$107,10 (mesmo valor da previsao mensal) com o badge de evolucao %, e os KPI cards mantem apenas "Receita Anual Prevista" sem duplicar.
 
-### Visual esperado
+### Detalhes tecnicos
 
-```text
-+----------------------------------+
-| R$ 1.250,00                      |
-| Receita Este Mes    [+15.3% ^]   |
-+----------------------------------+
-```
-
-Se nao houver dados do mes anterior, o badge mostra "Novo" em vez de porcentagem.
+- Buscar os dois ultimos meses de `useSubscriptionHistory('monthly')` para calcular a variacao %
+- Se so houver 1 mes, badge mostra "Novo"
+- A RPC `admin_get_monthly_revenue` pode ser mantida no banco mas nao sera mais chamada pelo dashboard
 
