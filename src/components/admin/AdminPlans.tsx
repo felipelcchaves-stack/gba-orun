@@ -21,6 +21,7 @@ const PERIOD_LABELS: Record<string, string> = {
 const emptyForm = {
   name: "",
   price: 0,
+  net_price: "" as string | number,
   billing_period: "monthly",
   guru_checkout_url: "",
   description: "",
@@ -49,6 +50,7 @@ const AdminPlans = () => {
     setForm({
       name: p.name,
       price: p.price,
+      net_price: p.net_price ?? "",
       billing_period: p.billing_period,
       guru_checkout_url: p.guru_checkout_url || "",
       description: p.description || "",
@@ -60,7 +62,7 @@ const AdminPlans = () => {
 
   const handleSave = async () => {
     try {
-      const payload = { ...form, guru_checkout_url: form.guru_checkout_url || null, description: form.description || null };
+      const payload = { ...form, guru_checkout_url: form.guru_checkout_url || null, description: form.description || null, net_price: form.net_price === "" ? null : Number(form.net_price) };
       if (editing) {
         await updatePlan.mutateAsync({ id: editing.id, ...payload });
         toast.success("Plano atualizado!");
@@ -106,7 +108,8 @@ const AdminPlans = () => {
             <h3 className="font-display font-bold">{editing ? "Editar Plano" : "Novo Plano"}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <input placeholder="Nome (ex: Mensal)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="px-4 py-3 rounded-xl bg-background border border-border text-foreground" />
-              <input type="number" step="0.01" placeholder="Preço" value={form.price} onChange={e => setForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))} className="px-4 py-3 rounded-xl bg-background border border-border text-foreground" />
+              <input type="number" step="0.01" placeholder="Preço bruto" value={form.price} onChange={e => setForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))} className="px-4 py-3 rounded-xl bg-background border border-border text-foreground" />
+              <input type="number" step="0.01" placeholder="Valor líquido (recebido)" value={form.net_price} onChange={e => setForm(f => ({ ...f, net_price: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 }))} className="px-4 py-3 rounded-xl bg-background border border-border text-foreground" />
               <select value={form.billing_period} onChange={e => setForm(f => ({ ...f, billing_period: e.target.value }))} className="px-4 py-3 rounded-xl bg-background border border-border text-foreground">
                 <option value="monthly">Mensal</option>
                 <option value="quarterly">Trimestral</option>
@@ -140,6 +143,7 @@ const AdminPlans = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     R$ {Number(p.price).toFixed(2)} / {PERIOD_LABELS[p.billing_period] || p.billing_period}
+                    {p.net_price != null && <span className="ml-2 text-primary font-medium">| Líquido: R$ {Number(p.net_price).toFixed(2)}</span>}
                   </p>
                   {p.description && <p className="text-xs text-muted-foreground mt-1">{p.description}</p>}
                   {p.guru_checkout_url && <p className="text-xs text-primary mt-1 truncate max-w-md">{p.guru_checkout_url}</p>}
