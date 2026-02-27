@@ -104,11 +104,11 @@ export interface SubscriptionHistoryRow {
   revenue_estimate: number;
 }
 
-export const useSubscriptionHistory = () => {
+export const useSubscriptionHistory = (granularity: 'daily' | 'monthly' | 'yearly' = 'monthly') => {
   return useQuery({
-    queryKey: ["admin-subscription-history"],
+    queryKey: ["admin-subscription-history", granularity],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_get_subscription_history" as any);
+      const { data, error } = await supabase.rpc("admin_get_subscription_history_v2" as any, { p_granularity: granularity });
       if (error) throw error;
       return (data ?? []) as SubscriptionHistoryRow[];
     },
