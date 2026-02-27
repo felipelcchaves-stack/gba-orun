@@ -1,35 +1,28 @@
 
-# Receita Liquida: Campo "Valor Liquido" nos Planos de Assinatura
+# Correcao do Card Premium e Adicao de Ultimo Login
 
-## O que muda para voce
+## Problema 1: Card "Premium (Pagantes)" contando cortesia
 
-Na tela **Admin > Planos**, cada plano passara a ter um campo adicional chamado **"Valor Liquido (quanto voce recebe)"**. Voce preenche com o valor que efetivamente cai na sua conta apos descontos do gateway, impostos e rateio de coproducao.
+O card usa `stats.premium_users` que vem da RPC `admin_get_stats`, contando todos os perfis com `is_premium = true`. Como usuarios cortesia tambem tem `is_premium = true`, o numero inclui os 50 cortesia + 5 pagantes = 55.
 
-Exemplo:
-- Plano Mensal R$ 27,00 -> Valor Liquido: **R$ 26,50**
-- Plano Anual R$ 270,00 -> Valor Liquido: **R$ 265,00**
+**Solucao:** No frontend, subtrair a contagem de cortesia do total premium. O calculo fica: `(stats.premium_users - courtesyCount)`. Isso evita alterar a RPC e mantem a simplicidade.
 
-Os cards **Receita Mensal Prevista** e **Receita Anual Prevista** no dashboard, bem como o grafico de evolucao de receita, passarao a usar o valor liquido. Se o campo nao estiver preenchido, o sistema usa o preco bruto como fallback.
+## Problema 2: Adicionar "Ultimo Login"
 
----
+Hoje so aparece a data de cadastro. A tabela `auth.users` do sistema de autenticacao ja possui o campo `last_sign_in_at` que registra automaticamente cada login.
 
-## Detalhes Tecnicos
+**Solucao:**
 
 ### 1. Migracao de banco de dados
-- Adicionar coluna `net_price NUMERIC DEFAULT NULL` na tabela `subscription_plans`
-- Atualizar os planos existentes com os valores informados (Mensal: 26.50, Anual: 265.00) via ferramenta de insercao
-- Atualizar a funcao `admin_get_subscription_history` para usar `COALESCE(sp.net_price, sp.price)` no calculo de `revenue_estimate`
+Atualizar a funcao `admin_list_profiles` para incluir `u.last_sign_in_at` no retorno, ja que ela faz JOIN com a tabela de autenticacao.
 
-### 2. Frontend - AdminPlans.tsx
-- Adicionar campo "Valor Liquido" no formulario de criacao/edicao de planos
-- Exibir o valor liquido na listagem de planos (ex: "R$ 27,00 / Mensal | Liquido: R$ 26,50")
+### 2. Frontend - useAdminData.ts
+Adicionar `last_sign_in_at: string | null` na interface `AdminProfile`.
 
-### 3. Frontend - AdminDashboard.tsx (linha ~147)
-- Alterar o calculo de `monthlyRevenueForecast` para usar `net_price` quando disponivel:
-```text
-total += Number(plan.net_price ?? plan.price) / months;
-```
+### 3. Frontend - AdminDashboard.tsx
+- Corrigir o card Premium: `value: (stats?.premium_users ?? 0) - courtesyCount`
+- Renomear label para "Premium Pagantes" (sem parentesis)
+- Na tabela "Ultimos Usuarios", adicionar coluna "Ultimo Login"
 
-### 4. Hook useSubscriptionPlans.ts
-- Adicionar `net_price: number | null` ao tipo `SubscriptionPlan`
-- Incluir `net_price` nas operacoes de criacao e edicao
+### 4. Frontend - AdminUsers.tsx
+- Adicionar coluna "Ultimo Login" na tabela de usuarios, exibindo a data formatada ou "Nunca" se nulo
