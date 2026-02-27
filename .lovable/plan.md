@@ -1,50 +1,61 @@
 
-# Painel de Recuperacao de Vendas
 
-## O que e
-Uma nova secao no painel admin chamada "Recuperacao de Vendas" que lista usuarios que clicaram em promocoes mas nao compraram. Isso permite ao admin identificar leads quentes e fazer follow-up manual (WhatsApp, email, etc).
+# Granularidade dos Graficos do Dashboard (Diario / Mensal / Anual)
 
-## Como funciona
+## Problema
+Todos os graficos de evolucao (Assinantes, Receita, Crescimento de Usuarios) usam dados mensais fixos da RPC `admin_get_subscription_history`. No inicio do projeto, com poucos meses de dados, os graficos ficam com poucos pontos e parecem vazios.
 
-### Dados que ja temos
-- `promotion_clicks`: registra cada clique com `user_id`, `promotion_id`, `clicked_at` e `converted_at`
-- `profiles`: tem o email e nome do usuario
-- Se `converted_at` e NULL, o usuario clicou mas nao comprou
+## Solucao
+Adicionar um seletor de granularidade (Diario / Mensal / Anual) acima dos graficos, com **Diario como padrao**. Os tres graficos compartilham o mesmo filtro.
 
-### O que sera criado
+## Alteracoes
 
-**1. Nova secao "Recuperacao" no menu lateral do admin**
-- Icone de "target" ou "refresh" para representar recuperacao
-- Aparece entre "Promocoes" e "Orientacoes" no menu
+### 1. Nova RPC no banco de dados (migracao SQL)
 
-**2. Componente AdminSalesRecovery**
-Uma tela com:
-- **Filtros**: por promocao especifica, por periodo (ultimos 7 dias, 30 dias, todos)
-- **Tabela principal** com colunas:
-  - Nome do usuario
-  - Email (para contato)
-  - Promocao clicada
-  - Data do clique
-  - Quantidade de cliques (demonstra nivel de interesse)
-  - Status (Nao converteu / Converteu depois)
-- **Indicadores no topo**: Total de leads nao convertidos, taxa de conversao geral
-- Agrupamento por usuario (se clicou varias vezes, mostra o total de cliques e a promocao mais recente)
+Criar `admin_get_subscription_history_v2(p_granularity text)` que aceita `'daily'`, `'monthly'` ou `'yearly'`.
 
-**3. Hook useRecoveryLeads**
-Busca em `promotion_clicks` fazendo JOIN com `profiles` e `promotions` para trazer nome, email e titulo da promocao. Filtra por `converted_at IS NULL` para mostrar apenas quem nao comprou.
+- Para **diario**: gera series dos ultimos 90 dias (para nao sobrecarregar), agrupando por dia
+- Para **mensal**: mesmo comportamento atual, desde o primeiro usuario
+- Para **anual**: agrupa por ano
+
+A estrutura de retorno e a mesma (month, new_users, active_subscribers, courtesy_users, overdue_users, cancelled_users, revenue_estimate), so muda a granularidade do campo `month`.
+
+### 2. Atualizar hook useSubscriptionHistory
+
+- Aceitar parametro `granularity: 'daily' | 'monthly' | 'yearly'`
+- Chamar a nova RPC passando o parametro
+- Incluir granularity na queryKey para cache separado
+
+### 3. Atualizar AdminDashboard.tsx
+
+- Adicionar estado `granularity` com valor padrao `'daily'`
+- Renderizar um Select com 3 opcoes (Diario, Mensal, Anual) acima dos graficos
+- Ajustar a funcao `formatMonth` para formatar de acordo com a granularidade:
+  - Diario: `dd/MM` (ex: 27/02)
+  - Mensal: `MMM/yy` (ex: Fev/26)
+  - Anual: `yyyy` (ex: 2026)
+- Passar `granularity` para o hook
 
 ### Detalhes tecnicos
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/components/admin/AdminSidebar.tsx` | Adicionar item "Recuperacao" ao menu |
-| `src/components/admin/AdminSalesRecovery.tsx` | Novo componente com tabela e filtros |
-| `src/hooks/useRecoveryLeads.ts` | Novo hook para buscar leads nao convertidos |
-| `src/pages/Admin.tsx` | Renderizar a nova secao |
+| Migracao SQL | Nova RPC `admin_get_subscription_history_v2(p_granularity text)` |
+| `src/hooks/useAdminData.ts` | Atualizar `useSubscriptionHistory` para aceitar e passar granularidade |
+| `src/components/admin/AdminDashboard.tsx` | Adicionar seletor de granularidade + formatacao dinamica dos eixos |
 
-### Nao precisa de migracao
-Todos os dados necessarios ja existem nas tabelas atuais. A query simplesmente cruza `promotion_clicks` (where converted_at IS NULL) com `profiles` e `promotions`.
+### Logica da RPC (resumo)
 
-### Limitacoes
-- O email so estara disponivel se a RPC `admin_list_profiles` for usada, pois o email vem de `auth.users`. A alternativa e criar uma RPC dedicada ou buscar os perfis separadamente e cruzar no frontend.
-- Somente usuarios logados que clicaram serao listados (cliques no modo demo nao sao registrados).
+```text
+p_granularity = 'daily'   -> generate_series(now() - 90 days, now(), '1 day')
+p_granularity = 'monthly' -> generate_series(primeiro_usuario, now(), '1 month')
+p_granularity = 'yearly'  -> generate_series(primeiro_usuario, now(), '1 year')
+```
+
+Para cada ponto na serie, as subqueries de contagem usam `date_trunc(p_granularity, ...)` em vez de `date_trunc('month', ...)` fixo.
+
+### Resultado esperado
+- Padrao: grafico diario mostrando os ultimos 90 dias com pontos diarios
+- O admin pode trocar para mensal ou anual a qualquer momento
+- Graficos ficam mais preenchidos e uteis desde o primeiro dia
+
