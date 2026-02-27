@@ -1,28 +1,66 @@
 
-# Correcao do Card Premium e Adicao de Ultimo Login
 
-## Problema 1: Card "Premium (Pagantes)" contando cortesia
+# Rastreamento de Conversao de Promocoes
 
-O card usa `stats.premium_users` que vem da RPC `admin_get_stats`, contando todos os perfis com `is_premium = true`. Como usuarios cortesia tambem tem `is_premium = true`, o numero inclui os 50 cortesia + 5 pagantes = 55.
+## Como funciona hoje
+1. Usuario clica numa promocao -> salva em `promotion_clicks` (user_id + promotion_id + clicked_at)
+2. Usuario vai pro checkout da Guru (externo)
+3. Guru envia webhook de pagamento -> ativa premium
 
-**Solucao:** No frontend, subtrair a contagem de cortesia do total premium. O calculo fica: `(stats.premium_users - courtesyCount)`. Isso evita alterar a RPC e mantem a simplicidade.
+O problema: o webhook da Guru nao sabe qual promocao o usuario clicou. Mas como ja registramos os cliques, podemos **correlacionar** automaticamente.
 
-## Problema 2: Adicionar "Ultimo Login"
+## Solucao: Atribuicao por ultimo clique
 
-Hoje so aparece a data de cadastro. A tabela `auth.users` do sistema de autenticacao ja possui o campo `last_sign_in_at` que registra automaticamente cada login.
-
-**Solucao:**
+Quando o webhook da Guru confirmar um pagamento, o sistema busca o clique mais recente do usuario (nos ultimos 7 dias) e marca como "convertido".
 
 ### 1. Migracao de banco de dados
-Atualizar a funcao `admin_list_profiles` para incluir `u.last_sign_in_at` no retorno, ja que ela faz JOIN com a tabela de autenticacao.
+Adicionar coluna `converted_at` na tabela `promotion_clicks`:
 
-### 2. Frontend - useAdminData.ts
-Adicionar `last_sign_in_at: string | null` na interface `AdminProfile`.
+```text
+promotion_clicks
+  + converted_at  timestamptz  (nullable, default null)
+```
 
-### 3. Frontend - AdminDashboard.tsx
-- Corrigir o card Premium: `value: (stats?.premium_users ?? 0) - courtesyCount`
-- Renomear label para "Premium Pagantes" (sem parentesis)
-- Na tabela "Ultimos Usuarios", adicionar coluna "Ultimo Login"
+### 2. Atualizar o webhook da Guru
+No `supabase/functions/guru-webhook/index.ts`, apos ativar o premium do usuario (tanto para usuario novo quanto existente), buscar o clique mais recente daquele email/user_id e marcar como convertido:
 
-### 4. Frontend - AdminUsers.tsx
-- Adicionar coluna "Ultimo Login" na tabela de usuarios, exibindo a data formatada ou "Nunca" se nulo
+```text
+-- Buscar clique mais recente (ultimos 7 dias)
+SELECT id FROM promotion_clicks
+WHERE user_id = <user_id>
+  AND converted_at IS NULL
+  AND clicked_at > now() - interval '7 days'
+ORDER BY clicked_at DESC
+LIMIT 1
+
+-- Marcar como convertido
+UPDATE promotion_clicks SET converted_at = now() WHERE id = <click_id>
+```
+
+### 3. Frontend - Painel Admin (AdminUsers.tsx)
+Na tabela de usuarios, ao expandir ou visualizar um usuario, mostrar a promocao que ele converteu (se houver), buscando de `promotion_clicks` onde `converted_at` nao e nulo.
+
+### 4. Frontend - Estatisticas de Promocoes (AdminPromotions.tsx)
+Atualizar o card de estatisticas para mostrar nao so "cliques" mas tambem "conversoes" por promocao. Algo como:
+
+```text
+Curso de Ebo         45 cliques  |  3 conversoes
+Curso de Iyami       32 cliques  |  1 conversao
+```
+
+### 5. RLS
+A tabela `promotion_clicks` ja tem politica de SELECT para admins e INSERT para o proprio usuario. Precisamos adicionar uma politica de UPDATE para o service_role (usado pelo webhook). Como o webhook ja usa `SUPABASE_SERVICE_ROLE_KEY`, ele bypassa RLS, entao nao precisa de politica adicional.
+
+## Limitacoes
+- A atribuicao e por "ultimo clique em 7 dias". Se o usuario clicou numa promocao e comprou outra coisa pela Guru, pode haver falso positivo.
+- Se o usuario nao estava logado quando clicou (modo demo), o clique nao sera registrado.
+- Isso nao substitui um rastreamento completo de e-commerce, mas da uma visibilidade boa de qual promocao gerou conversao.
+
+## Resumo das alteracoes
+| Arquivo | Alteracao |
+|---|---|
+| Migracao SQL | Adicionar coluna `converted_at` em `promotion_clicks` |
+| `supabase/functions/guru-webhook/index.ts` | Marcar ultimo clique como convertido apos pagamento |
+| `src/hooks/usePromotions.ts` | Atualizar query de stats para incluir contagem de conversoes |
+| `src/components/admin/AdminPromotions.tsx` | Exibir conversoes ao lado dos cliques |
+| `src/components/admin/AdminUsers.tsx` | Mostrar promocao convertida no perfil do usuario |
