@@ -1,61 +1,47 @@
 
 
-# Granularidade dos Graficos do Dashboard (Diario / Mensal / Anual)
+# Graficos começam no primeiro evento real
 
 ## Problema
-Todos os graficos de evolucao (Assinantes, Receita, Crescimento de Usuarios) usam dados mensais fixos da RPC `admin_get_subscription_history`. No inicio do projeto, com poucos meses de dados, os graficos ficam com poucos pontos e parecem vazios.
+Os graficos de Evolucao de Assinantes, Receita e Crescimento mostram dados desde o primeiro cadastro no sistema, gerando uma linha de zeros ate a primeira atividade real (assinatura, cortesia ou venda). Isso polui o grafico e esconde os gaps reais.
 
 ## Solucao
-Adicionar um seletor de granularidade (Diario / Mensal / Anual) acima dos graficos, com **Diario como padrao**. Os tres graficos compartilham o mesmo filtro.
+Alterar a RPC `admin_get_subscription_history_v2` para que o ponto de inicio (`start_date`) considere a **primeira atividade relevante** em vez do primeiro cadastro:
 
-## Alteracoes
+- **Grafico de Assinantes/Receita**: comecar na data do primeiro perfil com `subscription_started_at IS NOT NULL` ou `is_courtesy = true`
+- **Se nao houver nenhuma atividade**: nao retornar dados (grafico fica oculto, como ja acontece hoje com a condicao `historyData.length > 0`)
 
-### 1. Nova RPC no banco de dados (migracao SQL)
+Para o modo diario, manter o limite de 90 dias mas tambem so mostrar a partir da primeira atividade.
 
-Criar `admin_get_subscription_history_v2(p_granularity text)` que aceita `'daily'`, `'monthly'` ou `'yearly'`.
+## Alteracao
 
-- Para **diario**: gera series dos ultimos 90 dias (para nao sobrecarregar), agrupando por dia
-- Para **mensal**: mesmo comportamento atual, desde o primeiro usuario
-- Para **anual**: agrupa por ano
+### 1. Migração SQL - Atualizar a RPC
 
-A estrutura de retorno e a mesma (month, new_users, active_subscribers, courtesy_users, overdue_users, cancelled_users, revenue_estimate), so muda a granularidade do campo `month`.
+Alterar o calculo de `start_date` na CTE `params`:
 
-### 2. Atualizar hook useSubscriptionHistory
-
-- Aceitar parametro `granularity: 'daily' | 'monthly' | 'yearly'`
-- Chamar a nova RPC passando o parametro
-- Incluir granularity na queryKey para cache separado
-
-### 3. Atualizar AdminDashboard.tsx
-
-- Adicionar estado `granularity` com valor padrao `'daily'`
-- Renderizar um Select com 3 opcoes (Diario, Mensal, Anual) acima dos graficos
-- Ajustar a funcao `formatMonth` para formatar de acordo com a granularidade:
-  - Diario: `dd/MM` (ex: 27/02)
-  - Mensal: `MMM/yy` (ex: Fev/26)
-  - Anual: `yyyy` (ex: 2026)
-- Passar `granularity` para o hook
-
-### Detalhes tecnicos
-
-| Arquivo | Alteracao |
-|---|---|
-| Migracao SQL | Nova RPC `admin_get_subscription_history_v2(p_granularity text)` |
-| `src/hooks/useAdminData.ts` | Atualizar `useSubscriptionHistory` para aceitar e passar granularidade |
-| `src/components/admin/AdminDashboard.tsx` | Adicionar seletor de granularidade + formatacao dinamica dos eixos |
-
-### Logica da RPC (resumo)
-
+**Antes:**
 ```text
-p_granularity = 'daily'   -> generate_series(now() - 90 days, now(), '1 day')
-p_granularity = 'monthly' -> generate_series(primeiro_usuario, now(), '1 month')
-p_granularity = 'yearly'  -> generate_series(primeiro_usuario, now(), '1 year')
+start_date = primeiro cadastro (min(created_at) de profiles)
 ```
 
-Para cada ponto na serie, as subqueries de contagem usam `date_trunc(p_granularity, ...)` em vez de `date_trunc('month', ...)` fixo.
+**Depois:**
+```text
+start_date = GREATEST(
+  -- primeiro evento relevante (assinatura ou cortesia)
+  primeiro subscription_started_at OU primeiro created_at de cortesia,
+  -- para diario, no maximo 90 dias atras
+  limite de 90 dias (se diario)
+)
+```
 
-### Resultado esperado
-- Padrao: grafico diario mostrando os ultimos 90 dias com pontos diarios
-- O admin pode trocar para mensal ou anual a qualquer momento
-- Graficos ficam mais preenchidos e uteis desde o primeiro dia
+Se nao houver nenhum evento relevante, a query retorna zero linhas.
+
+### 2. Sem alteracao no frontend
+
+O dashboard ja trata `historyData.length > 0` para esconder os graficos quando nao ha dados. A formatacao dos eixos ja e dinamica. Nenhuma mudanca no React.
+
+## Resultado esperado
+- Graficos so aparecem quando existe pelo menos um assinante, cortesia ou venda
+- A partir desse ponto, os gaps (dias/meses sem venda) ficam visiveis, que e exatamente o que voce quer monitorar
+- Modo diario continua limitado a 90 dias
 
