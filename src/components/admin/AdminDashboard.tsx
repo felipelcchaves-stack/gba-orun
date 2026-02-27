@@ -163,10 +163,12 @@ const AdminDashboard = () => {
 
   const yearlyRevenueForecast = monthlyRevenueForecast * 12;
 
-  // Revenue evolution: use monthlyRevenueForecast + compare with previous month from history
+  const totalRevenueForecast = monthlyRevenueForecast + yearlyRevenueForecast;
+
+  // Revenue evolution: compare total forecast with previous month from history
   const revenueEvolution = (() => {
-    if (monthlyRevenueForecast === 0) return null;
-    const current = monthlyRevenueForecast;
+    if (totalRevenueForecast === 0) return null;
+    const current = totalRevenueForecast;
     if (!monthlyHistory || monthlyHistory.length < 2) return { current, percentage: null };
     const prev = Number(monthlyHistory[monthlyHistory.length - 2]?.revenue_estimate ?? 0);
     if (prev === 0) return { current, percentage: null };
@@ -187,6 +189,7 @@ const AdminDashboard = () => {
     { label: "Assinantes Ativos", value: stats?.active_subscribers ?? 0, icon: UserCheck, color: "text-green-600" },
     ...(hasAnySubscriber ? [
       { label: "Inadimplentes", value: stats?.overdue_users ?? 0, icon: AlertTriangle, color: "text-destructive" },
+      { label: "Receita Mensal Prevista", value: `R$ ${monthlyRevenueForecast.toFixed(2)}`, icon: DollarSign, color: "text-accent" },
       { label: "Receita Anual Prevista", value: `R$ ${yearlyRevenueForecast.toFixed(2)}`, icon: TrendingUp, color: "text-green-600" },
     ] : []),
     { label: "Premium Pagantes", value: (stats?.premium_users ?? 0) - courtesyCount, icon: Crown, color: "text-accent" },
