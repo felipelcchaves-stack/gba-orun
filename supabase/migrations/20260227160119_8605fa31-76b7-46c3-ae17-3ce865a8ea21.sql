@@ -1,0 +1,1 @@
+ALTER TABLE public.promotion_clicks ADD COLUMN converted_at timestamptz DEFAULT NULL;

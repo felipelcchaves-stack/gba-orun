@@ -167,17 +167,41 @@ export const usePromotionClickStats = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("promotion_clicks")
-        .select("promotion_id, promotions(title)");
+        .select("promotion_id, converted_at, promotions(title)");
       if (error) throw error;
-      const counts: Record<string, { title: string; clicks: number }> = {};
+      const counts: Record<string, { title: string; clicks: number; conversions: number }> = {};
       for (const row of data || []) {
         const pid = row.promotion_id;
         if (!counts[pid]) {
-          counts[pid] = { title: (row as any).promotions?.title || "—", clicks: 0 };
+          counts[pid] = { title: (row as any).promotions?.title || "—", clicks: 0, conversions: 0 };
         }
         counts[pid].clicks++;
+        if (row.converted_at) counts[pid].conversions++;
       }
       return Object.values(counts).sort((a, b) => b.clicks - a.clicks);
+    },
+  });
+};
+
+export const useUserConvertedPromotion = (userId: string | undefined) => {
+  return useQuery({
+    queryKey: ["user-converted-promotion", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("promotion_clicks")
+        .select("converted_at, promotions(title)")
+        .eq("user_id", userId!)
+        .not("converted_at", "is", null)
+        .order("converted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        title: (data as any).promotions?.title || "—",
+        converted_at: data.converted_at,
+      };
     },
   });
 };

@@ -185,12 +185,15 @@ const AdminPromotions = () => {
       {clickStats && clickStats.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="font-display font-semibold text-sm mb-3">Top Promoções por Cliques</h3>
+            <h3 className="font-display font-semibold text-sm mb-3">Top Promoções por Cliques e Conversões</h3>
             <div className="space-y-2">
-              {clickStats.map((s, i) => (
+            {clickStats.map((s, i) => (
                 <div key={i} className="flex items-center justify-between text-sm">
                   <span>{s.title}</span>
-                  <span className="font-bold">{s.clicks} cliques</span>
+                  <div className="flex gap-4">
+                    <span className="font-bold">{s.clicks} cliques</span>
+                    <span className="font-bold text-accent">{s.conversions} {s.conversions === 1 ? "conversão" : "conversões"}</span>
+                  </div>
                 </div>
               ))}
             </div>
