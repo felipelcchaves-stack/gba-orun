@@ -17,6 +17,31 @@ function maskEmail(email: string): string {
   return `${local.substring(0, 3)}***@${domain}`;
 }
 
+// --- Mark the most recent promotion click as converted ---
+async function markPromotionConversion(supabase: any, userId: string) {
+  try {
+    const { data: click } = await supabase
+      .from("promotion_clicks")
+      .select("id")
+      .eq("user_id", userId)
+      .is("converted_at", null)
+      .gte("clicked_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .order("clicked_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (click) {
+      await supabase
+        .from("promotion_clicks")
+        .update({ converted_at: new Date().toISOString() })
+        .eq("id", click.id);
+      console.log(`Promotion click ${click.id} marked as converted`);
+    }
+  } catch (err) {
+    console.error("Promotion conversion tracking error (non-blocking):", err);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -182,6 +207,9 @@ Deno.serve(async (req) => {
         console.error("Error updating new user profile:", profileError);
       }
 
+      // Mark promotion conversion (new user won't have clicks, but just in case)
+      await markPromotionConversion(supabase, newUserId);
+
       // Send recovery email so buyer can set their own password
       try {
         const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -286,6 +314,9 @@ Deno.serve(async (req) => {
         });
       }
       console.log(`User ${maskEmail(email)} subscription activated (${durationDays} days)`);
+
+      // Mark promotion conversion for existing user
+      await markPromotionConversion(supabase, userId);
 
       // Send Purchase event via Meta CAPI
       try {

@@ -714,18 +714,21 @@ export type Database = {
       promotion_clicks: {
         Row: {
           clicked_at: string
+          converted_at: string | null
           id: string
           promotion_id: string
           user_id: string
         }
         Insert: {
           clicked_at?: string
+          converted_at?: string | null
           id?: string
           promotion_id: string
           user_id: string
         }
         Update: {
           clicked_at?: string
+          converted_at?: string | null
           id?: string
           promotion_id?: string
           user_id?: string

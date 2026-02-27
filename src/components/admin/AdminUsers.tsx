@@ -10,12 +10,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAdminProfiles } from "@/hooks/useAdminData";
+import { useUserConvertedPromotion } from "@/hooks/usePromotions";
 import { format, differenceInYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { Lock, Unlock, UserPlus, Upload, MoreHorizontal, Pencil, Shield, ShieldOff, Trash2, ChevronDown, Smartphone, Gift } from "lucide-react";
+import { Lock, Unlock, UserPlus, Upload, MoreHorizontal, Pencil, Shield, ShieldOff, Trash2, ChevronDown, Smartphone, Gift, Tag } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -51,6 +52,17 @@ const SUB_STATUS_CONFIG: Record<string, { label: string; className: string }> = 
   overdue: { label: "Inadimplente", className: "bg-destructive hover:bg-destructive/90" },
   cancelled: { label: "Cancelado", className: "bg-yellow-600 hover:bg-yellow-700" },
   free: { label: "Gratuito", className: "" },
+};
+// Small sub-component to avoid hook rules in the main component
+const ConvertedPromotionBadge = ({ userId }: { userId: string }) => {
+  const { data: converted } = useUserConvertedPromotion(userId);
+  if (!converted) return null;
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/10 border border-accent/20 text-sm">
+      <Tag className="h-4 w-4 text-accent" />
+      <span>Converteu via: <strong>{converted.title}</strong></span>
+    </div>
+  );
 };
 
 const AdminUsers = () => {
@@ -462,6 +474,7 @@ const AdminUsers = () => {
           <DialogHeader>
             <DialogTitle>Editar Perfil — {editUser?.email}</DialogTitle>
           </DialogHeader>
+          {editUser && <ConvertedPromotionBadge userId={editUser.user_id} />}
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium text-foreground">Nome</label>
