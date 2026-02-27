@@ -5,6 +5,7 @@ export interface SubscriptionPlan {
   id: string;
   name: string;
   price: number;
+  net_price: number | null;
   billing_period: string;
   guru_checkout_url: string | null;
   description: string | null;

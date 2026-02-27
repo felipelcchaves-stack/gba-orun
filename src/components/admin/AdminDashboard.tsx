@@ -144,13 +144,13 @@ const AdminDashboard = () => {
         const plan = planMap.get(p.subscription_plan_id);
         if (plan) {
           const months = PERIOD_MONTHS[plan.billing_period] || 1;
-          total += Number(plan.price) / months;
+          total += Number(plan.net_price ?? plan.price) / months;
         }
       }
     }
     const activeWithoutPlan = (profiles || []).filter(p => p.subscription_status === "active" && !p.subscription_plan_id && !p.is_courtesy).length;
     if (activeWithoutPlan > 0 && plans.length > 0) {
-      const cheapest = Math.min(...plans.filter(p => p.is_active).map(p => Number(p.price)));
+      const cheapest = Math.min(...plans.filter(p => p.is_active).map(p => Number(p.net_price ?? p.price)));
       total += activeWithoutPlan * cheapest;
     }
     return total;
