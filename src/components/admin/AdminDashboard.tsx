@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAdminStats, useAdminProfiles, useAdminKnowledgeStats, useSubscriptionHistory } from "@/hooks/useAdminData";
+import { useAdminStats, useAdminProfiles, useAdminKnowledgeStats, useSubscriptionHistory, useMonthlyRevenue } from "@/hooks/useAdminData";
 import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -134,7 +134,7 @@ const AdminDashboard = () => {
   const { data: knowledgeStats } = useAdminKnowledgeStats();
   const [granularity, setGranularity] = useState<'daily' | 'monthly' | 'yearly'>('daily');
   const { data: historyData } = useSubscriptionHistory(granularity);
-  const { data: monthlyHistory } = useSubscriptionHistory('monthly');
+  const { data: monthlyRevenue } = useMonthlyRevenue();
   const [knowledgeFilter, setKnowledgeFilter] = useState<string>("all");
 
   const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
@@ -163,18 +163,16 @@ const AdminDashboard = () => {
 
   const yearlyRevenueForecast = monthlyRevenueForecast * 12;
 
-  // Revenue evolution: compare current vs previous month using monthly history
+  // Revenue evolution: real cash flow this month vs previous month
   const revenueEvolution = (() => {
-    if (!monthlyHistory || monthlyHistory.length < 1) return null;
-    const len = monthlyHistory.length;
-    const currentRevenue = Number(monthlyHistory[len - 1].revenue_estimate);
-    const prevRevenue = len >= 2 ? Number(monthlyHistory[len - 2].revenue_estimate) : null;
+    if (!monthlyRevenue) return null;
+    const current = Number(monthlyRevenue.current_month_revenue);
+    const prev = Number(monthlyRevenue.previous_month_revenue);
     
-    if (prevRevenue === null || prevRevenue === 0) {
-      return { current: currentRevenue, percentage: null };
-    }
-    const pct = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
-    return { current: currentRevenue, percentage: pct };
+    if (prev === 0 && current === 0) return null;
+    if (prev === 0) return { current, percentage: null };
+    const pct = ((current - prev) / prev) * 100;
+    return { current, percentage: pct };
   })();
 
   const courtesyCount = profiles?.filter(p => p.is_courtesy).length ?? 0;

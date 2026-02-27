@@ -1074,6 +1074,13 @@ export type Database = {
           total_sem_ifa: number
         }[]
       }
+      admin_get_monthly_revenue: {
+        Args: never
+        Returns: {
+          current_month_revenue: number
+          previous_month_revenue: number
+        }[]
+      }
       admin_get_stats: {
         Args: never
         Returns: {
