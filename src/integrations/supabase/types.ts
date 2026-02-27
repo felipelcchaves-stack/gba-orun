@@ -831,6 +831,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          net_price: number | null
           price: number
         }
         Insert: {
@@ -842,6 +843,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          net_price?: number | null
           price: number
         }
         Update: {
@@ -853,6 +855,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          net_price?: number | null
           price?: number
         }
         Relationships: []
