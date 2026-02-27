@@ -174,7 +174,7 @@ const AdminDashboard = () => {
       { label: "Receita Mensal Prevista", value: `R$ ${monthlyRevenueForecast.toFixed(2)}`, icon: DollarSign, color: "text-accent" },
       { label: "Receita Anual Prevista", value: `R$ ${yearlyRevenueForecast.toFixed(2)}`, icon: TrendingUp, color: "text-green-600" },
     ] : []),
-    { label: "Premium (Pagantes)", value: stats?.premium_users ?? 0, icon: Crown, color: "text-accent" },
+    { label: "Premium Pagantes", value: (stats?.premium_users ?? 0) - courtesyCount, icon: Crown, color: "text-accent" },
     { label: "Cortesia", value: courtesyCount, icon: Gift, color: "text-purple-600" },
     { label: "Consultas Hoje", value: stats?.consultations_today ?? 0, icon: CalendarDays, color: "text-primary" },
     { label: "Rituais Cadastrados", value: stats?.total_rituals ?? 0, icon: BookOpen, color: "text-primary" },
@@ -367,16 +367,17 @@ const AdminDashboard = () => {
                 <TableHead>Assinatura</TableHead>
                 <TableHead>Conhecimento</TableHead>
                 <TableHead>Cadastro</TableHead>
+                <TableHead>Último Login</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {profilesLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                 </TableRow>
               ) : recentProfiles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado.</TableCell>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado.</TableCell>
                 </TableRow>
               ) : (
                 recentProfiles.map((p) => {
@@ -425,6 +426,9 @@ const AdminDashboard = () => {
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {p.last_sign_in_at ? format(new Date(p.last_sign_in_at), "dd/MM/yyyy", { locale: ptBR }) : "Nunca"}
                       </TableCell>
                     </TableRow>
                   );

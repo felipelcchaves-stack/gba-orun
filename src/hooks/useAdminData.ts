@@ -28,6 +28,7 @@ export interface AdminProfile {
   device_changed_at: string | null;
   ifa_status: string | null;
   is_courtesy: boolean;
+  last_sign_in_at: string | null;
 }
 
 export interface KnowledgeStats {
