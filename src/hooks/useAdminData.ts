@@ -114,3 +114,20 @@ export const useSubscriptionHistory = (granularity: 'daily' | 'monthly' | 'yearl
     },
   });
 };
+
+export interface MonthlyRevenue {
+  current_month_revenue: number;
+  previous_month_revenue: number;
+}
+
+export const useMonthlyRevenue = () => {
+  return useQuery({
+    queryKey: ["admin-monthly-revenue"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_get_monthly_revenue" as any);
+      if (error) throw error;
+      const row = (data as unknown as MonthlyRevenue[])?.[0];
+      return row ?? { current_month_revenue: 0, previous_month_revenue: 0 };
+    },
+  });
+};
