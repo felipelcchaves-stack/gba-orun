@@ -134,6 +134,7 @@ const AdminDashboard = () => {
   const { data: knowledgeStats } = useAdminKnowledgeStats();
   const [granularity, setGranularity] = useState<'daily' | 'monthly' | 'yearly'>('daily');
   const { data: historyData } = useSubscriptionHistory(granularity);
+  const { data: monthlyHistory } = useSubscriptionHistory('monthly');
   const [knowledgeFilter, setKnowledgeFilter] = useState<string>("all");
 
   const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
@@ -161,6 +162,20 @@ const AdminDashboard = () => {
   })();
 
   const yearlyRevenueForecast = monthlyRevenueForecast * 12;
+
+  // Revenue evolution: compare current vs previous month using monthly history
+  const revenueEvolution = (() => {
+    if (!monthlyHistory || monthlyHistory.length < 1) return null;
+    const len = monthlyHistory.length;
+    const currentRevenue = Number(monthlyHistory[len - 1].revenue_estimate);
+    const prevRevenue = len >= 2 ? Number(monthlyHistory[len - 2].revenue_estimate) : null;
+    
+    if (prevRevenue === null || prevRevenue === 0) {
+      return { current: currentRevenue, percentage: null };
+    }
+    const pct = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
+    return { current: currentRevenue, percentage: pct };
+  })();
 
   const courtesyCount = profiles?.filter(p => p.is_courtesy).length ?? 0;
 
@@ -243,6 +258,30 @@ const AdminDashboard = () => {
         <h1 className="text-2xl font-display font-bold text-foreground">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Visão geral do aplicativo</p>
       </div>
+
+      {/* Revenue Evolution Card */}
+      {hasAnySubscriber && revenueEvolution && (
+        <Card className="border-accent/30">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-accent/10 text-accent">
+              <DollarSign className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <p className="text-2xl font-bold text-foreground">
+                R$ {revenueEvolution.current.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs text-muted-foreground">Receita Este Mês</p>
+            </div>
+            {revenueEvolution.percentage !== null ? (
+              <Badge className={`text-sm px-3 py-1 ${revenueEvolution.percentage >= 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                {revenueEvolution.percentage >= 0 ? "↑" : "↓"} {Math.abs(revenueEvolution.percentage).toFixed(1)}%
+              </Badge>
+            ) : (
+              <Badge className="bg-accent/20 text-accent-foreground text-sm px-3 py-1">Novo</Badge>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
