@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAdminStats, useAdminProfiles, useAdminKnowledgeStats, useSubscriptionHistory } from "@/hooks/useAdminData";
 import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { format } from "date-fns";
@@ -260,26 +261,36 @@ const AdminDashboard = () => {
 
       {/* Revenue Evolution Card */}
       {hasAnySubscriber && revenueEvolution && (
-        <Card className="border-accent/30">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-accent/10 text-accent">
-              <DollarSign className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <p className="text-2xl font-bold text-foreground">
-                R$ {revenueEvolution.current.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <p className="text-xs text-muted-foreground">Receita Este Mês</p>
-            </div>
-            {revenueEvolution.percentage !== null ? (
-              <Badge className={`text-sm px-3 py-1 ${revenueEvolution.percentage >= 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
-                {revenueEvolution.percentage >= 0 ? "↑" : "↓"} {Math.abs(revenueEvolution.percentage).toFixed(1)}%
-              </Badge>
-            ) : (
-              <Badge className="bg-accent/20 text-accent-foreground text-sm px-3 py-1">Novo</Badge>
-            )}
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <UiTooltip>
+            <TooltipTrigger asChild>
+              <Card className="border-accent/30 cursor-help">
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-accent/10 text-accent">
+                    <DollarSign className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-2xl font-bold text-foreground">
+                      R$ {revenueEvolution.current.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Receita Este Mês</p>
+                  </div>
+                  {revenueEvolution.percentage !== null ? (
+                    <Badge className={`text-sm px-3 py-1 ${revenueEvolution.percentage >= 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                      {revenueEvolution.percentage >= 0 ? "↑" : "↓"} {Math.abs(revenueEvolution.percentage).toFixed(1)}%
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-accent/20 text-accent-foreground text-sm px-3 py-1">Novo</Badge>
+                  )}
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-sm space-y-1 p-3">
+              <p>Mensal: R$ {monthlyRevenueForecast.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p>Anual (÷12): R$ {yearlyRevenueForecast.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            </TooltipContent>
+          </UiTooltip>
+        </TooltipProvider>
       )}
 
       {/* KPI Cards */}
