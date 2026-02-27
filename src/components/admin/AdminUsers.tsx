@@ -384,14 +384,15 @@ const AdminUsers = () => {
               <TableHead>Idade</TableHead>
               <TableHead>Dia de Cuidado</TableHead>
               <TableHead>Cadastro</TableHead>
+              <TableHead>Último Login</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado.</TableCell></TableRow>
             ) : (
               filtered.map((p) => {
                 const sub = p.subscription_status || "free";
@@ -414,6 +415,9 @@ const AdminUsers = () => {
                     <TableCell>{p.care_day !== null && p.care_day !== undefined ? WEEKDAYS[p.care_day] : "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {p.last_sign_in_at ? format(new Date(p.last_sign_in_at), "dd/MM/yyyy", { locale: ptBR }) : "Nunca"}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

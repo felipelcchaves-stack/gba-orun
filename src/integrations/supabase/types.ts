@@ -1122,6 +1122,7 @@ export type Database = {
           knows_iyami: boolean
           knows_obi: boolean
           knows_ori: boolean
+          last_sign_in_at: string
           onboarding_completed: boolean
           religion: string
           subscription_expires_at: string
