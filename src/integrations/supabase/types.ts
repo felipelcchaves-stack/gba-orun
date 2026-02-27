@@ -1103,6 +1103,18 @@ export type Database = {
           revenue_estimate: number
         }[]
       }
+      admin_get_subscription_history_v2: {
+        Args: { p_granularity?: string }
+        Returns: {
+          active_subscribers: number
+          cancelled_users: number
+          courtesy_users: number
+          month: string
+          new_users: number
+          overdue_users: number
+          revenue_estimate: number
+        }[]
+      }
       admin_list_profiles: {
         Args: never
         Returns: {

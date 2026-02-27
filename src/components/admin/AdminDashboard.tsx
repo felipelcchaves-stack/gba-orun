@@ -33,15 +33,18 @@ const SUB_COLORS = {
   newUsers: "#3b82f6",
 };
 
-const formatMonth = (m: string) => {
+const formatLabel = (m: string, granularity: string) => {
   try {
-    return format(new Date(m), "MMM/yy", { locale: ptBR });
+    const d = new Date(m);
+    if (granularity === 'daily') return format(d, "dd/MM", { locale: ptBR });
+    if (granularity === 'yearly') return format(d, "yyyy", { locale: ptBR });
+    return format(d, "MMM/yy", { locale: ptBR });
   } catch {
     return m;
   }
 };
 
-const SubscriberEvolutionChart = ({ data }: { data: any[] }) => (
+const SubscriberEvolutionChart = ({ data, granularity }: { data: any[]; granularity: string }) => (
   <Card>
     <CardContent className="p-5">
       <div className="flex items-center gap-2 mb-3">
@@ -51,9 +54,9 @@ const SubscriberEvolutionChart = ({ data }: { data: any[] }) => (
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis dataKey="month" tickFormatter={formatMonth} fontSize={11} />
+          <XAxis dataKey="month" tickFormatter={(m) => formatLabel(m, granularity)} fontSize={11} />
           <YAxis fontSize={11} allowDecimals={false} />
-          <Tooltip labelFormatter={formatMonth} />
+          <Tooltip labelFormatter={(m) => formatLabel(m, granularity)} />
           <Legend />
           <Line type="monotone" dataKey="active_subscribers" name="Ativos Pagantes" stroke={SUB_COLORS.active} strokeWidth={2} dot={{ r: 3 }} />
           <Line type="monotone" dataKey="courtesy_users" name="Cortesia" stroke={SUB_COLORS.courtesy} strokeWidth={2} dot={{ r: 3 }} />
@@ -65,19 +68,19 @@ const SubscriberEvolutionChart = ({ data }: { data: any[] }) => (
   </Card>
 );
 
-const RevenueChart = ({ data }: { data: any[] }) => (
+const RevenueChart = ({ data, granularity }: { data: any[]; granularity: string }) => (
   <Card>
     <CardContent className="p-5">
       <div className="flex items-center gap-2 mb-3">
         <DollarSign className="h-5 w-5 text-accent" />
-        <h3 className="font-display font-semibold text-sm">Previsão de Receita Mensal</h3>
+        <h3 className="font-display font-semibold text-sm">Previsão de Receita</h3>
       </div>
       <ResponsiveContainer width="100%" height={240}>
         <AreaChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis dataKey="month" tickFormatter={formatMonth} fontSize={11} />
+          <XAxis dataKey="month" tickFormatter={(m) => formatLabel(m, granularity)} fontSize={11} />
           <YAxis fontSize={11} tickFormatter={(v: number) => `R$${v}`} />
-          <Tooltip labelFormatter={formatMonth} formatter={(v: number) => [`R$ ${Number(v).toFixed(2)}`, "Receita"]} />
+          <Tooltip labelFormatter={(m) => formatLabel(m, granularity)} formatter={(v: number) => [`R$ ${Number(v).toFixed(2)}`, "Receita"]} />
           <Area type="monotone" dataKey="revenue_estimate" name="Receita" stroke={SUB_COLORS.revenue} fill={SUB_COLORS.revenue} fillOpacity={0.25} strokeWidth={2} />
         </AreaChart>
       </ResponsiveContainer>
@@ -85,19 +88,19 @@ const RevenueChart = ({ data }: { data: any[] }) => (
   </Card>
 );
 
-const UserGrowthChart = ({ data }: { data: any[] }) => (
+const UserGrowthChart = ({ data, granularity }: { data: any[]; granularity: string }) => (
   <Card>
     <CardContent className="p-5">
       <div className="flex items-center gap-2 mb-3">
-        <Users className="h-5 w-5 text-blue-500" />
+        <Users className="h-5 w-5 text-primary" />
         <h3 className="font-display font-semibold text-sm">Crescimento de Usuários</h3>
       </div>
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis dataKey="month" tickFormatter={formatMonth} fontSize={11} />
+          <XAxis dataKey="month" tickFormatter={(m) => formatLabel(m, granularity)} fontSize={11} />
           <YAxis fontSize={11} allowDecimals={false} />
-          <Tooltip labelFormatter={formatMonth} />
+          <Tooltip labelFormatter={(m) => formatLabel(m, granularity)} />
           <Line type="monotone" dataKey="new_users" name="Novos Cadastros" stroke={SUB_COLORS.newUsers} strokeWidth={2} dot={{ r: 3 }} />
         </LineChart>
       </ResponsiveContainer>
@@ -129,7 +132,8 @@ const AdminDashboard = () => {
   const { data: profiles, isLoading: profilesLoading } = useAdminProfiles();
   const { data: plans } = useSubscriptionPlans();
   const { data: knowledgeStats } = useAdminKnowledgeStats();
-  const { data: historyData } = useSubscriptionHistory();
+  const [granularity, setGranularity] = useState<'daily' | 'monthly' | 'yearly'>('daily');
+  const { data: historyData } = useSubscriptionHistory(granularity);
   const [knowledgeFilter, setKnowledgeFilter] = useState<string>("all");
 
   const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
@@ -262,10 +266,21 @@ const AdminDashboard = () => {
       {/* Evolution Charts */}
       {historyData && historyData.length > 0 && (
         <>
-          <SubscriberEvolutionChart data={historyData} />
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-display font-semibold text-foreground">Evolução</h2>
+            <Select value={granularity} onValueChange={(v) => setGranularity(v as any)}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Diário</SelectItem>
+                <SelectItem value="monthly">Mensal</SelectItem>
+                <SelectItem value="yearly">Anual</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <SubscriberEvolutionChart data={historyData} granularity={granularity} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RevenueChart data={historyData} />
-            <UserGrowthChart data={historyData} />
+            <RevenueChart data={historyData} granularity={granularity} />
+            <UserGrowthChart data={historyData} granularity={granularity} />
           </div>
         </>
       )}
