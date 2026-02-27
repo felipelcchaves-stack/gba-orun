@@ -293,6 +293,32 @@ const AdminDashboard = () => {
         </TooltipProvider>
       )}
 
+      {/* Revenue Composition Pie */}
+      {hasAnySubscriber && (monthlyRevenueForecast > 0 || yearlyRevenueForecast > 0) && (() => {
+        const pieData = [
+          { name: "Mensal", value: monthlyRevenueForecast },
+          { name: "Anual (÷12)", value: yearlyRevenueForecast },
+        ].filter(d => d.value > 0);
+        const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--accent))"];
+        return (
+          <Card>
+            <CardContent className="p-5">
+              <p className="text-sm font-semibold text-foreground mb-3">Composição da Receita</p>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
+                      {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {KPI_CARDS.map(({ label, value, icon: Icon, color }) => (
