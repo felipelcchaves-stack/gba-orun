@@ -70,6 +70,8 @@ Deno.serve(async (req) => {
         );
       }
 
+      let userId: string;
+
       const { data: user, error: createErr } = await adminClient.auth.admin.createUser({
         email,
         password,
@@ -78,10 +80,29 @@ Deno.serve(async (req) => {
       });
 
       if (createErr) {
-        return new Response(JSON.stringify({ error: createErr.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        // If user already exists, find them and update instead
+        if (createErr.message.includes("already been registered")) {
+          const { data: existingUsers, error: listErr } = await adminClient.auth.admin.listUsers();
+          const existing = existingUsers?.users?.find((u: any) => u.email === email);
+          if (!existing || listErr) {
+            return new Response(JSON.stringify({ error: "Usuário existe mas não foi possível localizá-lo" }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          // Update password and metadata
+          await adminClient.auth.admin.updateUserById(existing.id, {
+            password,
+            email_confirm: true,
+            user_metadata: { display_name: display_name || null },
+          });
+          userId = existing.id;
+        } else {
+          return new Response(JSON.stringify({ error: createErr.message }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        userId = user.user.id;
       }
 
       // Update profile
@@ -92,18 +113,18 @@ Deno.serve(async (req) => {
             ...(display_name ? { display_name } : {}),
             ...(is_premium ? { is_premium: true, subscription_status: "active" } : {}),
           })
-          .eq("user_id", user.user.id);
+          .eq("user_id", userId);
       }
 
       // Add admin role if requested
       if (is_admin) {
         await adminClient
           .from("user_roles")
-          .insert({ user_id: user.user.id, role: "admin" });
+          .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
       }
 
       return new Response(
-        JSON.stringify({ success: true, user_id: user.user.id }),
+        JSON.stringify({ success: true, user_id: userId }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
