@@ -121,7 +121,14 @@ const AdminUsers = () => {
       body,
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
-    if (res.error) throw new Error(res.error.message);
+    if (res.error) {
+      // Try to extract the error message from the response data
+      const msg = res.data?.error || res.error.message;
+      const friendlyMessages: Record<string, string> = {
+        "A user with this email address has already been registered": "Este email já está cadastrado",
+      };
+      throw new Error(friendlyMessages[msg] || msg);
+    }
     return res.data;
   };
 
