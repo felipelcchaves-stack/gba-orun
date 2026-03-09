@@ -113,18 +113,18 @@ Deno.serve(async (req) => {
             ...(display_name ? { display_name } : {}),
             ...(is_premium ? { is_premium: true, subscription_status: "active" } : {}),
           })
-          .eq("user_id", user.user.id);
+          .eq("user_id", userId);
       }
 
       // Add admin role if requested
       if (is_admin) {
         await adminClient
           .from("user_roles")
-          .insert({ user_id: user.user.id, role: "admin" });
+          .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
       }
 
       return new Response(
-        JSON.stringify({ success: true, user_id: user.user.id }),
+        JSON.stringify({ success: true, user_id: userId }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
