@@ -1,24 +1,30 @@
 
 
-# Corrigir Cards de Receita no Dashboard
+# Fix: Edge Function "admin-manage-users" Auth Error
 
-## O que estava errado
+## Problem
 
-Na ultima alteracao, o card KPI "Receita Mensal Prevista" foi removido e o card grande "Receita Este Mes" passou a mostrar apenas o valor mensal normalizado (R$ 107,10). Voce quer os tres cards distintos.
+The edge function uses `anonClient.auth.getClaims(token)` which does not exist in `@supabase/supabase-js@2`. This causes every call to fail with a non-2xx status code.
 
-## O que vai ficar
+## Solution
 
-1. **Card grande "Receita Este Mes"** = Receita Mensal Prevista + Receita Anual Prevista (soma dos dois, ex: R$ 107,10 + R$ 1.285,20 = R$ 1.392,30)
-2. **Card KPI "Receita Mensal Prevista"** = valor normalizado mensal (R$ 107,10) -- sera restaurado
-3. **Card KPI "Receita Anual Prevista"** = valor anual (R$ 1.285,20) -- ja existe
+Replace `getClaims` with `anonClient.auth.getUser(token)` which is the correct v2 method to validate a JWT and extract the user ID.
 
-## Alteracoes tecnicas
+## Changes
 
-### AdminDashboard.tsx
+### `supabase/functions/admin-manage-users/index.ts`
 
-1. **Restaurar** o card KPI "Receita Mensal Prevista" no array `KPI_CARDS` (linha que foi removida no ultimo diff)
-2. **Alterar** o card grande "Receita Este Mes" para exibir `monthlyRevenueForecast + yearlyRevenueForecast` em vez de apenas `monthlyRevenueForecast`
-3. **Ajustar** o calculo de evolucao % para comparar esse somatorio com o periodo anterior
+Replace lines 34-42:
+```typescript
+const { data: { user: caller }, error: callerError } = await anonClient.auth.getUser(token);
+if (callerError || !caller) {
+  return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    status: 401,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+const callerId = caller.id;
+```
 
-Nenhuma alteracao de banco de dados necessaria.
+This uses the standard `getUser()` method to validate the token and extract the caller's user ID, then proceeds with the existing `has_role` check.
 
