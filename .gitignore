@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Migration secrets/artifacts (never committed)
+.secrets/
+
+# Local tooling state
+.claude-flow/
+supabase/.temp/

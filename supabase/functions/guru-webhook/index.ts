@@ -52,6 +52,17 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // --- Refuse fail-open: if the secret isn't configured at all, this must
+    // reject everything instead of silently skipping the check below ---
+    const webhookSecret = Deno.env.get("GURU_WEBHOOK_SECRET");
+    if (!webhookSecret) {
+      console.error("GURU_WEBHOOK_SECRET not configured — refusing request");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
 
     // --- NORMALIZE PAYLOAD: accept both wrapped {payload:{...}} and unwrapped {...} ---
@@ -60,19 +71,16 @@ Deno.serve(async (req) => {
     console.log(`Webhook received — format: ${isWrapped ? "wrapped" : "unwrapped"}`);
 
     // --- Validate webhook authenticity ---
-    const webhookSecret = Deno.env.get("GURU_WEBHOOK_SECRET");
-    if (webhookSecret) {
-      const bodyToken = p?.api_token;
-      const headerToken = req.headers.get("x-guru-token") || req.headers.get("authorization")?.replace("Bearer ", "");
-      const token = bodyToken || headerToken;
+    const bodyToken = p?.api_token;
+    const headerToken = req.headers.get("x-guru-token") || req.headers.get("authorization")?.replace("Bearer ", "");
+    const token = bodyToken || headerToken;
 
-      if (token !== webhookSecret) {
-        console.error("Invalid webhook token");
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (token !== webhookSecret) {
+      console.error("Invalid webhook token");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // --- Extract data from normalized payload ---

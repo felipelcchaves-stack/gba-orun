@@ -14,6 +14,26 @@ async function sha256(value: string): Promise<string> {
     .join("");
 }
 
+// Anonymous site visitors call this directly (no Supabase session), so we
+// can't require a user JWT — but anyone who finds the URL could otherwise
+// relay arbitrary fake conversion events to the configured Meta Pixel.
+// Allow either a same-origin browser request, or a trusted server-to-server
+// call from another one of our own Edge Functions (e.g. guru-webhook),
+// which authenticates with the service-role key instead of an Origin header.
+const ALLOWED_ORIGINS = [
+  "https://gba-orun.ifatokun.com.br",
+  "http://localhost:8080",
+  "http://localhost:5173",
+];
+
+function isAllowedRequest(req: Request, serviceRoleKey: string): boolean {
+  const authHeader = req.headers.get("authorization");
+  if (authHeader === `Bearer ${serviceRoleKey}`) return true;
+
+  const origin = req.headers.get("origin") || req.headers.get("referer") || "";
+  return ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -31,6 +51,16 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    if (!isAllowedRequest(req, serviceRoleKey)) {
+      const origin = req.headers.get("origin") || req.headers.get("referer") || "";
+      console.warn("meta-capi: rejected request from unrecognized origin", { origin });
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: settingRow } = await supabase

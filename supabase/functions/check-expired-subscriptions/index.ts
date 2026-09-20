@@ -12,6 +12,24 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Internal endpoint meant only for the pg_cron job below — fail closed
+    // if the shared secret isn't configured, don't just skip the check.
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    if (!cronSecret) {
+      console.error("CRON_SECRET not configured — refusing request");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (req.headers.get("x-cron-secret") !== cronSecret) {
+      console.error("Invalid or missing x-cron-secret header");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
