@@ -1,4 +1,9 @@
-project_id = "otfnpfzrtsopitmlpovk"
+project_id = "remrjowcbyavydfbkbny"
+
+[auth.hook.send_email]
+  enabled = true
+  uri = "https://remrjowcbyavydfbkbny.supabase.co/functions/v1/auth-email-hook"
+  secrets = "env(SEND_EMAIL_HOOK_SECRET)"
 
 [functions]
   [functions.admin-manage-users]
