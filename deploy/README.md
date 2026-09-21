@@ -66,6 +66,7 @@ completo, depois apaga releases antigas (mantém as últimas 5).
 | `SUPABASE_ACCESS_TOKEN` | personal access token (supabase.com/dashboard/account/tokens) |
 | `SUPABASE_PROJECT_REF` | `remrjowcbyavydfbkbny` |
 | `SUPABASE_DB_PASSWORD` | senha do banco definida na criação do projeto |
+| `SEND_EMAIL_HOOK_SECRET` | mesmo valor do secret de Edge Function abaixo — necessário aqui também porque `supabase db push` valida o `auth.hook.send_email` do `config.toml` usando essa variável de ambiente do próprio runner |
 
 ## Segredos de Edge Functions (não são secrets do GitHub — write-only no Supabase)
 
