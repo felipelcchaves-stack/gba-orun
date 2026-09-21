@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://gba-orun.com/sitemap.xml
+Sitemap: https://gba-orun.ifatokun.com.br/sitemap.xml
