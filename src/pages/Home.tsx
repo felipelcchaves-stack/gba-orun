@@ -15,7 +15,7 @@ import { useCareReminder } from "@/hooks/useCareReminder";
 import { useReviewPrompt } from "@/hooks/useReviewPrompt";
 import ReviewModal from "@/components/ReviewModal";
 
-import heroBanner from "@/assets/hero-banner.jpg";
+import heroBanner from "@/assets/hero-banner.webp";
 
 
 import eboCategory from "@/assets/ebo-category.jpg";

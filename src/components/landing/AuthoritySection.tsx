@@ -1,4 +1,4 @@
-import heroBanner from "@/assets/hero-banner.jpg";
+import heroBanner from "@/assets/hero-banner.webp";
 
 const AuthoritySection = () => (
   <section className="py-16 md:py-20 px-6 gradient-sacred text-primary-foreground">

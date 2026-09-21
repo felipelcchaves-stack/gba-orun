@@ -7,26 +7,30 @@ import { ThemeProvider } from "next-themes";
 import BottomNav from "@/components/BottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import OfflineBanner from "@/components/OfflineBanner";
-import Home from "./pages/Home";
-import Oracle from "./pages/Oracle";
-import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
-import Rituals from "./pages/Rituals";
-import RitualReader from "./pages/RitualReader";
-import Journey from "./pages/Journey";
-import Learn from "./pages/Learn";
-import Profile from "./pages/Profile";
-import Oferta from "./pages/Oferta";
-import Demo from "./pages/Demo";
-import Community from "./pages/Community";
-import Admin from "./pages/Admin";
-import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import Install from "./pages/Install";
-import Promotions from "./pages/Promotions";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import NotFound from "./pages/NotFound";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
+
+// Route-level code splitting: each page becomes its own chunk, only fetched
+// when visited. Admin in particular pulls in @xyflow/react (the flow
+// builder), which was otherwise shipped to every visitor's initial bundle.
+const Home = lazy(() => import("./pages/Home"));
+const Oracle = lazy(() => import("./pages/Oracle"));
+const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard"));
+const Rituals = lazy(() => import("./pages/Rituals"));
+const RitualReader = lazy(() => import("./pages/RitualReader"));
+const Journey = lazy(() => import("./pages/Journey"));
+const Learn = lazy(() => import("./pages/Learn"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Oferta = lazy(() => import("./pages/Oferta"));
+const Demo = lazy(() => import("./pages/Demo"));
+const Community = lazy(() => import("./pages/Community"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Install = lazy(() => import("./pages/Install"));
+const Promotions = lazy(() => import("./pages/Promotions"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 import { initPixelWithId, initGoogleAds } from "@/lib/pixel";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useDynamicSEO } from "@/hooks/useDynamicSEO";
@@ -65,27 +69,29 @@ const AppContent = () => {
   return (
     <>
       <OfflineBanner />
-      <Routes>
-        <Route path="/oferta" element={<Oferta />} />
-        <Route path="/demo/*" element={<Demo />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/termos" element={<Terms />} />
-        <Route path="/privacidade" element={<Privacy />} />
-        <Route path="/onboarding" element={<ProtectedRoute skipOnboardingCheck><OnboardingWizard /></ProtectedRoute>} />
-        <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/oraculo" element={<ProtectedRoute><Oracle /></ProtectedRoute>} />
-        <Route path="/rituais" element={<ProtectedRoute><Rituals /></ProtectedRoute>} />
-        <Route path="/rituais/:id" element={<ProtectedRoute><RitualReader /></ProtectedRoute>} />
-        <Route path="/jornada" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
-        <Route path="/comunidade" element={<ProtectedRoute><Community /></ProtectedRoute>} />
-        <Route path="/aprender" element={<ProtectedRoute><Learn /></ProtectedRoute>} />
-        <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/promocoes" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-        <Route path="/instalar" element={<ProtectedRoute><Install /></ProtectedRoute>} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/oferta" element={<Oferta />} />
+          <Route path="/demo/*" element={<Demo />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/termos" element={<Terms />} />
+          <Route path="/privacidade" element={<Privacy />} />
+          <Route path="/onboarding" element={<ProtectedRoute skipOnboardingCheck><OnboardingWizard /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/oraculo" element={<ProtectedRoute><Oracle /></ProtectedRoute>} />
+          <Route path="/rituais" element={<ProtectedRoute><Rituals /></ProtectedRoute>} />
+          <Route path="/rituais/:id" element={<ProtectedRoute><RitualReader /></ProtectedRoute>} />
+          <Route path="/jornada" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
+          <Route path="/comunidade" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+          <Route path="/aprender" element={<ProtectedRoute><Learn /></ProtectedRoute>} />
+          <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/promocoes" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/instalar" element={<ProtectedRoute><Install /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
       <BottomNav />
     </>
   );
