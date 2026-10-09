@@ -136,7 +136,7 @@ async function fakeSupabase(req: Request, url: URL): Promise<Response> {
     const table = path.slice("/rest/v1/".length);
     const uid = me?.sub ?? null;
     let rows: unknown[] = [];
-    if (table === "profiles") rows = uid ? [{ id: uid, user_id: uid, email: adminEmail, onboarding_completed: true, display_name: "Teste Hub", full_name: "Teste Hub", nome: "Teste Hub" }] : [];
+    if (table === "profiles") rows = uid ? [{ id: uid, user_id: uid, email: adminEmail, onboarding_completed: true, display_name: "Teste Hub", full_name: "Teste Hub", nome: "Teste Hub", created_at: new Date().toISOString(), updated_at: new Date().toISOString(), profile_completed: true, pais: "Brasil", estado: "SP", data_nascimento: "1990-01-01", sexo: "f" }] : [];
     if (table === "user_roles") rows = uid === adminId ? [{ user_id: uid, role: adminRole }] : [];
     const single = (req.headers.get("accept") ?? "").includes("vnd.pgrst.object");
     if (single) return rows.length ? json(200, rows[0]) : json(406, { code: "PGRST116", message: "no rows" });
@@ -156,5 +156,9 @@ Deno.serve({ port, hostname: "127.0.0.1" }, async (req) => {
     return fn(req);
   }
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  // Project functions the admin area calls on its own (Isesemind single-session rule).
+  if (url.pathname === "/functions/v1/enforce-single-session") return json(200, { session_id: crypto.randomUUID() });
+  if (url.pathname === "/functions/v1/validate-session") return json(200, { valid: true });
+  if (url.pathname.startsWith("/functions/v1/")) return json(200, {});
   return fakeSupabase(req, url);
 });
