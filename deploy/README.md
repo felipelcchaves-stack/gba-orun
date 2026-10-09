@@ -96,3 +96,8 @@ mandar e-mail de verdade.
    `deploy-frontend.yml` rodou, o symlink `current` mudou de timestamp
    (`ssh -p 22022 gba-orun@143.95.164.62 readlink /home/gba-orun/current`
    antes/depois), e o conteúdo do site atualizou.
+
+## Login único pelo Hub (área /admin)
+
+Ver `deploy/HUB-SSO.md`: Edge Function `hub-sso`, migrações `*_hub_sso*.sql`, segredos
+`HUB_*` da função e secrets `VITE_HUB_*` do GitHub. Sem esses secrets o app fica como antes.
