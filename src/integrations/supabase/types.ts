@@ -1162,6 +1162,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hub_sso_session_status: { Args: never; Returns: Json }
       reset_user_journey: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {

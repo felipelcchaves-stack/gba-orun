@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom";
 
-Object.defineProperty(window, "matchMedia", {
+// Server-side tests (hub-sso Edge Function) run with `@vitest-environment node`, without window.
+if (typeof window !== "undefined") Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({
     matches: false,

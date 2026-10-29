@@ -31,6 +31,9 @@ const Promotions = lazy(() => import("./pages/Promotions"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const HubSsoStart = lazy(() => import("./pages/HubSsoStart"));
+const HubSsoCallback = lazy(() => import("./pages/HubSsoCallback"));
+import HubAdminGuard from "@/components/hub-sso/HubAdminGuard";
 import { initPixelWithId, initGoogleAds } from "@/lib/pixel";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useDynamicSEO } from "@/hooks/useDynamicSEO";
@@ -75,6 +78,9 @@ const AppContent = () => {
           <Route path="/demo/*" element={<Demo />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          {/* Hub single sign-on for the admin area (deploy/HUB-SSO.md) */}
+          <Route path="/auth/hub/iniciar" element={<HubSsoStart />} />
+          <Route path="/auth/hub/callback" element={<HubSsoCallback />} />
           <Route path="/termos" element={<Terms />} />
           <Route path="/privacidade" element={<Privacy />} />
           <Route path="/onboarding" element={<ProtectedRoute skipOnboardingCheck><OnboardingWizard /></ProtectedRoute>} />
@@ -87,7 +93,7 @@ const AppContent = () => {
           <Route path="/aprender" element={<ProtectedRoute><Learn /></ProtectedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/promocoes" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin" element={<HubAdminGuard><ProtectedRoute><Admin /></ProtectedRoute></HubAdminGuard>} />
           <Route path="/instalar" element={<ProtectedRoute><Install /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

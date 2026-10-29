@@ -24,6 +24,7 @@ import AdminFlows from "@/components/admin/AdminFlows";
 import AdminCategories from "@/components/admin/AdminCategories";
 import AdminIreIbiTypes from "@/components/admin/AdminIreIbiTypes";
 import AdminOracleConfigs from "@/components/admin/AdminOracleConfigs";
+import { signOutWithHub } from "@/lib/hubSsoSession";
 
 import { ALL_CATEGORY_KEYS, getCategoryLabel } from "@/lib/categories";
 const CATEGORIES = ALL_CATEGORY_KEYS;
@@ -64,6 +65,9 @@ const AdminPage = () => {
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [defaultFormCategory, setDefaultFormCategory] = useState<string | undefined>(undefined);
   const [filterCat, setFilterCat] = useState("");
+
+  // "Sair" also ends the hub session when this session came from the hub (deploy/HUB-SSO.md).
+  const handleSignOut = () => void signOutWithHub(signOut);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,14 +127,14 @@ const AdminPage = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-5 gap-4">
         <p className="text-muted-foreground text-center">Você não tem permissão de administrador.</p>
-        <button onClick={signOut} className="text-sm text-primary underline">Sair</button>
+        <button onClick={handleSignOut} className="text-sm text-primary underline">Sair</button>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-screen w-full bg-background">
-      <AdminSidebar active={activeSection} onNavigate={setActiveSection} onSignOut={signOut} />
+      <AdminSidebar active={activeSection} onNavigate={setActiveSection} onSignOut={handleSignOut} />
 
       <main className={`flex-1 overflow-auto flex flex-col ${activeSection === "flows" ? "p-2 sm:p-4" : "p-4 sm:p-8"}`}>
         {activeSection === "dashboard" && <AdminDashboard />}
